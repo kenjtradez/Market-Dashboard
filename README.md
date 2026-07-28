@@ -1,6 +1,6 @@
 # Market Dashboard — OME + Macro
 
-Automated daily market dashboard that blends **options positioning data** (from OME screenshots via Google Gemini vision) with **macro-economic data** (from FRED API) into a single bullish/bearish score per instrument.
+Automated daily market dashboard that blends **options positioning data** (from OME screenshots via Groq/Llama vision) with **macro-economic data** (from FRED API) into a single bullish/bearish score per instrument.
 
 **Instruments:** Gold, NAS100, GER40, EUR/USD  
 **Output:** Static HTML site, auto-deployed to GitHub Pages
@@ -18,7 +18,7 @@ You upload 4 screenshots ─┐
   │     (VIX, yields, dollar,    │
   │      breakeven, fed funds)   │
   │                              │
-  │  2. Gemini Vision reads OME  │
+  │  2. Llama Vision reads OME   │
   │     numbers from screenshots │
   │                              │
   │  3. Score engine blends      │
@@ -47,10 +47,10 @@ Create a new **private** or **public** repo on GitHub, then push this folder to 
 2. Click "Request an API Key" (instant, no approval)
 3. Copy the key
 
-### 3. Get a free Gemini API key (for screenshot vision)
+### 3. Get a free Groq API key (for screenshot vision)
 
-1. Go to https://aistudio.google.com/apikey
-2. Click **Create API Key** (free, just needs a Google account)
+1. Go to https://console.groq.com → Sign up (free, no credit card)
+2. Create an API key
 3. Copy the key
 
 ### 4. Add GitHub secrets
@@ -60,7 +60,7 @@ In your repo → Settings → Secrets and variables → Actions → add:
 | Secret | Value |
 |--------|-------|
 | `FRED_API_KEY` | Your FRED API key |
-| `GEMINI_API_KEY` | Your Google Gemini API key |
+| `GROQ_API_KEY` | Your Groq API key (free, from https://console.groq.com) |
 
 ### 5. Enable GitHub Pages
 
@@ -99,7 +99,7 @@ PNG or JPG, any size.
 cd market-dashboard
 pip install -r requirements.txt
 export FRED_API_KEY=your_key
-export GEMINI_API_KEY=your_key
+export GROQ_API_KEY=your_key
 python scripts/run_all.py
 ```
 
@@ -125,7 +125,7 @@ market-dashboard/
 ├── .github/workflows/build.yml   # Auto-build on schedule or upload
 ├── scripts/
 │   ├── fetch_fred.py              # FRED API fetcher
-│   ├── extract_ome.py             # Gemini Vision screenshot reader
+│   ├── extract_ome.py             # Groq/Llama Vision screenshot reader
 │   ├── compute_scores.py          # Bullish/bearish scoring engine
 │   ├── build_dashboard.py         # Static HTML generator
 │   └── run_all.py                 # Orchestrator (run everything)
