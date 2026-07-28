@@ -14,7 +14,7 @@ INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-TEXT_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+TEXT_API = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
 
 PROMPT = """You are looking at an OME (Options Market Event) panel for a financial instrument.
 
@@ -94,6 +94,18 @@ def run():
     if not api_key:
         print("ERROR: GEMINI_API_KEY not set — skipping OME extraction.")
         return False
+
+    print("  Listing available models...")
+    model_resp = requests.get(
+        f"https://generativelanguage.googleapis.com/v1/models?key={api_key}",
+        timeout=15,
+    )
+    if model_resp.status_code == 200:
+        models = model_resp.json().get("models", [])
+        supported = [m["name"] for m in models if "generateContent" in m.get("supportedMethods", [])]
+        print(f"  Available models ({len(supported)}): {supported[:10]}")
+    else:
+        print(f"  Could not list models: HTTP {model_resp.status_code}")
 
     print("  Testing Gemini API key with text-only call...")
     test = call_gemini_text(api_key)
