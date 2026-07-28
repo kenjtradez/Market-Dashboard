@@ -26,9 +26,15 @@ def fetch_series(series_id, api_key):
         "file_type": "json",
         "sort_order": "desc",
         "limit": 2,
-        "observation_start": datetime.now().strftime("%Y-%m-%d") if False else "20240101",
+        "observation_start": "20240101",
     }
     r = requests.get(FRED_BASE, params=params, timeout=15)
+    if r.status_code == 400:
+        err_data = r.json()
+        msg = err_data.get("error_message", "")
+        if "api_key" in msg.lower() or "key" in msg.lower():
+            raise Exception(f"INVALID FRED API KEY — get a free key at https://fred.stlouisfed.org/docs/api/api_key.html")
+        raise Exception(f"Bad request: {msg[:200]}")
     r.raise_for_status()
     data = r.json()
     obs = data.get("observations", [])
