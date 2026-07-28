@@ -55,7 +55,7 @@ jobs:
 
       - name: Extract OME data from screenshots
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python market-dashboard/scripts/extract_ome.py
         continue-on-error: true
 

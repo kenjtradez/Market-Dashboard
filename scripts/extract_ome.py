@@ -1,12 +1,13 @@
 """
-Use Anthropic Claude API (vision) to extract OME options-wall data
-from screenshots of Gold, NAS100, GER40, and EUR/USD.
+Use Google Gemini API (vision, free tier) to extract OME options-wall
+data from screenshots of Gold, NAS100, GER40, and EUR/USD.
 """
 import os
 import json
-import base64
+import re
 from datetime import datetime
 from pathlib import Path
+from PIL import Image
 
 INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
@@ -27,24 +28,12 @@ Read ALL visible numbers from this screenshot and return them as a JSON object w
 
 Return ONLY valid JSON, no explanation."""
 
-def encode_image(image_path):
-    with open(image_path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
-
-def extract_from_screenshot(image_path, client):
-    b64 = encode_image(image_path)
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1000,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": PROMPT},
-                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
-            ],
-        }],
-    )
-    text = response.content[0].text
+def extract_from_screenshot(image_path, model):
+    img = Image.open(image_path)
+    response = model.generate_content([PROMPT, img])
+    text = response.text
+    text = re.sub(r'^```(?:json)?\s*', '', text.strip())
+    text = re.sub(r'\s*```$', '', text)
     json_start = text.find("{")
     json_end = text.rfind("}") + 1
     if json_start >= 0 and json_end > json_start:
@@ -52,13 +41,14 @@ def extract_from_screenshot(image_path, client):
     return {"error": "No JSON found in response", "raw": text}
 
 def run():
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        print("ERROR: ANTHROPIC_API_KEY not set — skipping OME extraction.")
+        print("ERROR: GEMINI_API_KEY not set — skipping OME extraction.")
         return False
 
-    from anthropic import Anthropic
-    client = Anthropic(api_key=api_key)
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-1.5-flash")
 
     results = {}
     screenshot_dir = Path(SCREENSHOT_DIR)
@@ -73,7 +63,7 @@ def run():
         image_path = candidates[0]
         print(f"  {instr}: extracting from {image_path.name}...")
         try:
-            data = extract_from_screenshot(str(image_path), client)
+            data = extract_from_screenshot(str(image_path), model)
             results[instr] = data
             print(f"    max_pain={data.get('max_pain')}, PCR={data.get('put_call_ratio')}")
         except Exception as e:
