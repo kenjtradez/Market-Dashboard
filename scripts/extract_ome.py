@@ -32,6 +32,7 @@ Read ALL visible numbers from this screenshot and return them as a JSON object w
 Return ONLY valid JSON, no explanation."""
 
 def extract_from_screenshot(image_path, api_key):
+    file_size = os.path.getsize(image_path)
     with open(image_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
 
@@ -77,18 +78,26 @@ def run():
         print("ERROR: GEMINI_API_KEY not set — skipping OME extraction.")
         return False
 
-    results = {}
     screenshot_dir = Path(SCREENSHOT_DIR)
+    print(f"  DEBUG: screenshots dir = {screenshot_dir.resolve()}")
+    print(f"  DEBUG: dir exists = {screenshot_dir.exists()}")
+    all_files = list(screenshot_dir.iterdir()) if screenshot_dir.exists() else []
+    print(f"  DEBUG: all files in dir: {[f.name for f in all_files]}")
+
+    results = {}
     for instr in INSTRUMENTS:
         candidates = list(screenshot_dir.glob(f"{instr}.*")) + list(screenshot_dir.glob(f"{instr.lower()}.*"))
         candidates += list(screenshot_dir.glob(f"*{instr}*"))
+        print(f"  DEBUG: {instr} candidates: {[c.name for c in candidates]}")
+
         if not candidates:
-            print(f"  {instr}: no screenshot found (looked for {instr}.*)")
+            print(f"  {instr}: no screenshot found")
             results[instr] = {"error": "no screenshot"}
             continue
 
         image_path = candidates[0]
-        print(f"  {instr}: extracting from {image_path.name}...")
+        file_size = os.path.getsize(image_path)
+        print(f"  {instr}: extracting from {image_path.name} ({file_size} bytes)...")
         try:
             data = extract_from_screenshot(str(image_path), api_key)
             results[instr] = data
