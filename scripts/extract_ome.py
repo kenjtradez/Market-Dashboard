@@ -1,6 +1,6 @@
 """
-Use Groq API (free tier, Llama vision) to extract OME options-wall
-data from screenshots of Gold, NAS100, GER40, and EUR/USD.
+Use Hugging Face Inference API (free tier) to extract OME options-wall
+data from screenshots of Gold, NAS100, and EUR/USD.
 """
 import os
 import json
@@ -10,27 +10,23 @@ import requests
 from datetime import datetime
 from pathlib import Path
 
-INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
+INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "llama-3.2-90b-vision-preview"
+# Uses Salesforce/blip2-flan-t5-xl for vision-language understanding
+HF_MODEL = "Salesforce/blip2-flan-t5-xl"
+HF_API = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
-PROMPT = """You are looking at an OME (Options Market Event) panel for a financial instrument.
-
-Read ALL visible numbers from this screenshot and return them as a JSON object with these exact keys:
-- instrument (string): the name of the instrument if visible
-- max_pain (number or null)
-- put_call_ratio (number or null)
-- call_wall (number or null)
-- put_wall (number or null)
-- magnet_strike (number or null)
-- skew_percent (number or null) — the call/put skew percentage if shown
-- total_oi (number or null) — total open interest if shown
-- notes (string): any other relevant numbers or observations you can read
-
-Return ONLY valid JSON, no explanation."""
+PROMPT = """Read all numbers from this financial options screenshot. Return JSON with:
+- max_pain: number or null
+- put_call_ratio: number or null
+- call_wall: number or null
+- put_wall: number or null
+- magnet_strike: number or null
+- skew_percent: number or null
+- total_oi: number or null
+Return ONLY valid JSON."""
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
@@ -39,57 +35,47 @@ def is_image_file(path):
 
 def extract_from_screenshot(image_path, api_key):
     with open(image_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode("utf-8")
-
-    ext = Path(image_path).suffix.lower()
-    mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}.get(ext.lstrip("."), "image/png")
-    data_url = f"data:{mime};base64,{b64}"
-
-    payload = {
-        "model": MODEL,
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": PROMPT},
-                {"type": "image_url", "image_url": {"url": data_url}}
-            ]
-        }],
-        "temperature": 0.1,
-        "max_tokens": 500,
-    }
+        img_bytes = f.read()
 
     resp = requests.post(
-        API_URL,
+        HF_API,
         headers={"Authorization": f"Bearer {api_key}"},
-        json=payload,
-        timeout=30,
+        data=img_bytes,
+        timeout=60,
     )
     if resp.status_code != 200:
         return {"error": f"HTTP {resp.status_code}: {resp.text[:500]}"}
 
-    data = resp.json()
-    text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    result = resp.json()
+    text = ""
+    if isinstance(result, list):
+        for item in result:
+            if isinstance(item, dict):
+                text += item.get("generated_text", "")
+    elif isinstance(result, dict):
+        text = result.get("generated_text", "")
 
     if not text:
-        return {"error": "empty response from model", "raw": data}
+        return {"error": "empty response from model", "raw": result}
 
-    text = re.sub(r'^```(?:json)?\s*', '', text.strip())
-    text = re.sub(r'\s*```$', '', text)
     json_start = text.find("{")
     json_end = text.rfind("}") + 1
     if json_start >= 0 and json_end > json_start:
-        return json.loads(text[json_start:json_end])
-    return {"error": "No JSON found in response", "raw": text}
+        try:
+            return json.loads(text[json_start:json_end])
+        except json.JSONDecodeError:
+            pass
+    return {"error": "No JSON found", "raw": text}
 
 def run():
-    api_key = os.environ.get("GROQ_API_KEY")
+    api_key = os.environ.get("HF_API_KEY")
     if not api_key:
-        print("ERROR: GROQ_API_KEY not set — skipping OME extraction.")
-        print("Get a free key at https://console.groq.com")
+        print("ERROR: HF_API_KEY not set — skipping OME extraction.")
+        print("Get a free key at https://huggingface.co/settings/tokens")
         return False
 
-    print(f"  Using model: {MODEL}")
     screenshot_dir = Path(SCREENSHOT_DIR)
+    print(f"  Model: {HF_MODEL}")
     print(f"  Screenshots dir: {screenshot_dir.resolve()}")
     print(f"  Dir exists: {screenshot_dir.exists()}")
 

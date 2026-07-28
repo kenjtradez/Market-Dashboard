@@ -9,7 +9,7 @@ from datetime import datetime
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
+INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 
 def score_positioning(ome):
     score = 0

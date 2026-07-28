@@ -7,7 +7,7 @@ from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..")
-INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
+INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 
 def load_json(path):
     if os.path.exists(path):
@@ -158,8 +158,8 @@ def run():
 
   <div class="card">
     <div class="label">Instruments Tracked</div>
-    <div class="value">4</div>
-    <div class="sub">Gold &bull; NAS100 &bull; GER40 &bull; EUR/USD</div>
+  <div class="value">3</div>
+  <div class="sub">Gold &bull; NAS100 &bull; EUR/USD</div>
   </div>
 
   <div class="card">
