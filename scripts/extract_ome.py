@@ -1,17 +1,20 @@
 """
-Use Google Gemini API (vision, free tier) to extract OME options-wall
+Use Google Gemini REST API (vision, free tier) to extract OME options-wall
 data from screenshots of Gold, NAS100, GER40, and EUR/USD.
 """
 import os
 import json
 import re
+import base64
+import requests
 from datetime import datetime
 from pathlib import Path
-from PIL import Image
 
 INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 PROMPT = """You are looking at an OME (Options Market Event) panel for a financial instrument.
 
@@ -28,10 +31,37 @@ Read ALL visible numbers from this screenshot and return them as a JSON object w
 
 Return ONLY valid JSON, no explanation."""
 
-def extract_from_screenshot(image_path, model):
-    img = Image.open(image_path)
-    response = model.generate_content([PROMPT, img])
-    text = response.text
+def extract_from_screenshot(image_path, api_key):
+    with open(image_path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+
+    mime = "image/png" if str(image_path).lower().endswith(".png") else "image/jpeg"
+
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": PROMPT},
+                {"inline_data": {"mime_type": mime, "data": b64}}
+            ]
+        }]
+    }
+
+    resp = requests.post(
+        f"{API_URL}?key={api_key}",
+        json=payload,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    text = ""
+    for candidate in data.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            text += part.get("text", "")
+
+    if not text:
+        return {"error": "empty response", "raw": data}
+
     text = re.sub(r'^```(?:json)?\s*', '', text.strip())
     text = re.sub(r'\s*```$', '', text)
     json_start = text.find("{")
@@ -46,10 +76,6 @@ def run():
         print("ERROR: GEMINI_API_KEY not set — skipping OME extraction.")
         return False
 
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
-
     results = {}
     screenshot_dir = Path(SCREENSHOT_DIR)
     for instr in INSTRUMENTS:
@@ -63,7 +89,7 @@ def run():
         image_path = candidates[0]
         print(f"  {instr}: extracting from {image_path.name}...")
         try:
-            data = extract_from_screenshot(str(image_path), model)
+            data = extract_from_screenshot(str(image_path), api_key)
             results[instr] = data
             print(f"    max_pain={data.get('max_pain')}, PCR={data.get('put_call_ratio')}")
         except Exception as e:
