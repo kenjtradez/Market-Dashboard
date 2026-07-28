@@ -26,7 +26,7 @@ def fetch_series(series_id, api_key):
         "file_type": "json",
         "sort_order": "desc",
         "limit": 2,
-        "observation_start": "20240101",
+        "observation_start": "2024-01-01",
     }
     r = requests.get(FRED_BASE, params=params, timeout=15)
     if r.status_code == 400:
