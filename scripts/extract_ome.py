@@ -14,7 +14,7 @@ INSTRUMENTS = ["Gold", "NAS100", "GER40", "EURUSD"]
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
 PROMPT = """You are looking at an OME (Options Market Event) panel for a financial instrument.
 
@@ -51,7 +51,8 @@ def extract_from_screenshot(image_path, api_key):
         json=payload,
         timeout=30,
     )
-    resp.raise_for_status()
+    if resp.status_code != 200:
+        raise Exception(f"HTTP {resp.status_code}: {resp.text[:500]}")
     data = resp.json()
 
     text = ""
