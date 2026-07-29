@@ -70,18 +70,38 @@ def score_positioning(ome):
 
     return score, details
 
-def score_macro(macro):
+def score_macro(macro, instr=None):
+    """Score macro environment. If instr is given, scores against its relevant volatility index."""
     score = 0
     details = {}
 
-    vix = macro.get("VIX", {}).get("value")
-    if vix is not None:
-        if vix < 15:
-            score += 1; details["vix"] = f"{vix} (low fear, +1)"
-        elif vix > 25:
-            score -= 1; details["vix"] = f"{vix} (high fear, -1)"
-        else:
-            details["vix"] = f"{vix} (neutral)"
+    vol_idx_map = {
+        "Gold":   {"series": "GVZ", "label": "GVZ"},
+        "NAS100": {"series": "VXN", "label": "VXN"},
+        "EURUSD": {"series": "EVZ", "label": "EVZ"},
+    }
+
+    # Instrument-specific volatility index
+    if instr and instr in vol_idx_map:
+        vs = vol_idx_map[instr]
+        vol = macro.get(vs["series"], {}).get("value")
+        if vol is not None:
+            if vol < 15:
+                score += 1; details[f"{vs['label']}"] = f"{vol} (low fear, +1)"
+            elif vol > 30:
+                score -= 1; details[f"{vs['label']}"] = f"{vol} (high fear, -1)"
+            else:
+                details[f"{vs['label']}"] = f"{vol} (neutral)"
+    else:
+        # Fallback: VIX for general / unknown instruments
+        vix = macro.get("VIX", {}).get("value")
+        if vix is not None:
+            if vix < 15:
+                score += 1; details["VIX"] = f"{vix} (low fear, +1)"
+            elif vix > 25:
+                score -= 1; details["VIX"] = f"{vix} (high fear, -1)"
+            else:
+                details["VIX"] = f"{vix} (neutral)"
 
     dxy = macro.get("Dollar Index", {}).get("value")
     if dxy is not None:
@@ -103,6 +123,26 @@ def score_macro(macro):
         else:
             details["curve"] = f"{spread:.2f}% (neutral)"
 
+    # SKEW (tail risk)
+    skew = macro.get("SKEW", {}).get("value")
+    if skew is not None:
+        if skew > 145:
+            score -= 1; details["skew"] = f"{skew} (tail risk high, -1)"
+        elif skew < 120:
+            score += 1; details["skew"] = f"{skew} (tail risk low, +1)"
+        else:
+            details["skew"] = f"{skew} (neutral)"
+
+    # Breakeven inflation
+    be5 = macro.get("5Y Breakeven", {}).get("value")
+    if be5 is not None:
+        if be5 > 3.0:
+            score -= 1; details["be5"] = f"{be5}% (high inflation, -1)"
+        elif be5 < 1.5:
+            score += 1; details["be5"] = f"{be5}% (low inflation, +1)"
+        else:
+            details["be5"] = f"{be5}% (neutral)"
+
     return score, details
 
 def run():
@@ -117,7 +157,7 @@ def run():
         print("WARNING: No FRED data found — skipping macro scores")
 
     macro_score, macro_details = score_macro(macro_data)
-    print(f"\nMacro score: {macro_score}")
+    print(f"\nGeneral macro score: {macro_score}")
     for k, v in macro_details.items():
         print(f"  {k}: {v}")
 
@@ -139,25 +179,33 @@ def run():
             continue
 
         pos_score, pos_details = score_positioning(ome)
-        total = pos_score + macro_score
+        instr_macro_score, instr_macro_details = score_macro(macro_data, instr)
+        total = pos_score + instr_macro_score
         per_instrument[instr] = {
             "ome_data": {k: v for k, v in ome.items() if k != "raw"},
             "positioning_score": pos_score,
             "positioning_details": pos_details,
-            "macro_score": macro_score,
-            "macro_details": macro_details,
+            "macro_score": instr_macro_score,
+            "macro_details": instr_macro_details,
             "total_score": total,
             "signal": "LONG" if total > 0 else ("SHORT" if total < 0 else "NEUTRAL"),
         }
-        print(f"\n{instr}: pos={pos_score} + macro={macro_score} = {total} ({per_instrument[instr]['signal']})")
+        print(f"\n{instr}: pos={pos_score} + macro={instr_macro_score} = {total} ({per_instrument[instr]['signal']})")
+        for k, v in instr_macro_details.items():
+            print(f"  macro.{k}: {v}")
 
     # Overall market score
     valid = {k: v for k, v in per_instrument.items() if v.get("total_score") is not None}
     avg = sum(v["total_score"] for v in valid.values()) / len(valid) if valid else 0
 
+    # Aggregate macro for dashboard display (general macro)
+    macro_details = per_instrument.get("Gold", {}).get("macro_details", {})
+    # Also merge in the macro_score as the average across instruments
+    macro_score_avg = sum(v["macro_score"] for v in valid.values()) / len(valid) if valid else 0
+
     output = {
         "generated": datetime.now().isoformat(),
-        "macro": {"score": macro_score, "details": macro_details, "raw": macro_data},
+        "macro": {"score": round(macro_score_avg, 1), "details": macro_details, "raw": macro_data},
         "instruments": per_instrument,
         "overall": {"avg_score": round(avg, 1), "signal": "LONG" if avg > 0 else ("SHORT" if avg < 0 else "NEUTRAL")},
     }

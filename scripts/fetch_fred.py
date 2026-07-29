@@ -1,7 +1,8 @@
 """
 Fetch macro-economic data from FRED API.
-Series: DGS10 (10Y yield), DGS2 (2Y yield), T5YIE (5Y breakeven),
-        VIXCLS (VIX), DTWEXBGS (dollar index), FEDFUNDS (rate)
+Core series: DGS10, DGS2, T5YIE, VIXCLS, DTWEXBGS, FEDFUNDS
+CBOE volatility: VXNCLS (Nasdaq), GVZCLS (Gold), EVZCLS (Euro), SKEW (tail risk)
+Inflation: T10YIE (10Y breakeven)
 """
 import os
 import json
@@ -10,12 +11,17 @@ from datetime import datetime
 
 FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 SERIES = {
-    "10Y Yield":     "DGS10",
-    "2Y Yield":      "DGS2",
-    "5Y Breakeven":  "T5YIE",
-    "VIX":           "VIXCLS",
-    "Dollar Index":  "DTWEXBGS",
-    "Fed Funds":     "FEDFUNDS",
+    "10Y Yield":       "DGS10",
+    "2Y Yield":        "DGS2",
+    "5Y Breakeven":    "T5YIE",
+    "10Y Breakeven":   "T10YIE",
+    "VIX":             "VIXCLS",
+    "VXN":             "VXNCLS",
+    "GVZ":             "GVZCLS",
+    "EVZ":             "EVZCLS",
+    "SKEW":            "SKEW",
+    "Dollar Index":    "DTWEXBGS",
+    "Fed Funds":       "FEDFUNDS",
 }
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 

@@ -396,10 +396,17 @@ def run():
     if vix: macro_line_parts.append(f"VIX: {vix}")
     if dxy: macro_line_parts.append(f"DXY: {dxy}")
     if y10 and y2: macro_line_parts.append(f"2-10: {float(y10)-float(y2):.2f}%")
+    # CBOE volatility indices
+    for label, key in [("VXN", "VXN"), ("GVZ", "GVZ"), ("EVZ", "EVZ"), ("SKEW", "SKEW")]:
+        v = fred.get(key, {}).get("value")
+        if v: macro_line_parts.append(f"{label}: {v}")
+    # Breakeven inflation
+    be = fred.get("10Y Breakeven", {}).get("value")
+    if be: macro_line_parts.append(f"BE10: {be}%")
     macro_line = " &bull; ".join(macro_line_parts)
 
     macro_items = ""
-    for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "VIX", "Dollar Index", "Fed Funds"]:
+    for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "10Y Breakeven", "VIX", "VXN", "GVZ", "EVZ", "SKEW", "Dollar Index", "Fed Funds"]:
         d_fred = fred.get(label, {})
         val = d_fred.get("value", DASH)
         dt = d_fred.get("date", "")
