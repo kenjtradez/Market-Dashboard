@@ -192,6 +192,7 @@ def run():
     cot_data = load_json(os.path.join(DATA_DIR, "cot_data.json")).get("instruments", {})
     sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
     oanda = load_json(os.path.join(DATA_DIR, "oanda_prices.json")).get("instruments", {})
+    geopolitical = load_json(os.path.join(DATA_DIR, "geopolitical.json"))
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -207,6 +208,33 @@ def run():
     overall_arrow = arrow_for(overall_score)
 
     macro_score = macro.get("score", 0)
+
+    # Geopolitical Risk card
+    geo_section = ""
+    if geopolitical.get("articles"):
+        arts = geopolitical["articles"][:8]
+        ir = geopolitical.get("instrument_risk", {})
+        gs = geopolitical.get("global_risk_score", 0)
+        geo_color = "var(--red)" if gs >= 5 else ("var(--amber)" if gs >= 3 else "var(--green)")
+        geo_rows = ""
+        for a in arts:
+            tags = "".join(f'<span class="geo-art-tag">{t}</span>' for t in a.get("tags", []))
+            geo_rows += f'<div class="geo-art"><a class="geo-art-title" href="{a["url"]}" target="_blank" rel="noopener">{a["title"]}</a> <span class="geo-art-domain">{a.get("domain","")}</span>{tags}</div>'
+        instr_rows = ""
+        for instr in INSTRUMENTS:
+            v = ir.get(instr, {})
+            lvl = v.get("risk_level", "LOW")
+            lvl_color = {"HIGH": "var(--red)", "MODERATE": "var(--amber)", "LOW": "var(--green)"}.get(lvl, "var(--muted)")
+            instr_rows += f'<div class="geo-instr"><span class="geo-instr-name">{instr}</span><span class="geo-instr-level" style="background:{lvl_color}15;color:{lvl_color};border:1px solid {lvl_color}40">{lvl}</span></div>'
+        geo_section = f"""
+        <div class="geo-card">
+          <div class="geo-header">
+            <span class="geo-label">Geopolitical Risk</span>
+            <span class="geo-score" style="color:{geo_color}">{gs}/10</span>
+          </div>
+          <div class="geo-body">{instr_rows}</div>
+          <div class="geo-articles">{geo_rows}</div>
+        </div>"""
 
     # Gold Forecast card
     gf = load_gold_forecast()
@@ -237,7 +265,8 @@ def run():
             </div>
           </div>
           <div class="gold-fc-footer">
-            <a href="gold-forecast.html" class="gold-fc-link" target="_blank">Open interactive forecast &rarr;</a>
+            <a href="gold-forecast.html" class="gold-fc-link" target="_blank">Vol forecast &rarr;</a>
+            <a href="gold-options-oi.html" class="gold-fc-link" target="_blank">Options OI &rarr;</a>
             <span class="gold-fc-date">{gf.get("generated","")}</span>
           </div>
         </div>"""
@@ -612,6 +641,22 @@ def run():
   .gold-fc-link {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--accent); text-decoration: none; }}
   .gold-fc-link:hover {{ text-decoration: underline; }}
   .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
+  .geo-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
+  .geo-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
+  .geo-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }}
+  .geo-score {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; font-weight: 600; }}
+  .geo-body {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.5rem; }}
+  .geo-instr {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.6rem; display: flex; justify-content: space-between; align-items: center; }}
+  .geo-instr-name {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--text); }}
+  .geo-instr-level {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600; }}
+  .geo-articles {{ max-height: 220px; overflow-y: auto; }}
+  .geo-art {{ padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.68rem; line-height: 1.4; }}
+  .geo-art:last-child {{ border-bottom: none; }}
+  .geo-art-title {{ color: var(--text); text-decoration: none; }}
+  .geo-art-title:hover {{ color: var(--accent); }}
+  .geo-art-domain {{ color: var(--muted); font-size: 0.55rem; }}
+  .geo-art-tags {{ display: inline-flex; gap: 0.2rem; flex-wrap: wrap; margin-left: 0.3rem; }}
+  .geo-art-tag {{ background: rgba(74,143,255,0.12); color: var(--accent); font-size: 0.5rem; padding: 0.05rem 0.3rem; border-radius: 2px; text-transform: uppercase; }}
   .macro-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }}
   .macro-card .mc-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }}
   .macro-card .mc-line {{ font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }}
@@ -625,6 +670,7 @@ def run():
     .signal-detail-grid {{ grid-template-columns: repeat(2, 1fr); }}
     .corr-grid {{ grid-template-columns: 1fr; }}
     .gold-fc-body {{ grid-template-columns: repeat(2, 1fr); }}
+    .geo-body {{ grid-template-columns: 1fr; }}
     .macro-card .mc-grid {{ grid-template-columns: 1fr 1fr; }}
     .container {{ padding: 0.75rem; }}
   }}
@@ -659,6 +705,8 @@ def run():
   {vol_section}
 
   {events_section}
+
+  {geo_section}
 
   <div class="macro-card">
     <div class="mc-label">Macro Snapshot</div>

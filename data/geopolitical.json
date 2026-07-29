@@ -1,0 +1,23 @@
+{
+  "fetched": "2026-07-29T13:35:46.344785",
+  "total_articles": 0,
+  "articles": [],
+  "instrument_risk": {
+    "Gold": {
+      "article_count": 0,
+      "avg_relevance": 0,
+      "risk_level": "LOW"
+    },
+    "NAS100": {
+      "article_count": 0,
+      "avg_relevance": 0,
+      "risk_level": "LOW"
+    },
+    "EURUSD": {
+      "article_count": 0,
+      "avg_relevance": 0,
+      "risk_level": "LOW"
+    }
+  },
+  "global_risk_score": 0.0
+}

@@ -125,6 +125,22 @@
   .gold-fc-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--accent); text-decoration: none; }
   .gold-fc-link:hover { text-decoration: underline; }
   .gold-fc-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }
+  .geo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
+  .geo-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+  .geo-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
+  .geo-score { font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; font-weight: 600; }
+  .geo-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.5rem; }
+  .geo-instr { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.6rem; display: flex; justify-content: space-between; align-items: center; }
+  .geo-instr-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--text); }
+  .geo-instr-level { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600; }
+  .geo-articles { max-height: 220px; overflow-y: auto; }
+  .geo-art { padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.68rem; line-height: 1.4; }
+  .geo-art:last-child { border-bottom: none; }
+  .geo-art-title { color: var(--text); text-decoration: none; }
+  .geo-art-title:hover { color: var(--accent); }
+  .geo-art-domain { color: var(--muted); font-size: 0.55rem; }
+  .geo-art-tags { display: inline-flex; gap: 0.2rem; flex-wrap: wrap; margin-left: 0.3rem; }
+  .geo-art-tag { background: rgba(74,143,255,0.12); color: var(--accent); font-size: 0.5rem; padding: 0.05rem 0.3rem; border-radius: 2px; text-transform: uppercase; }
   .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }
   .macro-card .mc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
   .macro-card .mc-line { font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }
@@ -138,6 +154,7 @@
     .signal-detail-grid { grid-template-columns: repeat(2, 1fr); }
     .corr-grid { grid-template-columns: 1fr; }
     .gold-fc-body { grid-template-columns: repeat(2, 1fr); }
+    .geo-body { grid-template-columns: 1fr; }
     .macro-card .mc-grid { grid-template-columns: 1fr 1fr; }
     .container { padding: 0.75rem; }
   }
@@ -579,6 +596,8 @@
           </table>
           <div class="events-note">Upcoming events &bull; High impact highlighted</div>
         </div>
+
+  
 
   <div class="macro-card">
     <div class="mc-label">Macro Snapshot</div>

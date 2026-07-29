@@ -90,6 +90,10 @@ jobs:
         run: python scripts/fetch_oanda.py
         continue-on-error: true
 
+      - name: Fetch geopolitical risk news
+        run: python scripts/fetch_geopolitical.py
+        continue-on-error: true
+
       - name: Build dashboard
         run: python scripts/build_dashboard.py
 
