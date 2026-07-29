@@ -162,6 +162,21 @@ def generate_trade_idea(instr, d, ome_raw):
             return f"Neutral: fade pushes toward {fmt(cw)} (sell) and treat {fmt(pw)} as a floor (buy). Low conviction \u2014 small size only."
         return f"Neutral bias \u2014 no strong directional edge. Wait for a clear break of the range."
 
+def load_gold_forecast_detail():
+    path = os.path.join(OUTPUT_DIR, "gold-forecast.html")
+    if not os.path.exists(path):
+        return None
+    import re
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+    m = re.search(r'const DATA\s*=\s*({.*?});', content, re.DOTALL)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(1))
+    except json.JSONDecodeError:
+        return None
+
 def load_gold_forecast():
     path = os.path.join(OUTPUT_DIR, "gold-forecast.html")
     if not os.path.exists(path):
@@ -208,6 +223,62 @@ def run():
     overall_arrow = arrow_for(overall_score)
 
     macro_score = macro.get("score", 0)
+
+    # Gold Options OI inline section
+    gold_ome = ome.get("Gold", {})
+    gold_strikes = gold_ome.get("strikes", [])
+    gold_call_oi = gold_ome.get("call_oi", [])
+    gold_put_oi = gold_ome.get("put_oi", [])
+    oi_section = ""
+    if gold_strikes:
+        oi_section = f"""
+        <div class="analysis-section" id="gold-oi">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">Gold Options OI</h2>
+              <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">GLD</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">Expiry {gold_ome.get("expiry","")} &middot; {len(gold_strikes)} strikes</span>
+            </div>
+          </div>
+          <div class="analysis-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiBarChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiNetChart"></canvas></div></div>
+            </div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="oiPainChart"></canvas></div></div>
+            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiPcrChart"></canvas></div></div>
+          </div>
+        </div>"""
+
+    # Gold Forecast detail inline section
+    gold_detail_section = ""
+    gf_detail = load_gold_forecast_detail()
+    if gf_detail:
+        gold_detail_section = f"""
+        <div class="analysis-section" id="gold-fc-detail">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">Gold Vol Forecast Detail</h2>
+              <div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">HAR-IV</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">Interactive gauge &amp; levels</span>
+            </div>
+          </div>
+          <div class="analysis-body">
+            <div id="gfCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px"></div>
+            <div id="gfRangeStrip" style="font-size:12px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;line-height:1.8"></div>
+            <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;margin-bottom:12px">
+              <div id="gfGauge" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px"></div>
+              <div id="gfLevels" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;overflow-x:auto"></div>
+            </div>
+            <div class="an-footer">Forecast for trading day after {gf_detail.get("data_through","")} &middot; model HAR-IV &middot; generated {gf_detail.get("generated","")}</div>
+          </div>
+        </div>"""
 
     # Geopolitical Risk card
     geo_section = ""
@@ -265,8 +336,7 @@ def run():
             </div>
           </div>
           <div class="gold-fc-footer">
-            <a href="gold-forecast.html" class="gold-fc-link" target="_blank">Vol forecast &rarr;</a>
-            <a href="gold-options-oi.html" class="gold-fc-link" target="_blank">Options OI &rarr;</a>
+            <span class="gold-fc-note">Inline sections below &darr;</span>
             <span class="gold-fc-date">{gf.get("generated","")}</span>
           </div>
         </div>"""
@@ -520,6 +590,7 @@ def run():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Market Analysis \u2014 OME + Macro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -600,6 +671,11 @@ def run():
   .corr-val {{ font-weight: 600; }}
   .corr-driven {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); line-height: 1.4; }}
   .corr-footer {{ font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; grid-column: 1 / -1; padding-top: 0.3rem; border-top: 1px solid var(--border); }}
+  .chart-wrap-oi {{ position: relative; width: 100%; height: 240px; }}
+  .chart-wrap-gf {{ position: relative; width: 100%; height: 320px; }}
+  #gfCards .gf-card {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.6rem; text-align: center; }}
+  #gfCards .gf-card-k {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.48rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }}
+  #gfCards .gf-card-v {{ font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--gold); margin-top: 0.15rem; }}
 
   /* Macro bottom */
   .vol-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
@@ -641,6 +717,7 @@ def run():
   .gold-fc-link {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--accent); text-decoration: none; }}
   .gold-fc-link:hover {{ text-decoration: underline; }}
   .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
+  .gold-fc-note {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
   .geo-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
   .geo-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
   .geo-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }}
@@ -702,6 +779,10 @@ def run():
 
   {gold_forecast_section}
 
+  {oi_section}
+
+  {gold_detail_section}
+
   {vol_section}
 
   {events_section}
@@ -718,10 +799,145 @@ def run():
 
 </div>
 
+<script id="inlineData" type="application/json">{json.dumps(gold_ome) if gold_strikes else "{}"}</script>
+<script id="gfData" type="application/json">{json.dumps(gf_detail) if gf_detail else "{}"}</script>
 <script>
+(() => {{
+  const OI = (() => {{
+    try {{ return JSON.parse(document.getElementById('inlineData').textContent); }} catch(e) {{ return {{}}; }}
+  }})();
+  const GF = (() => {{
+    try {{ return JSON.parse(document.getElementById('gfData').textContent); }} catch(e) {{ return null; }}
+  }})();
+  const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
+  const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
+
+  // OI Charts
+  if (OI.strikes && OI.strikes.length) {{
+    const s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
+    const common = {{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{{legend:{{labels:{{color:'var(--muted)',font:{{size:10}},boxWidth:12}}}}}},
+      scales:{{
+        x:{{ticks:{{color:'var(--muted)',font:{{size:9}}}},grid:{{color:'var(--line)'}}}},
+        y:{{ticks:{{color:'var(--muted)',font:{{size:9}}}},grid:{{color:'var(--line)'}}}}
+      }}
+    }};
+    new Chart(document.getElementById('oiBarChart'), {{...{{
+      type:'bar', data:{{labels:s,datasets:[
+        {{label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1}},
+        {{label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}}
+      ]}}, options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{{size:11}}}}}}}}
+    }}}});
+    const net = s.map((_,i)=> (po[i]||0)-(co[i]||0));
+    new Chart(document.getElementById('oiNetChart'), {{...{{
+      type:'bar', data:{{labels:s,datasets:[{{label:'Net OI (Put-Call)',data:net,
+        backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+        borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
+      }}]}}, options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{{size:11}}}}}}}}
+    }}}});
+    // Max Pain
+    const pain = []; let mpStrike=null, mpVal=Infinity;
+    for(const k of s){{ let t=0; for(const st of s){{ const ci=co[s.indexOf(st)]||0, pi=po[s.indexOf(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; }} if(t<mpVal){{ mpVal=t; mpStrike=k; }} pain.push({{x:k,y:t}}); }}
+    new Chart(document.getElementById('oiPainChart'), {{...{{
+      type:'line', data:{{datasets:[{{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
+        backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}}]}},
+      options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Max Pain Profile — seller payout at expiry (min at $'+mpStrike+')',color:'var(--muted)',font:{{size:11}}}}}},
+        scales:{{...common.scales,x:{{...common.scales.x,type:'linear',title:{{display:true,text:'Strike',color:'var(--muted)',font:{{size:10}}}}}},
+          y:{{...common.scales.y,title:{{display:true,text:'Total payout',color:'var(--muted)',font:{{size:10}}}}}}}}
+    }}}});
+    // PCR by strike
+    const pcr = s.map((_,i)=> {{ const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; }});
+    new Chart(document.getElementById('oiPcrChart'), {{...{{
+      type:'bar', data:{{labels:s,datasets:[{{label:'Put/Call OI',data:pcr,
+        backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+        borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
+      }}]}}, options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{{size:11}}}}}}}}
+    }}}});
+  }}
+
+  // Gold Forecast detail
+  if (GF && GF.base) {{
+    const A = GF.base;
+    const cards = [
+      {{k:'Forecast daily vol', v:A.forecast_daily_pct.toFixed(3)+'%'}},
+      {{k:'Annualised', v:A.forecast_annual_pct.toFixed(1)+'%'}},
+      {{k:'HL range (median)', v:A.hl.median.toFixed(2)+'%'}},
+      {{k:'OC move (median)', v:A.oc.median.toFixed(2)+'%'}},
+    ];
+    document.getElementById('gfCards').innerHTML = cards.map(c => '<div class="gf-card"><span class="gf-card-k">'+c.k+'</span><span class="gf-card-v">'+c.v+'</span></div>').join('');
+
+    const ref = GF.day_open || GF.anchor_price || 0;
+    const hl = A.hl;
+    const items=[['normal (median)','var(--green)',hl.median],['busy (75th)','var(--amber)',hl.p75],['big (90th)','var(--red)',hl.p90]];
+    document.getElementById('gfRangeStrip').innerHTML =
+      '<span style="color:var(--muted)">Typical full-day range (high-to-low width):</span> ' +
+      items.map(([lab,c,v]) => '<span style="display:inline-block;margin-right:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+c+';margin-right:6px;vertical-align:middle"></span><b>'+v.toFixed(2)+'%</b> $'+fmt(ref*v/100)+' <span style="color:var(--muted)">'+lab+'</span></span>').join('');
+
+    // Gauge SVG
+    const up=A.oh, dn=A.ol, oc=A.oc;
+    const levels=[
+      {{lab:'High big (90th)',col:'var(--red)',v:ref*(1+up.p90/100), p:up.p90}},
+      {{lab:'High busy (75th)',col:'var(--amber)',v:ref*(1+up.p75/100), p:up.p75}},
+      {{lab:'High normal (med)',col:'var(--green)',v:ref*(1+up.median/100), p:up.median}},
+      {{lab:'Open',col:'var(--text)',v:ref, p:0}},
+      {{lab:'Low normal (med)',col:'var(--green)',v:ref*(1-dn.median/100), p:-dn.median}},
+      {{lab:'Low busy (75th)',col:'var(--amber)',v:ref*(1-dn.p75/100), p:-dn.p75}},
+      {{lab:'Low big (90th)',col:'var(--red)',v:ref*(1-dn.p90/100), p:-dn.p90}},
+    ];
+    const closeLv = [
+      {{lab:'Close up 90th',v:ref*(1+Math.min(oc.p90,up.p90)/100)}},
+      {{lab:'Close up 75th',v:ref*(1+Math.min(oc.p75,up.p75)/100)}},
+      {{lab:'Close up med',v:ref*(1+Math.min(oc.median,up.median)/100)}},
+      {{lab:'Close down med',v:ref*(1-Math.min(oc.median,dn.median)/100)}},
+      {{lab:'Close down 75th',v:ref*(1-Math.min(oc.p75,dn.p75)/100)}},
+      {{lab:'Close down 90th',v:ref*(1-Math.min(oc.p90,dn.p90)/100)}},
+    ];
+    const allPrices = levels.map(l=>l.v).concat(closeLv.map(l=>l.v));
+    let pmin = Math.min(...allPrices), pmax = Math.max(...allPrices);
+    const pad = (pmax-pmin)*0.08||1; pmin-=pad; pmax+=pad;
+    const H=380, W=210, top=12, bot=H-12, ax0=90, ax1=114;
+    const y = p => top + (pmax-p)/(pmax-pmin)*(bot-top);
+    let svg = '<svg width="'+W+'" height="'+H+'">';
+    const zU=[[ref,ref*(1+A.oh.median/100),'rgba(46,160,67,.15)'],
+      [ref*(1+A.oh.median/100),ref*(1+A.oh.p75/100),'rgba(210,153,34,.15)'],
+      [ref*(1+A.oh.p75/100),ref*(1+A.oh.p90/100),'rgba(218,54,51,.16)']];
+    const zD=[[ref*(1-A.ol.median/100),ref,'rgba(46,160,67,.15)'],
+      [ref*(1-A.ol.p75/100),ref*(1-A.ol.median/100),'rgba(210,153,34,.15)'],
+      [ref*(1-A.ol.p90/100),ref*(1-A.ol.p75/100),'rgba(218,54,51,.16)']];
+    for(const [a,b,col] of zU.concat(zD)){{ const ya=y(Math.max(a,b)), yb=y(Math.min(a,b));
+      svg += '<rect x="'+ax0+'" y="'+ya+'" width="'+(ax1-ax0)+'" height="'+(yb-ya)+'" fill="'+col+'"/>'; }}
+    for(const l of levels){{ const yy=y(l.v);
+      svg += '<line x1="'+ax0+'" y1="'+yy+'" x2="'+(ax1+13)+'" y2="'+yy+'" stroke="'+l.col+'" stroke-width="2" stroke-dasharray="'+(l.p===0?'4,3':'0')+'"/>';
+      svg += '<text x="'+(ax1+17)+'" y="'+(yy+3.5)+'" fill="'+l.col+'" font-size="10">'+fmt(l.v)+'</text>'; }}
+    for(const l of closeLv){{ const yy=y(l.v);
+      svg += '<line x1="'+(ax0-13)+'" y1="'+yy+'" x2="'+ax0+'" y2="'+yy+'" stroke="var(--blue)" stroke-width="1.6" stroke-dasharray="3,2"/>';
+      svg += '<text x="'+(ax0-17)+'" y="'+(yy+3.5)+'" fill="var(--blue)" font-size="9.5" text-anchor="end">'+fmt(l.v)+'</text>'; }}
+    svg += '</svg>';
+    document.getElementById('gfGauge').innerHTML = svg;
+
+    // Levels table
+    let rows = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    const grps = [['Intraday high / low',levels],['Open to close',closeLv]];
+    for(const [title,arr] of grps){{
+      rows += '<tr><th class="lab" colspan="3" style="padding-top:10px;color:var(--gold2);border-bottom:none;text-align:left;font-size:11px;text-transform:uppercase">'+title+'</th></tr>';
+      rows += '<tr><th style="text-align:left;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">Level</th><th style="text-align:right;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">Price</th><th style="text-align:right;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">%</th></tr>';
+      for(const l of arr){{
+        const dp = (l.v/ref-1)*100;
+        rows += '<tr><td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;color:var(--text)"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:'+(l.col||'var(--blue)')+';margin-right:5px;vertical-align:middle"></span>'+l.lab+'</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:var(--text)">'+fmt(l.v)+'</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:'+(dp>=0?'var(--green)':'var(--red)')+'">'+pct(dp)+'</td></tr>';
+      }}
+    }}
+    rows += '</table>';
+    document.getElementById('gfLevels').innerHTML = rows;
+  }}
+
+  // Collapse toggle
   document.querySelectorAll('.analysis-header').forEach(h => {{
     h.addEventListener('click', () => h.parentElement.classList.toggle('collapsed'));
   }});
+}})();
 </script>
 </body>
 </html>"""

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Market Analysis — OME + Macro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,6 +85,11 @@
   .corr-val { font-weight: 600; }
   .corr-driven { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); line-height: 1.4; }
   .corr-footer { font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; grid-column: 1 / -1; padding-top: 0.3rem; border-top: 1px solid var(--border); }
+  .chart-wrap-oi { position: relative; width: 100%; height: 240px; }
+  .chart-wrap-gf { position: relative; width: 100%; height: 320px; }
+  #gfCards .gf-card { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.6rem; text-align: center; }
+  #gfCards .gf-card-k { font-family: 'IBM Plex Mono', monospace; font-size: 0.48rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }
+  #gfCards .gf-card-v { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--gold); margin-top: 0.15rem; }
 
   /* Macro bottom */
   .vol-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
@@ -125,6 +131,7 @@
   .gold-fc-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--accent); text-decoration: none; }
   .gold-fc-link:hover { text-decoration: underline; }
   .gold-fc-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }
+  .gold-fc-note { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }
   .geo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
   .geo-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
   .geo-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
@@ -225,7 +232,7 @@
                   <div class="an-label">Positioning Analysis</div>
                   <p>Gold at 369.37 is pinned between two key options reference points — the call wall at 324 and put wall at 288. The PCR of 2.15 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 286 is 22.6% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 324 towers above the put wall at 288 — resistance overhead is the dominant structural level.</p><p>The magnet at 288 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0.0/3 to the score. COT: specs 48.0% net, commercials -55.6% net (score -2). Net score: -5 (SHORT).Net score: -5 (SHORT).</p>
                 </div>
-                <p class="an-footer">Generated 29/07/2026, 11:24. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated 29/07/2026, 11:24. AI opinion, not a backtested signal. | Oanda: 369.37</p>
               </div>
             </div>
 
@@ -307,7 +314,7 @@
                   <div class="an-label">Positioning Analysis</div>
                   <p>NAS100 at 675.49 is pinned between two key options reference points — the call wall at 549 and put wall at 269. The PCR of 0.75 is balanced.</p><p>Max pain at 444 is 34.3% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 549 towers above the put wall at 269 — resistance overhead is the dominant structural level.</p><p>The magnet at 269 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0.0/3 to the score. COT: specs 36.1% net, commercials -61.2% net (score -2). Net score: -3 (SHORT).Net score: -3 (SHORT).</p>
                 </div>
-                <p class="an-footer">Generated 29/07/2026, 11:24. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated 29/07/2026, 11:24. AI opinion, not a backtested signal. | Oanda: 675.49</p>
               </div>
             </div>
 
@@ -389,7 +396,7 @@
                   <div class="an-label">Positioning Analysis</div>
                   <p>EURUSD at 105.11 is pinned between two key options reference points — the call wall at 115 and put wall at 98. The PCR of 0.13 shows call dominance, traders positioning for upside.</p><p>Max pain at 120 is 14.2% above the current price. Price is below max pain and may drift higher toward it. The call wall at 115 towers above the put wall at 98 — resistance overhead is the dominant structural level.</p><p>The magnet at 115 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0.0/3 to the score. COT: specs -26.0% net, commercials 23.1% net (score +2). Net score: 6 (LONG).Net score: 6 (LONG).</p>
                 </div>
-                <p class="an-footer">Generated 29/07/2026, 11:24. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated 29/07/2026, 11:24. AI opinion, not a backtested signal. | Oanda: 105.11</p>
               </div>
             </div>
 
@@ -455,9 +462,53 @@
             </div>
           </div>
           <div class="gold-fc-footer">
-            <a href="gold-forecast.html" class="gold-fc-link" target="_blank">Vol forecast &rarr;</a>
-            <a href="gold-options-oi.html" class="gold-fc-link" target="_blank">Options OI &rarr;</a>
+            <span class="gold-fc-note">Inline sections below &darr;</span>
             <span class="gold-fc-date">2026-07-29 10:16:22</span>
+          </div>
+        </div>
+
+  
+        <div class="analysis-section" id="gold-oi">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">Gold Options OI</h2>
+              <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">GLD</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">Expiry 2026-09-18 &middot; 229 strikes</span>
+            </div>
+          </div>
+          <div class="analysis-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiBarChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiNetChart"></canvas></div></div>
+            </div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="oiPainChart"></canvas></div></div>
+            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiPcrChart"></canvas></div></div>
+          </div>
+        </div>
+
+  
+        <div class="analysis-section" id="gold-fc-detail">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">Gold Vol Forecast Detail</h2>
+              <div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">HAR-IV</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">Interactive gauge &amp; levels</span>
+            </div>
+          </div>
+          <div class="analysis-body">
+            <div id="gfCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px"></div>
+            <div id="gfRangeStrip" style="font-size:12px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;line-height:1.8"></div>
+            <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;margin-bottom:12px">
+              <div id="gfGauge" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px"></div>
+              <div id="gfLevels" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;overflow-x:auto"></div>
+            </div>
+            <div class="an-footer">Forecast for trading day after 2026-07-28 &middot; model HAR-IV &middot; generated 2026-07-29 10:16:22</div>
           </div>
         </div>
 
@@ -598,6 +649,14 @@
         </div>
 
   
+        <div class="geo-card">
+          <div class="geo-header">
+            <span class="geo-label">Geopolitical Risk</span>
+            <span class="geo-score" style="color:var(--amber)">3.4/10</span>
+          </div>
+          <div class="geo-body"><div class="geo-instr"><span class="geo-instr-name">Gold</span><span class="geo-instr-level" style="background:var(--green)15;color:var(--green);border:1px solid var(--green)40">LOW</span></div><div class="geo-instr"><span class="geo-instr-name">NAS100</span><span class="geo-instr-level" style="background:var(--amber)15;color:var(--amber);border:1px solid var(--amber)40">MODERATE</span></div><div class="geo-instr"><span class="geo-instr-name">EURUSD</span><span class="geo-instr-level" style="background:var(--amber)15;color:var(--amber);border:1px solid var(--amber)40">MODERATE</span></div></div>
+          <div class="geo-articles"><div class="geo-art"><a class="geo-art-title" href="https://www.cnbc.com/2026/07/28/trump-zelenskyy-ukraine-russia-iran-war.html" target="_blank" rel="noopener">Blurred front lines: Trump meets Zelenskyy as Ukraine, Iran wars collide</a> <span class="geo-art-domain">cnbc</span><span class="geo-art-tag">war</span><span class="geo-art-tag">invasion</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.bbc.co.uk/news/articles/c4gx399l0wyo?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Thousands sheltering in key Sudan city under threat again as fighting escalates</a> <span class="geo-art-domain">bbc</span><span class="geo-art-tag">war</span><span class="geo-art-tag">attack</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.cnbc.com/2026/07/29/ukraine-russia-wildberries-putin-trump.html" target="_blank" rel="noopener">Ukraine has found a new pressure point in Russia’s wartime economy</a> <span class="geo-art-domain">cnbc</span><span class="geo-art-tag">war</span><span class="geo-art-tag">attack</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.cnbc.com/2026/07/28/russia-sanctions-congress-key-vote-lindsey-graham-ukraine.html" target="_blank" rel="noopener">Senate sets up votes to sanction Russia for Ukraine war</a> <span class="geo-art-domain">cnbc</span><span class="geo-art-tag">war</span><span class="geo-art-tag">sanction</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.reddit.com/r/worldnews/comments/1v9qvyi/the_european_union_is_preparing_its_biggest/" target="_blank" rel="noopener">The European Union is preparing its biggest sanctions package against companies accused of supporting Russia’s war in Ukraine, targeting more than 1,600 firms with a total annual turnover of over $20 billion.</a> <span class="geo-art-domain">reddit-worldnews</span><span class="geo-art-tag">war</span><span class="geo-art-tag">sanction</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.reddit.com/r/worldnews/comments/1v9vq70/zelenskyy_asks_trump_for_emergency_delivery_of/" target="_blank" rel="noopener">Zelenskyy asks Trump for emergency delivery of Patriot air defence missiles</a> <span class="geo-art-domain">reddit-worldnews</span><span class="geo-art-tag">emergency</span><span class="geo-art-tag">riot</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.bbc.co.uk/news/articles/cj4k2z8z45ro?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">Zelensky and Netanyahu meet Trump as wars in Ukraine and Iran drag on</a> <span class="geo-art-domain">bbc</span><span class="geo-art-tag">war</span></div><div class="geo-art"><a class="geo-art-title" href="https://www.bbc.co.uk/news/videos/cd0xlnz2yk1o?at_medium=RSS&at_campaign=rss" target="_blank" rel="noopener">What to expect from Zelensky and Netanyahu's visit to Washington</a> <span class="geo-art-domain">bbc</span><span class="geo-art-tag">war</span></div></div>
+        </div>
 
   <div class="macro-card">
     <div class="mc-label">Macro Snapshot</div>
@@ -609,10 +668,145 @@
 
 </div>
 
+<script id="inlineData" type="application/json">{"expiry": "2026-09-18", "total_oi_used": 1064550, "underlying_price": 369.37, "put_call_ratio": 0.2543, "max_pain": 590, "call_wall": 550, "put_wall": 350, "magnet_strike": 550, "skew_percent": -28.36, "n_calls_used": 229, "strikes": [200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 415, 420, 425, 430, 435, 440, 445, 450, 455, 460, 465, 470, 475, 480, 485, 490, 495, 500, 505, 510, 515, 520, 525, 530, 535, 540, 545, 550, 555, 560, 565, 570, 575, 580, 590, 595, 600, 605, 610, 615, 620, 625, 630, 635, 640, 645, 650, 655, 660, 665, 670, 675, 680, 685, 690, 695, 700, 705, 710, 715, 720, 725, 730, 735, 740, 745, 750, 755, 760, 770, 780, 790, 800, 810, 820, 830, 840, 850, 860, 870, 880, 890, 900], "call_oi": [70, 0, 103, 2, 1, 16, 2, 0, 11, 3, 1158, 13, 196, 0, 27, 302, 395, 2, 2, 77, 0, 10, 160, 6, 281, 447, 110, 0, 0, 29, 104, 123, 32, 2, 0, 98, 682, 16, 32, 0, 59, 147, 99, 314, 338, 0, 503, 2208, 672, 43, 8, 198, 248, 0, 75, 599, 104, 74, 295, 159, 250, 69, 99, 176, 265, 414, 148, 72, 38, 72, 275, 244, 25, 152, 43, 1196, 85, 73, 0, 311, 750, 300, 126, 146, 88, 2319, 28, 88, 40, 45, 1606, 173, 17, 633, 148, 1119, 30, 26, 247, 56, 689, 24, 282, 66, 49, 1770, 71, 287, 489, 165, 8710, 252, 61, 39, 169, 6470, 133, 111, 59, 104, 6203, 212, 18, 94, 192, 6011, 88, 27662, 36, 9, 2716, 24, 30, 24, 45, 7896, 38, 41, 5, 1213, 4043, 42, 84, 21, 680, 12663, 13621, 17089, 6101, 6379, 6306, 5057, 5564, 16430, 1392, 18167, 43993, 41856, 10571, 3677, 1915, 3873, 1386, 44002, 2590, 4405, 2989, 4934, 2009, 3492, 583, 384, 794, 110678, 93242, 2404, 375, 1020, 1360, 815, 74202, 74236, 9376, 2647, 405, 407, 422, 507, 479, 6705, 6877, 542, 3637, 46, 1198, 127, 188, 89, 237, 140, 45, 74, 717, 17, 136, 19, 31917, 14, 31743, 28, 26, 29, 491, 179, 224, 55, 43, 96, 235, 101, 122, 305, 465, 450, 126, 10, 100, 1308, 4977], "put_oi": [355, 182, 13, 87, 17, 28, 11, 100, 1244, 85, 8095, 576, 1010, 395, 341, 303, 730, 64, 5, 6, 54, 1575, 33, 47, 177, 518, 10008, 77, 46, 163, 396, 1553, 9, 19, 320, 979, 2929, 62, 11, 44, 126, 1427, 208, 28, 132, 614, 1005, 51, 0, 486, 179, 558, 232, 229, 185, 5965, 754, 20, 1036, 208, 1156, 261, 394, 834, 224, 2779, 100, 254, 287, 95, 1417, 857, 28, 307, 382, 20783, 153, 219, 188, 259, 3052, 284, 81, 265, 286, 40407, 268, 326, 291, 673, 1395, 416, 322, 572, 402, 4661, 20, 13, 143, 23, 4134, 172, 133, 92, 110, 17678, 163, 80, 87, 483, 9879, 158, 75, 138, 135, 3483, 454, 66, 32, 145, 2103, 28, 62, 9, 60, 5046, 0, 3, 5, 7, 1181, 5, 7, 0, 6, 9166, 0, 0, 1, 15, 1099, 0, 1, 7, 2, 10778, 4642, 7754, 325, 2702, 614, 406, 31, 13, 0, 0, 2, 3, 300, 3, 0, 0, 0, 6, 0, 150, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 40, 0, 56, 0, 0, 492, 0, 0, 0, 23, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "proxy_for": "GLD", "proxy_note": "ETF proxy for Gold"}</script>
+<script id="gfData" type="application/json">{"symbol": "XAU/USD (Gold)", "model": "HAR-IV (HAR + implied vol)", "generated": "2026-07-29 10:16:22", "data_through": "2026-07-28", "iv_asof": "2026-07-27", "iv_used": 24.13, "rngfrac": 0.021337, "intraday_grid": [{"elapsed": 0.1, "used_bucket": 1, "n": 235, "used_lo": 0.073, "used_hi": 0.171, "used_mid": 0.144, "up_p50": 0.354, "up_p75": 0.5849, "up_p90": 1.0724, "dn_p50": 0.247, "dn_p75": 0.5277, "dn_p90": 0.8199, "full_mean": 0.928}, {"elapsed": 0.1, "used_bucket": 2, "n": 234, "used_lo": 0.171, "used_hi": 0.216, "used_mid": 0.194, "up_p50": 0.2953, "up_p75": 0.551, "up_p90": 0.9159, "dn_p50": 0.2646, "dn_p75": 0.5104, "dn_p90": 0.9576, "full_mean": 0.953}, {"elapsed": 0.1, "used_bucket": 3, "n": 234, "used_lo": 0.216, "used_hi": 0.266, "used_mid": 0.238, "up_p50": 0.2358, "up_p75": 0.532, "up_p90": 0.8743, "dn_p50": 0.2363, "dn_p75": 0.5331, "dn_p90": 0.8495, "full_mean": 0.932}, {"elapsed": 0.1, "used_bucket": 4, "n": 234, "used_lo": 0.266, "used_hi": 0.382, "used_mid": 0.314, "up_p50": 0.2671, "up_p75": 0.5225, "up_p90": 0.7979, "dn_p50": 0.1626, "dn_p75": 0.5567, "dn_p90": 0.8853, "full_mean": 0.999}, {"elapsed": 0.1, "used_bucket": 5, "n": 234, "used_lo": 0.382, "used_hi": 1.999, "used_mid": 0.491, "up_p50": 0.233, "up_p75": 0.5522, "up_p90": 0.8712, "dn_p50": 0.1732, "dn_p75": 0.6052, "dn_p90": 1.0504, "full_mean": 1.334}, {"elapsed": 0.2, "used_bucket": 1, "n": 235, "used_lo": 0.092, "used_hi": 0.221, "used_mid": 0.186, "up_p50": 0.3021, "up_p75": 0.5618, "up_p90": 0.9296, "dn_p50": 0.2464, "dn_p75": 0.4913, "dn_p90": 0.7423, "full_mean": 0.885}, {"elapsed": 0.2, "used_bucket": 2, "n": 234, "used_lo": 0.221, "used_hi": 0.275, "used_mid": 0.246, "up_p50": 0.2486, "up_p75": 0.5283, "up_p90": 0.9498, "dn_p50": 0.2302, "dn_p75": 0.5195, "dn_p90": 0.8046, "full_mean": 0.945}, {"elapsed": 0.2, "used_bucket": 3, "n": 235, "used_lo": 0.276, "used_hi": 0.357, "used_mid": 0.314, "up_p50": 0.2442, "up_p75": 0.4582, "up_p90": 0.7996, "dn_p50": 0.1679, "dn_p75": 0.4875, "dn_p90": 0.8124, "full_mean": 0.943}, {"elapsed": 0.2, "used_bucket": 4, "n": 234, "used_lo": 0.357, "used_hi": 0.463, "used_mid": 0.4, "up_p50": 0.1692, "up_p75": 0.4849, "up_p90": 0.7514, "dn_p50": 0.1381, "dn_p75": 0.5253, "dn_p90": 0.7425, "full_mean": 1.002}, {"elapsed": 0.2, "used_bucket": 5, "n": 235, "used_lo": 0.464, "used_hi": 2.397, "used_mid": 0.596, "up_p50": 0.1629, "up_p75": 0.5006, "up_p90": 0.8282, "dn_p50": 0.0334, "dn_p75": 0.5479, "dn_p90": 1.0844, "full_mean": 1.368}, {"elapsed": 0.3, "used_bucket": 1, "n": 235, "used_lo": 0.124, "used_hi": 0.273, "used_mid": 0.228, "up_p50": 0.2721, "up_p75": 0.5675, "up_p90": 0.9085, "dn_p50": 0.1962, "dn_p75": 0.4586, "dn_p90": 0.7433, "full_mean": 0.91}, {"elapsed": 0.3, "used_bucket": 2, "n": 234, "used_lo": 0.273, "used_hi": 0.345, "used_mid": 0.307, "up_p50": 0.23, "up_p75": 0.4378, "up_p90": 0.7981, "dn_p50": 0.154, "dn_p75": 0.4086, "dn_p90": 0.6558, "full_mean": 0.885}, {"elapsed": 0.3, "used_bucket": 3, "n": 235, "used_lo": 0.345, "used_hi": 0.432, "used_mid": 0.387, "up_p50": 0.1822, "up_p75": 0.4012, "up_p90": 0.716, "dn_p50": 0.1593, "dn_p75": 0.4375, "dn_p90": 0.6865, "full_mean": 0.913}, {"elapsed": 0.3, "used_bucket": 4, "n": 234, "used_lo": 0.432, "used_hi": 0.576, "used_mid": 0.476, "up_p50": 0.1478, "up_p75": 0.4412, "up_p90": 0.7365, "dn_p50": 0.0607, "dn_p75": 0.4209, "dn_p90": 0.7215, "full_mean": 1.015}, {"elapsed": 0.3, "used_bucket": 5, "n": 235, "used_lo": 0.578, "used_hi": 3.215, "used_mid": 0.72, "up_p50": 0.0473, "up_p75": 0.4159, "up_p90": 0.7586, "dn_p50": 0.0209, "dn_p75": 0.4732, "dn_p90": 1.0936, "full_mean": 1.42}, {"elapsed": 0.4, "used_bucket": 1, "n": 235, "used_lo": 0.147, "used_hi": 0.345, "used_mid": 0.292, "up_p50": 0.2359, "up_p75": 0.465, "up_p90": 0.7554, "dn_p50": 0.1437, "dn_p75": 0.3506, "dn_p90": 0.6669, "full_mean": 0.856}, {"elapsed": 0.4, "used_bucket": 2, "n": 234, "used_lo": 0.346, "used_hi": 0.426, "used_mid": 0.389, "up_p50": 0.1423, "up_p75": 0.3667, "up_p90": 0.7896, "dn_p50": 0.0988, "dn_p75": 0.3471, "dn_p90": 0.6427, "full_mean": 0.879}, {"elapsed": 0.4, "used_bucket": 3, "n": 235, "used_lo": 0.427, "used_hi": 0.522, "used_mid": 0.468, "up_p50": 0.0978, "up_p75": 0.3533, "up_p90": 0.6837, "dn_p50": 0.0957, "dn_p75": 0.3657, "dn_p90": 0.5908, "full_mean": 0.93}, {"elapsed": 0.4, "used_bucket": 4, "n": 234, "used_lo": 0.522, "used_hi": 0.681, "used_mid": 0.597, "up_p50": 0.0569, "up_p75": 0.3454, "up_p90": 0.6485, "dn_p50": 0.0317, "dn_p75": 0.3241, "dn_p90": 0.6255, "full_mean": 1.022}, {"elapsed": 0.4, "used_bucket": 5, "n": 235, "used_lo": 0.681, "used_hi": 3.215, "used_mid": 0.839, "up_p50": 0.0, "up_p75": 0.3445, "up_p90": 0.7238, "dn_p50": 0.0, "dn_p75": 0.3646, "dn_p90": 0.9823, "full_mean": 1.455}, {"elapsed": 0.5, "used_bucket": 1, "n": 235, "used_lo": 0.147, "used_hi": 0.391, "used_mid": 0.332, "up_p50": 0.1916, "up_p75": 0.3834, "up_p90": 0.693, "dn_p50": 0.0893, "dn_p75": 0.319, "dn_p90": 0.6097, "full_mean": 0.829}, {"elapsed": 0.5, "used_bucket": 2, "n": 234, "used_lo": 0.393, "used_hi": 0.478, "used_mid": 0.433, "up_p50": 0.0725, "up_p75": 0.3963, "up_p90": 0.7596, "dn_p50": 0.1015, "dn_p75": 0.2871, "dn_p90": 0.5724, "full_mean": 0.888}, {"elapsed": 0.5, "used_bucket": 3, "n": 235, "used_lo": 0.478, "used_hi": 0.592, "used_mid": 0.526, "up_p50": 0.0504, "up_p75": 0.2647, "up_p90": 0.5578, "dn_p50": 0.0473, "dn_p75": 0.3075, "dn_p90": 0.5942, "full_mean": 0.902}, {"elapsed": 0.5, "used_bucket": 4, "n": 234, "used_lo": 0.592, "used_hi": 0.765, "used_mid": 0.665, "up_p50": 0.052, "up_p75": 0.3239, "up_p90": 0.6054, "dn_p50": 0.0, "dn_p75": 0.2169, "dn_p90": 0.5109, "full_mean": 1.035}, {"elapsed": 0.5, "used_bucket": 5, "n": 235, "used_lo": 0.765, "used_hi": 3.603, "used_mid": 0.933, "up_p50": 0.0, "up_p75": 0.2736, "up_p90": 0.6836, "dn_p50": 0.0, "dn_p75": 0.2891, "dn_p90": 0.7732, "full_mean": 1.488}, {"elapsed": 0.6, "used_bucket": 1, "n": 235, "used_lo": 0.164, "used_hi": 0.468, "used_mid": 0.406, "up_p50": 0.0564, "up_p75": 0.2894, "up_p90": 0.5258, "dn_p50": 0.0, "dn_p75": 0.1772, "dn_p90": 0.4581, "full_mean": 0.752}, {"elapsed": 0.6, "used_bucket": 2, "n": 234, "used_lo": 0.468, "used_hi": 0.592, "used_mid": 0.526, "up_p50": 0.0051, "up_p75": 0.1665, "up_p90": 0.4696, "dn_p50": 0.0327, "dn_p75": 0.2258, "dn_p90": 0.4636, "full_mean": 0.817}, {"elapsed": 0.6, "used_bucket": 3, "n": 235, "used_lo": 0.592, "used_hi": 0.73, "used_mid": 0.656, "up_p50": 0.0197, "up_p75": 0.2357, "up_p90": 0.5134, "dn_p50": 0.0, "dn_p75": 0.1146, "dn_p90": 0.3201, "full_mean": 0.905}, {"elapsed": 0.6, "used_bucket": 4, "n": 234, "used_lo": 0.731, "used_hi": 0.926, "used_mid": 0.821, "up_p50": 0.0, "up_p75": 0.1296, "up_p90": 0.4564, "dn_p50": 0.0, "dn_p75": 0.2192, "dn_p90": 0.4455, "full_mean": 1.089}, {"elapsed": 0.6, "used_bucket": 5, "n": 235, "used_lo": 0.927, "used_hi": 3.603, "used_mid": 1.109, "up_p50": 0.0, "up_p75": 0.1991, "up_p90": 0.5644, "dn_p50": 0.0, "dn_p75": 0.0999, "dn_p90": 0.5649, "full_mean": 1.579}, {"elapsed": 0.7, "used_bucket": 1, "n": 235, "used_lo": 0.204, "used_hi": 0.587, "used_mid": 0.492, "up_p50": 0.0, "up_p75": 0.0664, "up_p90": 0.2598, "dn_p50": 0.0, "dn_p75": 0.0262, "dn_p90": 0.2199, "full_mean": 0.622}, {"elapsed": 0.7, "used_bucket": 2, "n": 234, "used_lo": 0.587, "used_hi": 0.724, "used_mid": 0.655, "up_p50": 0.0, "up_p75": 0.0192, "up_p90": 0.2653, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.124, "full_mean": 0.77}, {"elapsed": 0.7, "used_bucket": 3, "n": 235, "used_lo": 0.726, "used_hi": 0.903, "used_mid": 0.814, "up_p50": 0.0, "up_p75": 0.0129, "up_p90": 0.1995, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.1501, "full_mean": 0.919}, {"elapsed": 0.7, "used_bucket": 4, "n": 234, "used_lo": 0.904, "used_hi": 1.154, "used_mid": 1.0, "up_p50": 0.0, "up_p75": 0.0585, "up_p90": 0.2645, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.1736, "full_mean": 1.138}, {"elapsed": 0.7, "used_bucket": 5, "n": 234, "used_lo": 1.154, "used_hi": 4.447, "used_mid": 1.355, "up_p50": 0.0, "up_p75": 0.0237, "up_p90": 0.2539, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.307, "full_mean": 1.694}, {"elapsed": 0.8, "used_bucket": 1, "n": 235, "used_lo": 0.234, "used_hi": 0.617, "used_mid": 0.521, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0954, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0748, "full_mean": 0.577}, {"elapsed": 0.8, "used_bucket": 2, "n": 234, "used_lo": 0.618, "used_hi": 0.777, "used_mid": 0.699, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0536, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0651, "full_mean": 0.749}, {"elapsed": 0.8, "used_bucket": 3, "n": 235, "used_lo": 0.779, "used_hi": 0.961, "used_mid": 0.865, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0788, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0481, "full_mean": 0.916}, {"elapsed": 0.8, "used_bucket": 4, "n": 234, "used_lo": 0.963, "used_hi": 1.22, "used_mid": 1.074, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.1014, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0716, "full_mean": 1.152}, {"elapsed": 0.8, "used_bucket": 5, "n": 235, "used_lo": 1.22, "used_hi": 4.447, "used_mid": 1.461, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.2026, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0887, "full_mean": 1.749}, {"elapsed": 0.9, "used_bucket": 1, "n": 235, "used_lo": 0.234, "used_hi": 0.639, "used_mid": 0.548, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 0.545}, {"elapsed": 0.9, "used_bucket": 2, "n": 234, "used_lo": 0.639, "used_hi": 0.812, "used_mid": 0.726, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 0.737}, {"elapsed": 0.9, "used_bucket": 3, "n": 235, "used_lo": 0.814, "used_hi": 1.01, "used_mid": 0.901, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0114, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 0.919}, {"elapsed": 0.9, "used_bucket": 4, "n": 234, "used_lo": 1.01, "used_hi": 1.267, "used_mid": 1.123, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.032, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 1.15}, {"elapsed": 0.9, "used_bucket": 5, "n": 234, "used_lo": 1.27, "used_hi": 5.455, "used_mid": 1.546, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.1053, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 1.791}], "anchor_price": 4024.95, "news_info": {"has_event": true, "tier": "major", "forecast_date": "2026-07-29", "events": ["Federal Funds Rate", "FOMC Statement", "FOMC Press Conference"], "base_daily_pct": 1.1508, "news_daily_pct": 1.3547, "base_annual_pct": 18.27, "news_annual_pct": 21.5, "calendar_through": "2025-04-04", "source": "ForexFactory live feed", "feed_ok": true, "feed_coverage": ["2026-07-26", "2026-07-31"], "feed_reachable": true}, "base": {"forecast_daily_pct": 1.1508, "forecast_annual_pct": 18.27, "oc": {"median": 0.7458, "p75": 1.2923, "p90": 1.8427}, "hl": {"median": 1.7338, "p75": 2.1061, "p90": 2.5208}, "oh": {"median": 0.8133, "p75": 1.3514, "p90": 1.9505}, "ol": {"median": 0.7574, "p75": 1.2905, "p90": 1.8442}, "oh_curve": [0.00952, 0.02117, 0.03677, 0.04894, 0.05931, 0.07461, 0.08857, 0.10766, 0.12169, 0.13241, 0.14315, 0.15993, 0.17341, 0.18673, 0.20509, 0.2229, 0.23951, 0.25257, 0.26617, 0.28349, 0.30197, 0.32093, 0.33851, 0.3549, 0.3668, 0.38462, 0.39993, 0.41326, 0.43323, 0.45076, 0.46876, 0.48518, 0.5013, 0.52546, 0.5479, 0.56867, 0.58632, 0.607, 0.62466, 0.64689, 0.66428, 0.67948, 0.69535, 0.71027, 0.72498, 0.74154, 0.75801, 0.77746, 0.79831, 0.81329, 0.82988, 0.8471, 0.864, 0.883, 0.90448, 0.92219, 0.94544, 0.9625, 0.98658, 1.00671, 1.02785, 1.04632, 1.06246, 1.08522, 1.10847, 1.1332, 1.15219, 1.17622, 1.19751, 1.22632, 1.25645, 1.28429, 1.30178, 1.33063, 1.35142, 1.38579, 1.41776, 1.44836, 1.47818, 1.50837, 1.54596, 1.58937, 1.62928, 1.6643, 1.70292, 1.74766, 1.79198, 1.84269, 1.89668, 1.95052, 2.03324, 2.08127, 2.14576, 2.22846, 2.32276, 2.38656, 2.47638, 2.58334, 2.89293], "ol_curve": [0.01162, 0.02629, 0.04353, 0.05892, 0.07211, 0.08307, 0.0947, 0.10873, 0.12132, 0.13486, 0.14795, 0.15839, 0.17363, 0.18794, 0.20089, 0.21461, 0.22839, 0.23859, 0.24818, 0.26474, 0.27794, 0.29594, 0.3098, 0.32256, 0.33809, 0.35361, 0.3654, 0.38374, 0.39964, 0.41716, 0.43185, 0.44928, 0.46776, 0.47668, 0.49546, 0.51332, 0.52756, 0.54502, 0.56327, 0.57424, 0.59032, 0.60598, 0.62354, 0.63903, 0.65307, 0.67511, 0.69914, 0.71866, 0.73673, 0.75736, 0.77098, 0.79176, 0.807, 0.82346, 0.84402, 0.86464, 0.88593, 0.90712, 0.92466, 0.93828, 0.96295, 0.9831, 1.00433, 1.0243, 1.04781, 1.06382, 1.08989, 1.11397, 1.13421, 1.15299, 1.1848, 1.20751, 1.22975, 1.25962, 1.29049, 1.32036, 1.34796, 1.37434, 1.40458, 1.43636, 1.47012, 1.49546, 1.53303, 1.57211, 1.62564, 1.67599, 1.72937, 1.76614, 1.80523, 1.84424, 1.89072, 1.94473, 2.01647, 2.07709, 2.15355, 2.26438, 2.35522, 2.52294, 2.81098], "oc_curve": [0.01582, 0.02919, 0.03882, 0.05572, 0.07382, 0.08622, 0.10205, 0.11475, 0.12527, 0.1397, 0.15663, 0.16833, 0.18347, 0.19492, 0.21598, 0.2262, 0.24457, 0.25958, 0.2796, 0.29426, 0.30527, 0.31827, 0.33362, 0.34724, 0.36125, 0.37654, 0.39037, 0.40944, 0.42299, 0.43267, 0.44578, 0.46278, 0.48596, 0.49966, 0.51734, 0.53473, 0.55218, 0.56481, 0.57744, 0.58856, 0.60579, 0.62045, 0.63252, 0.64738, 0.66642, 0.67754, 0.68997, 0.71291, 0.72636, 0.74575, 0.75985, 0.77717, 0.79792, 0.81892, 0.83744, 0.8549, 0.87716, 0.89773, 0.91381, 0.93716, 0.9611, 0.98295, 1.00212, 1.0306, 1.0516, 1.06987, 1.09528, 1.11297, 1.14425, 1.17096, 1.19025, 1.21822, 1.2418, 1.2634, 1.29235, 1.31297, 1.3401, 1.37563, 1.41042, 1.44733, 1.47866, 1.51851, 1.55061, 1.58494, 1.64279, 1.68272, 1.72367, 1.76094, 1.80478, 1.84273, 1.91143, 1.98559, 2.03023, 2.08964, 2.17236, 2.23517, 2.35755, 2.52956, 2.74083]}, "news": {"forecast_daily_pct": 1.3547, "forecast_annual_pct": 21.5, "oc": {"median": 0.8778, "p75": 1.5212, "p90": 2.1691}, "hl": {"median": 2.0409, "p75": 2.4791, "p90": 2.9673}, "oh": {"median": 0.9573, "p75": 1.5908, "p90": 2.296}, "ol": {"median": 0.8915, "p75": 1.5191, "p90": 2.1709}, "oh_curve": [0.0112, 0.02492, 0.04329, 0.05761, 0.06981, 0.08782, 0.10425, 0.12673, 0.14324, 0.15586, 0.1685, 0.18826, 0.20413, 0.2198, 0.24141, 0.26238, 0.28193, 0.29731, 0.31331, 0.3337, 0.35545, 0.37777, 0.39846, 0.41775, 0.43177, 0.45274, 0.47077, 0.48645, 0.50996, 0.5306, 0.55178, 0.57111, 0.59009, 0.61853, 0.64494, 0.66939, 0.69017, 0.71451, 0.73529, 0.76146, 0.78193, 0.79983, 0.8185, 0.83607, 0.85339, 0.87288, 0.89226, 0.91515, 0.9397, 0.95734, 0.97686, 0.99713, 1.01703, 1.03939, 1.06467, 1.08552, 1.11289, 1.13297, 1.16131, 1.18501, 1.2099, 1.23163, 1.25064, 1.27743, 1.3048, 1.3339, 1.35625, 1.38455, 1.4096, 1.44352, 1.47899, 1.51176, 1.53235, 1.5663, 1.59077, 1.63123, 1.66886, 1.70488, 1.73998, 1.77552, 1.81978, 1.87086, 1.91784, 1.95907, 2.00453, 2.05719, 2.10937, 2.16905, 2.23261, 2.29599, 2.39335, 2.44989, 2.5258, 2.62315, 2.73415, 2.80925, 2.91498, 3.04089, 3.40531], "ol_curve": [0.01368, 0.03095, 0.05124, 0.06936, 0.08489, 0.09778, 0.11148, 0.12798, 0.14281, 0.15875, 0.17415, 0.18645, 0.20439, 0.22123, 0.23647, 0.25262, 0.26884, 0.28084, 0.29214, 0.31163, 0.32717, 0.34835, 0.36466, 0.37969, 0.39797, 0.41624, 0.43012, 0.4517, 0.47042, 0.49105, 0.50834, 0.52886, 0.55061, 0.5611, 0.58322, 0.60423, 0.621, 0.64155, 0.66303, 0.67595, 0.69487, 0.71331, 0.73397, 0.75221, 0.76874, 0.79468, 0.82297, 0.84594, 0.86721, 0.8915, 0.90753, 0.93199, 0.94993, 0.96931, 0.99351, 1.01778, 1.04284, 1.06778, 1.08843, 1.10446, 1.1335, 1.15722, 1.18221, 1.20572, 1.2334, 1.25224, 1.28292, 1.31126, 1.33509, 1.3572, 1.39464, 1.42138, 1.44755, 1.48271, 1.51906, 1.55421, 1.5867, 1.61775, 1.65334, 1.69076, 1.7305, 1.76033, 1.80455, 1.85055, 1.91356, 1.97283, 2.03567, 2.07895, 2.12496, 2.17088, 2.22559, 2.28917, 2.37362, 2.44497, 2.53497, 2.66544, 2.77236, 2.96979, 3.30884], "oc_curve": [0.01862, 0.03436, 0.04569, 0.06559, 0.08689, 0.10149, 0.12013, 0.13508, 0.14746, 0.16445, 0.18437, 0.19814, 0.21597, 0.22944, 0.25424, 0.26626, 0.28788, 0.30555, 0.32912, 0.34638, 0.35934, 0.37464, 0.39271, 0.40875, 0.42523, 0.44323, 0.45951, 0.48195, 0.49791, 0.5093, 0.52473, 0.54475, 0.57203, 0.58816, 0.60897, 0.62944, 0.64997, 0.66484, 0.67972, 0.6928, 0.71308, 0.73034, 0.74455, 0.76204, 0.78446, 0.79754, 0.81217, 0.83918, 0.85501, 0.87784, 0.89443, 0.91482, 0.93924, 0.96397, 0.98576, 1.00631, 1.03251, 1.05673, 1.07566, 1.10314, 1.13132, 1.15704, 1.17961, 1.21313, 1.23785, 1.25936, 1.28926, 1.31009, 1.34691, 1.37836, 1.40105, 1.43398, 1.46175, 1.48717, 1.52124, 1.54552, 1.57745, 1.61928, 1.66022, 1.70367, 1.74055, 1.78746, 1.82525, 1.86566, 1.93375, 1.98076, 2.02895, 2.07283, 2.12443, 2.16911, 2.24997, 2.33726, 2.38982, 2.45975, 2.55712, 2.63105, 2.7751, 2.97758, 3.22627]}, "day_open": 4024.99, "atm_iv": 22.6, "atm_iv_date": "2026-07-23"}</script>
 <script>
+(() => {
+  const OI = (() => {
+    try { return JSON.parse(document.getElementById('inlineData').textContent); } catch(e) { return {}; }
+  })();
+  const GF = (() => {
+    try { return JSON.parse(document.getElementById('gfData').textContent); } catch(e) { return null; }
+  })();
+  const fmt = x => x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
+
+  // OI Charts
+  if (OI.strikes && OI.strikes.length) {
+    const s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
+    const common = {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'var(--muted)',font:{size:10},boxWidth:12}}},
+      scales:{
+        x:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}},
+        y:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}}
+      }
+    };
+    new Chart(document.getElementById('oiBarChart'), {...{
+      type:'bar', data:{labels:s,datasets:[
+        {label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1},
+        {label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}
+      ]}, options:{...common,plugins:{...common.plugins,title:{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{size:11}}}}
+    }});
+    const net = s.map((_,i)=> (po[i]||0)-(co[i]||0));
+    new Chart(document.getElementById('oiNetChart'), {...{
+      type:'bar', data:{labels:s,datasets:[{label:'Net OI (Put-Call)',data:net,
+        backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+        borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
+      }]}, options:{...common,plugins:{...common.plugins,title:{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{size:11}}}}
+    }});
+    // Max Pain
+    const pain = []; let mpStrike=null, mpVal=Infinity;
+    for(const k of s){ let t=0; for(const st of s){ const ci=co[s.indexOf(st)]||0, pi=po[s.indexOf(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; } if(t<mpVal){ mpVal=t; mpStrike=k; } pain.push({x:k,y:t}); }
+    new Chart(document.getElementById('oiPainChart'), {...{
+      type:'line', data:{datasets:[{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
+        backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}]},
+      options:{...common,plugins:{...common.plugins,title:{display:true,text:'Max Pain Profile — seller payout at expiry (min at $'+mpStrike+')',color:'var(--muted)',font:{size:11}}},
+        scales:{...common.scales,x:{...common.scales.x,type:'linear',title:{display:true,text:'Strike',color:'var(--muted)',font:{size:10}}},
+          y:{...common.scales.y,title:{display:true,text:'Total payout',color:'var(--muted)',font:{size:10}}}}
+    }});
+    // PCR by strike
+    const pcr = s.map((_,i)=> { const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; });
+    new Chart(document.getElementById('oiPcrChart'), {...{
+      type:'bar', data:{labels:s,datasets:[{label:'Put/Call OI',data:pcr,
+        backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+        borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
+      }]}, options:{...common,plugins:{...common.plugins,title:{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{size:11}}}}
+    }});
+  }
+
+  // Gold Forecast detail
+  if (GF && GF.base) {
+    const A = GF.base;
+    const cards = [
+      {k:'Forecast daily vol', v:A.forecast_daily_pct.toFixed(3)+'%'},
+      {k:'Annualised', v:A.forecast_annual_pct.toFixed(1)+'%'},
+      {k:'HL range (median)', v:A.hl.median.toFixed(2)+'%'},
+      {k:'OC move (median)', v:A.oc.median.toFixed(2)+'%'},
+    ];
+    document.getElementById('gfCards').innerHTML = cards.map(c => '<div class="gf-card"><span class="gf-card-k">'+c.k+'</span><span class="gf-card-v">'+c.v+'</span></div>').join('');
+
+    const ref = GF.day_open || GF.anchor_price || 0;
+    const hl = A.hl;
+    const items=[['normal (median)','var(--green)',hl.median],['busy (75th)','var(--amber)',hl.p75],['big (90th)','var(--red)',hl.p90]];
+    document.getElementById('gfRangeStrip').innerHTML =
+      '<span style="color:var(--muted)">Typical full-day range (high-to-low width):</span> ' +
+      items.map(([lab,c,v]) => '<span style="display:inline-block;margin-right:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+c+';margin-right:6px;vertical-align:middle"></span><b>'+v.toFixed(2)+'%</b> $'+fmt(ref*v/100)+' <span style="color:var(--muted)">'+lab+'</span></span>').join('');
+
+    // Gauge SVG
+    const up=A.oh, dn=A.ol, oc=A.oc;
+    const levels=[
+      {lab:'High big (90th)',col:'var(--red)',v:ref*(1+up.p90/100), p:up.p90},
+      {lab:'High busy (75th)',col:'var(--amber)',v:ref*(1+up.p75/100), p:up.p75},
+      {lab:'High normal (med)',col:'var(--green)',v:ref*(1+up.median/100), p:up.median},
+      {lab:'Open',col:'var(--text)',v:ref, p:0},
+      {lab:'Low normal (med)',col:'var(--green)',v:ref*(1-dn.median/100), p:-dn.median},
+      {lab:'Low busy (75th)',col:'var(--amber)',v:ref*(1-dn.p75/100), p:-dn.p75},
+      {lab:'Low big (90th)',col:'var(--red)',v:ref*(1-dn.p90/100), p:-dn.p90},
+    ];
+    const closeLv = [
+      {lab:'Close up 90th',v:ref*(1+Math.min(oc.p90,up.p90)/100)},
+      {lab:'Close up 75th',v:ref*(1+Math.min(oc.p75,up.p75)/100)},
+      {lab:'Close up med',v:ref*(1+Math.min(oc.median,up.median)/100)},
+      {lab:'Close down med',v:ref*(1-Math.min(oc.median,dn.median)/100)},
+      {lab:'Close down 75th',v:ref*(1-Math.min(oc.p75,dn.p75)/100)},
+      {lab:'Close down 90th',v:ref*(1-Math.min(oc.p90,dn.p90)/100)},
+    ];
+    const allPrices = levels.map(l=>l.v).concat(closeLv.map(l=>l.v));
+    let pmin = Math.min(...allPrices), pmax = Math.max(...allPrices);
+    const pad = (pmax-pmin)*0.08||1; pmin-=pad; pmax+=pad;
+    const H=380, W=210, top=12, bot=H-12, ax0=90, ax1=114;
+    const y = p => top + (pmax-p)/(pmax-pmin)*(bot-top);
+    let svg = '<svg width="'+W+'" height="'+H+'">';
+    const zU=[[ref,ref*(1+A.oh.median/100),'rgba(46,160,67,.15)'],
+      [ref*(1+A.oh.median/100),ref*(1+A.oh.p75/100),'rgba(210,153,34,.15)'],
+      [ref*(1+A.oh.p75/100),ref*(1+A.oh.p90/100),'rgba(218,54,51,.16)']];
+    const zD=[[ref*(1-A.ol.median/100),ref,'rgba(46,160,67,.15)'],
+      [ref*(1-A.ol.p75/100),ref*(1-A.ol.median/100),'rgba(210,153,34,.15)'],
+      [ref*(1-A.ol.p90/100),ref*(1-A.ol.p75/100),'rgba(218,54,51,.16)']];
+    for(const [a,b,col] of zU.concat(zD)){ const ya=y(Math.max(a,b)), yb=y(Math.min(a,b));
+      svg += '<rect x="'+ax0+'" y="'+ya+'" width="'+(ax1-ax0)+'" height="'+(yb-ya)+'" fill="'+col+'"/>'; }
+    for(const l of levels){ const yy=y(l.v);
+      svg += '<line x1="'+ax0+'" y1="'+yy+'" x2="'+(ax1+13)+'" y2="'+yy+'" stroke="'+l.col+'" stroke-width="2" stroke-dasharray="'+(l.p===0?'4,3':'0')+'"/>';
+      svg += '<text x="'+(ax1+17)+'" y="'+(yy+3.5)+'" fill="'+l.col+'" font-size="10">'+fmt(l.v)+'</text>'; }
+    for(const l of closeLv){ const yy=y(l.v);
+      svg += '<line x1="'+(ax0-13)+'" y1="'+yy+'" x2="'+ax0+'" y2="'+yy+'" stroke="var(--blue)" stroke-width="1.6" stroke-dasharray="3,2"/>';
+      svg += '<text x="'+(ax0-17)+'" y="'+(yy+3.5)+'" fill="var(--blue)" font-size="9.5" text-anchor="end">'+fmt(l.v)+'</text>'; }
+    svg += '</svg>';
+    document.getElementById('gfGauge').innerHTML = svg;
+
+    // Levels table
+    let rows = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    const grps = [['Intraday high / low',levels],['Open to close',closeLv]];
+    for(const [title,arr] of grps){
+      rows += '<tr><th class="lab" colspan="3" style="padding-top:10px;color:var(--gold2);border-bottom:none;text-align:left;font-size:11px;text-transform:uppercase">'+title+'</th></tr>';
+      rows += '<tr><th style="text-align:left;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">Level</th><th style="text-align:right;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">Price</th><th style="text-align:right;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">%</th></tr>';
+      for(const l of arr){
+        const dp = (l.v/ref-1)*100;
+        rows += '<tr><td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;color:var(--text)"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:'+(l.col||'var(--blue)')+';margin-right:5px;vertical-align:middle"></span>'+l.lab+'</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:var(--text)">'+fmt(l.v)+'</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:'+(dp>=0?'var(--green)':'var(--red)')+'">'+pct(dp)+'</td></tr>';
+      }
+    }
+    rows += '</table>';
+    document.getElementById('gfLevels').innerHTML = rows;
+  }
+
+  // Collapse toggle
   document.querySelectorAll('.analysis-header').forEach(h => {
     h.addEventListener('click', () => h.parentElement.classList.toggle('collapsed'));
   });
+})();
 </script>
 </body>
 </html>
