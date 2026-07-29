@@ -162,6 +162,29 @@ def generate_trade_idea(instr, d, ome_raw):
             return f"Neutral: fade pushes toward {fmt(cw)} (sell) and treat {fmt(pw)} as a floor (buy). Low conviction \u2014 small size only."
         return f"Neutral bias \u2014 no strong directional edge. Wait for a clear break of the range."
 
+def load_gold_forecast():
+    path = os.path.join(OUTPUT_DIR, "gold-forecast.html")
+    if not os.path.exists(path):
+        return {}
+    import re
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+    m = re.search(r'const DATA\s*=\s*({.*?});', content, re.DOTALL)
+    if not m:
+        return {}
+    try:
+        data = json.loads(m.group(1))
+    except json.JSONDecodeError:
+        return {}
+    base = data.get("base", data)
+    return {
+        "daily_vol": base.get("forecast_daily_pct"),
+        "annual_vol": base.get("forecast_annual_pct"),
+        "hl_median": base.get("hl", {}).get("median"),
+        "oc_median": base.get("oc", {}).get("median"),
+        "generated": data.get("generated", ""),
+    }
+
 def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
     fred = load_json(os.path.join(DATA_DIR, "fred_macro.json")).get("series", {})
@@ -184,6 +207,40 @@ def run():
     overall_arrow = arrow_for(overall_score)
 
     macro_score = macro.get("score", 0)
+
+    # Gold Forecast card
+    gf = load_gold_forecast()
+    gold_forecast_section = ""
+    if gf.get("daily_vol") is not None:
+        gold_forecast_section = f"""
+        <div class="gold-forecast-card">
+          <div class="gold-fc-header">
+            <span class="gold-fc-label">Gold Next-Day Vol Forecast</span>
+            <span class="gold-fc-source">HAR-IV model</span>
+          </div>
+          <div class="gold-fc-body">
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">Daily Vol</span>
+              <span class="gold-fc-v">{gf["daily_vol"]:.3f}%</span>
+            </div>
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">HL Range (median)</span>
+              <span class="gold-fc-v">{gf["hl_median"]:.2f}%</span>
+            </div>
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">OC Move (median)</span>
+              <span class="gold-fc-v">{gf["oc_median"]:.2f}%</span>
+            </div>
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">Annualised Vol</span>
+              <span class="gold-fc-v">{gf["annual_vol"]:.1f}%</span>
+            </div>
+          </div>
+          <div class="gold-fc-footer">
+            <a href="gold-forecast.html" class="gold-fc-link" target="_blank">Open interactive forecast &rarr;</a>
+            <span class="gold-fc-date">{gf.get("generated","")}</span>
+          </div>
+        </div>"""
 
     # Vol & Range Forecast (check data/ then screenshots/)
     vol_range = load_json(os.path.join(DATA_DIR, "vol_range.json"))
@@ -440,7 +497,7 @@ def run():
   :root {{
     --bg: #0a0c10; --surface: #12151c; --border: #1e232d;
     --text: #c8cdd8; --muted: #525866;
-    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff;
+    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff; --gold: #e5b13a;
   }}
   body {{ background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }}
   .container {{ max-width: 960px; margin: 0 auto; padding: 1.5rem; }}
@@ -543,6 +600,18 @@ def run():
   .imp-low {{ background: rgba(90,96,112,0.15); color: var(--muted); }}
   .ev-fc, .ev-prev {{ color: var(--muted); font-size: 0.6rem; }}
   .events-note {{ font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border); }}
+  .gold-forecast-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
+  .gold-fc-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
+  .gold-fc-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }}
+  .gold-fc-source {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
+  .gold-fc-body {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem; }}
+  .gold-fc-metric {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.6rem; text-align: center; }}
+  .gold-fc-k {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.48rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }}
+  .gold-fc-v {{ font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--gold); margin-top: 0.15rem; }}
+  .gold-fc-footer {{ display: flex; justify-content: space-between; align-items: baseline; padding-top: 0.4rem; border-top: 1px solid var(--border); }}
+  .gold-fc-link {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--accent); text-decoration: none; }}
+  .gold-fc-link:hover {{ text-decoration: underline; }}
+  .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
   .macro-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }}
   .macro-card .mc-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }}
   .macro-card .mc-line {{ font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }}
@@ -555,6 +624,7 @@ def run():
     .analysis-extra {{ grid-template-columns: 1fr; }}
     .signal-detail-grid {{ grid-template-columns: repeat(2, 1fr); }}
     .corr-grid {{ grid-template-columns: 1fr; }}
+    .gold-fc-body {{ grid-template-columns: repeat(2, 1fr); }}
     .macro-card .mc-grid {{ grid-template-columns: 1fr 1fr; }}
     .container {{ padding: 0.75rem; }}
   }}
@@ -583,6 +653,8 @@ def run():
   </div>
 
   {instr_sections}
+
+  {gold_forecast_section}
 
   {vol_section}
 

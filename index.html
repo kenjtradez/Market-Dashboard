@@ -10,7 +10,7 @@
   :root {
     --bg: #0a0c10; --surface: #12151c; --border: #1e232d;
     --text: #c8cdd8; --muted: #525866;
-    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff;
+    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff; --gold: #e5b13a;
   }
   body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }
   .container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
@@ -113,6 +113,18 @@
   .imp-low { background: rgba(90,96,112,0.15); color: var(--muted); }
   .ev-fc, .ev-prev { color: var(--muted); font-size: 0.6rem; }
   .events-note { font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border); }
+  .gold-forecast-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
+  .gold-fc-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+  .gold-fc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
+  .gold-fc-source { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }
+  .gold-fc-body { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.5rem; }
+  .gold-fc-metric { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.6rem; text-align: center; }
+  .gold-fc-k { font-family: 'IBM Plex Mono', monospace; font-size: 0.48rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }
+  .gold-fc-v { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--gold); margin-top: 0.15rem; }
+  .gold-fc-footer { display: flex; justify-content: space-between; align-items: baseline; padding-top: 0.4rem; border-top: 1px solid var(--border); }
+  .gold-fc-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--accent); text-decoration: none; }
+  .gold-fc-link:hover { text-decoration: underline; }
+  .gold-fc-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }
   .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }
   .macro-card .mc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
   .macro-card .mc-line { font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }
@@ -125,6 +137,7 @@
     .analysis-extra { grid-template-columns: 1fr; }
     .signal-detail-grid { grid-template-columns: repeat(2, 1fr); }
     .corr-grid { grid-template-columns: 1fr; }
+    .gold-fc-body { grid-template-columns: repeat(2, 1fr); }
     .macro-card .mc-grid { grid-template-columns: 1fr 1fr; }
     .container { padding: 0.75rem; }
   }
@@ -397,6 +410,36 @@
               </div>
             </div>
 
+          </div>
+        </div>
+
+  
+        <div class="gold-forecast-card">
+          <div class="gold-fc-header">
+            <span class="gold-fc-label">Gold Next-Day Vol Forecast</span>
+            <span class="gold-fc-source">HAR-IV model</span>
+          </div>
+          <div class="gold-fc-body">
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">Daily Vol</span>
+              <span class="gold-fc-v">1.151%</span>
+            </div>
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">HL Range (median)</span>
+              <span class="gold-fc-v">1.73%</span>
+            </div>
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">OC Move (median)</span>
+              <span class="gold-fc-v">0.75%</span>
+            </div>
+            <div class="gold-fc-metric">
+              <span class="gold-fc-k">Annualised Vol</span>
+              <span class="gold-fc-v">18.3%</span>
+            </div>
+          </div>
+          <div class="gold-fc-footer">
+            <a href="gold-forecast.html" class="gold-fc-link" target="_blank">Open interactive forecast &rarr;</a>
+            <span class="gold-fc-date">2026-07-29 10:16:22</span>
           </div>
         </div>
 
