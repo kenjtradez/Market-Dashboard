@@ -177,6 +177,51 @@ def run():
 
     macro_score = macro.get("score", 0)
 
+    # Vol & Range Forecast
+    vol_range = load_json(os.path.join(DATA_DIR, "vol_range.json"))
+    vol_date = vol_range.get("date", "")
+    vol_session = vol_range.get("session", "")
+    vol_rows = ""
+    for instr in INSTRUMENTS:
+        v = vol_range.get("instruments", {}).get(instr, {})
+        if not v:
+            continue
+        vol_rows += f"""
+        <tr>
+          <td><strong>{instr}</strong></td>
+          <td>{v.get("volatility_annualized", DASH)}%</td>
+          <td>{v.get("high_low_range_median", DASH)}%</td>
+          <td>{v.get("high_low_range_p75", DASH)}%</td>
+          <td>{v.get("open_close_median", DASH)}%</td>
+          <td>{v.get("open_close_p75", DASH)}%</td>
+        </tr>"""
+
+    vol_section = ""
+    if vol_rows:
+        vol_section = f"""
+        <div class="vol-card">
+          <div class="vol-header">
+            <span class="vol-label">Vol &amp; Range Forecast</span>
+            <span class="vol-session">{vol_session}</span>
+          </div>
+          <table class="vol-table">
+            <thead>
+              <tr>
+                <th>Instrument</th>
+                <th>Vol (ann.)</th>
+                <th>HL Range Median</th>
+                <th>HL Range P75</th>
+                <th>OC Move Median</th>
+                <th>OC Move P75</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vol_rows}
+            </tbody>
+          </table>
+          <div class="vol-note">Ranges from daily open at 00:00 &bull; (buy top) (sell bottom)</div>
+        </div>"""
+
     instr_sections = ""
     for instr in INSTRUMENTS:
         d = instruments.get(instr, {})
@@ -392,6 +437,15 @@ def run():
   .corr-footer {{ font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; grid-column: 1 / -1; padding-top: 0.3rem; border-top: 1px solid var(--border); }}
 
   /* Macro bottom */
+  .vol-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
+  .vol-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
+  .vol-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }}
+  .vol-session {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--accent); }}
+  .vol-table {{ width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }}
+  .vol-table th {{ text-align: left; color: var(--muted); font-weight: 400; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); }}
+  .vol-table td {{ padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); color: var(--text); }}
+  .vol-table tr:last-child td {{ border-bottom: none; }}
+  .vol-note {{ font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }}
   .macro-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }}
   .macro-card .mc-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }}
   .macro-card .mc-line {{ font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }}
@@ -432,6 +486,8 @@ def run():
   </div>
 
   {instr_sections}
+
+  {vol_section}
 
   <div class="macro-card">
     <div class="mc-label">Macro Snapshot</div>

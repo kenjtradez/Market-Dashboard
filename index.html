@@ -86,6 +86,15 @@
   .corr-footer { font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; grid-column: 1 / -1; padding-top: 0.3rem; border-top: 1px solid var(--border); }
 
   /* Macro bottom */
+  .vol-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
+  .vol-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+  .vol-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .vol-session { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--accent); }
+  .vol-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
+  .vol-table th { text-align: left; color: var(--muted); font-weight: 400; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); }
+  .vol-table td { padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  .vol-table tr:last-child td { border-bottom: none; }
+  .vol-note { font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }
   .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }
   .macro-card .mc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
   .macro-card .mc-line { font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }
@@ -365,6 +374,54 @@
             </div>
 
           </div>
+        </div>
+
+  
+        <div class="vol-card">
+          <div class="vol-header">
+            <span class="vol-label">Vol &amp; Range Forecast</span>
+            <span class="vol-session">WEDNESDAY, July 29, 2026</span>
+          </div>
+          <table class="vol-table">
+            <thead>
+              <tr>
+                <th>Instrument</th>
+                <th>Vol (ann.)</th>
+                <th>HL Range Median</th>
+                <th>HL Range P75</th>
+                <th>OC Move Median</th>
+                <th>OC Move P75</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+        <tr>
+          <td><strong>Gold</strong></td>
+          <td>24.9%</td>
+          <td>2.55%</td>
+          <td>3.06%</td>
+          <td>1.21%</td>
+          <td>1.96%</td>
+        </tr>
+        <tr>
+          <td><strong>NAS100</strong></td>
+          <td>25.3%</td>
+          <td>2.46%</td>
+          <td>3.08%</td>
+          <td>1.14%</td>
+          <td>2.02%</td>
+        </tr>
+        <tr>
+          <td><strong>EURUSD</strong></td>
+          <td>4.77%</td>
+          <td>0.47%</td>
+          <td>0.57%</td>
+          <td>0.21%</td>
+          <td>0.35%</td>
+        </tr>
+            </tbody>
+          </table>
+          <div class="vol-note">Ranges from daily open at 00:00 &bull; (buy top) (sell bottom)</div>
         </div>
 
   <div class="macro-card">
