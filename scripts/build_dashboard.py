@@ -167,6 +167,8 @@ def run():
     fred = load_json(os.path.join(DATA_DIR, "fred_macro.json")).get("series", {})
     ome = load_json(os.path.join(DATA_DIR, "ome_data.json")).get("instruments", {})
     cot_data = load_json(os.path.join(DATA_DIR, "cot_data.json")).get("instruments", {})
+    sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
+    oanda = load_json(os.path.join(DATA_DIR, "oanda_prices.json")).get("instruments", {})
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -289,6 +291,13 @@ def run():
         ts = d.get("total_score")
         sig = d.get("signal", "N/A")
         sig_color = "var(--long)" if sig == "LONG" else ("var(--short)" if sig == "SHORT" else "var(--muted)")
+        sent = sentiment.get(instr, {})
+        sent_sig = sent.get("signal")
+        sent_label = f"News: {sent_sig}" if sent_sig else ""
+        sent_color = "var(--long)" if sent_sig == "BULLISH" else ("var(--short)" if sent_sig == "BEARISH" else "")
+        oanda_instr = oanda.get(instr, {})
+        oanda_price = oanda_instr.get("mid")
+        oanda_note = f"Oanda: {oanda_price}" if oanda_price else ""
         arr = arrow_for(ts)
         ps = d.get("positioning_score", 0)
         ome_raw = d.get("ome_data", {})
@@ -344,6 +353,7 @@ def run():
                 <div class="sd-item"><span class="sd-label">COT</span><span class="sd-val">{d.get("cot_score", "N/A")}</span></div>
                 <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">{macro_score}/3</span></div>
                 <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">{conv_stars}/10 <span class="stars">{stars_html}</span></span></div>
+                {"".join(f'<div class="sd-item"><span class="sd-label">{sent_label}</span><span class="sd-val" style="color:{sent_color}">{sent_sig}</span></div>' for _ in [1] if sent_sig)}
               </div>
             </div>
 
@@ -357,7 +367,7 @@ def run():
                   <div class="an-label">Positioning Analysis</div>
                   {"".join(f"<p>{p}</p>" for p in paragraphs)}
                 </div>
-                <p class="an-footer">Generated {gen_display}. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated {gen_display}. AI opinion, not a backtested signal.{' | ' + oanda_note if oanda_note else ''}</p>
               </div>
             </div>
 

@@ -77,6 +77,19 @@ jobs:
         run: python scripts/fetch_cot.py
         continue-on-error: true
 
+      - name: Fetch Finnhub news sentiment
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: python scripts/fetch_sentiment.py
+        continue-on-error: true
+
+      - name: Fetch Oanda live prices
+        env:
+          OANDA_API_KEY: ${{ secrets.OANDA_API_KEY }}
+          OANDA_ACCOUNT_ID: ${{ secrets.OANDA_ACCOUNT_ID }}
+        run: python scripts/fetch_oanda.py
+        continue-on-error: true
+
       - name: Build dashboard
         run: python scripts/build_dashboard.py
 
