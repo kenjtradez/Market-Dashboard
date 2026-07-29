@@ -55,7 +55,7 @@ jobs:
 
       - name: Extract OME data from screenshots
         env:
-          HF_API_KEY: ${{ secrets.HF_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/extract_ome.py
         continue-on-error: true
 

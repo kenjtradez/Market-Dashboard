@@ -1,11 +1,10 @@
 """
 Extract OME options-wall data from PDF reports or screenshots
-via Hugging Face Inference API (free tier).
+via Groq Vision API (free tier, llama-3.2-90b-vision-preview).
 """
 import os
 import json
-import re
-import io
+import base64
 import requests
 from datetime import datetime
 from pathlib import Path
@@ -14,8 +13,8 @@ INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 
-HF_MODEL = "Salesforce/blip2-flan-t5-xl"
-HF_API = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+GROQ_MODEL = "llama-3.2-90b-vision-preview"
+GROQ_API = "https://api.groq.com/openai/v1/chat/completions"
 
 PROMPT = """Read all numbers from this financial options page. Return JSON with:
 - instrument: name if visible
@@ -30,25 +29,39 @@ Return ONLY valid JSON."""
 
 SUPPORTED_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"}
 
+def image_to_base64(image_bytes):
+    return base64.b64encode(image_bytes).decode("utf-8")
+
 def process_page(image_bytes, api_key):
+    b64 = image_to_base64(image_bytes)
+    body = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": PROMPT},
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}}
+                ]
+            }
+        ],
+        "temperature": 0.1,
+        "max_tokens": 500
+    }
     resp = requests.post(
-        HF_API,
-        headers={"Authorization": f"Bearer {api_key}"},
-        data=image_bytes,
-        timeout=60,
+        GROQ_API,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=body,
+        timeout=90,
     )
     if resp.status_code != 200:
         return {"error": f"HTTP {resp.status_code}: {resp.text[:500]}"}
     result = resp.json()
     text = ""
-    if isinstance(result, list):
-        for item in result:
-            if isinstance(item, dict):
-                text += item.get("generated_text", "")
-    elif isinstance(result, dict):
-        text = result.get("generated_text", "")
-    if not text:
-        return {"error": "empty response", "raw": result}
+    try:
+        text = result["choices"][0]["message"]["content"]
+    except (KeyError, IndexError):
+        return {"error": "unexpected response", "raw": str(result)[:500]}
     json_start = text.find("{")
     json_end = text.rfind("}") + 1
     if json_start >= 0 and json_end > json_start:
@@ -56,11 +69,19 @@ def process_page(image_bytes, api_key):
             return json.loads(text[json_start:json_end])
         except json.JSONDecodeError:
             pass
-    return {"error": "No JSON found", "raw": text}
+    return {"error": "No JSON found", "raw": text[:500]}
 
 def process_image(image_path, api_key):
+    ext = Path(image_path).suffix.lower()
     with open(image_path, "rb") as f:
-        return process_page(f.read(), api_key)
+        data = f.read()
+    if ext == ".png":
+        return process_page(data, api_key)
+    from PIL import Image
+    img = Image.open(image_path)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return process_page(buf.getvalue(), api_key)
 
 def process_pdf(image_path, api_key):
     import fitz
@@ -92,24 +113,33 @@ def process_pdf(image_path, api_key):
     return combined
 
 def run():
-    api_key = os.environ.get("HF_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        print("ERROR: HF_API_KEY not set — skipping OME extraction.")
-        print("Get a free key at https://huggingface.co/settings/tokens")
+        print("ERROR: GROQ_API_KEY not set — skipping OME extraction.")
+        print("Set GROQ_API_KEY in your repo secrets.")
         return False
 
+    import io
     has_fitz = False
+    has_pil = False
     try:
         import fitz
         has_fitz = True
     except ImportError:
         pass
+    try:
+        from PIL import Image
+        has_pil = True
+    except ImportError:
+        pass
 
     screenshot_dir = Path(SCREENSHOT_DIR)
-    print(f"  Model: {HF_MODEL}")
+    print(f"  Model: {GROQ_MODEL}")
+    print(f"  API: {GROQ_API}")
     print(f"  Screenshots dir: {screenshot_dir.resolve()}")
     print(f"  Dir exists: {screenshot_dir.exists()}")
     print(f"  PDF support: {'yes' if has_fitz else 'no (pip install PyMuPDF)'}")
+    print(f"  Image conversion (Pillow): {'yes' if has_pil else 'no (pip install Pillow)'}")
 
     all_files = []
     if screenshot_dir.exists():
