@@ -1,116 +1,101 @@
 """
-Fetch geopolitical risk news via GDELT Project API.
-Single-query approach. No API key required.
+Fetch geopolitical risk news from RSS feeds.
+No API key required. Falls back gracefully if a feed is unavailable.
 """
-import os, json, re, time
+import os, json, time
 from datetime import datetime
+
 import requests
+from xml.etree import ElementTree
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-QUERY = "war crisis sanctions tariff conflict nuclear attack protest riot coup"
+FEEDS = [
+    ("Reuters", "https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best&best-sectors=geopolitical"),
+    ("BBC", "https://feeds.bbci.co.uk/news/world/rss.xml"),
+    ("CNBC", "https://www.cnbc.com/id/100727362/device/rss/rss.html"),
+    ("AP", "https://rsshub.app/apnews/topics/apf-topnews"),
+]
+
+KEYWORDS = [
+    "war", "conflict", "crisis", "sanction", "invasion", "attack", "nuclear",
+    "tariff", "trade war", "default", "coup", "collapse", "emergency",
+    "protest", "riot", "embargo", "shutdown", "disruption", "restriction",
+]
+
 INSTRUMENTS = {
-    "Gold":   ["gold", "precious metal", "gld", "xau"],
-    "NAS100": ["nasdaq", "tech", "semiconductor", "qqq", "big tech"],
-    "EURUSD": ["euro", "ecb", "european", "fxe", "eur", "germany", "france"],
+    "Gold":   ["gold", "commodity", "precious metal", "gld", "xau"],
+    "NAS100": ["nasdaq", "tech", "semiconductor", "qqq", "big tech", "ai", "software"],
+    "EURUSD": ["euro", "ecb", "european", "fxe", "eur", "germany", "france", "dax"],
 }
-SOURCES = ["reuters", "bloomberg", "ft.com", "wsj", "ap.org", "cnbc", "bbc", "economist", "foreignpolicy", "nytimes"]
 
 
-def score_article(title, seentext, domain, tone_str):
-    text = (title + " " + seentext).lower()
+def parse_rss(url, timeout=15):
+    try:
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "MarketDashboard/1.0"})
+        if resp.status_code != 200:
+            return []
+        root = ElementTree.fromstring(resp.content)
+        items = []
+        for item in root.iter("item"):
+            title = item.findtext("title", "")
+            link = item.findtext("link", "")
+            desc = item.findtext("description", "")
+            pubdate = item.findtext("pubDate", "")
+            items.append({"title": title, "url": link, "description": desc, "date": pubdate})
+        return items
+    except Exception as e:
+        print(f"  RSS error for {url}: {e}")
+        return []
+
+
+def score_article(title, desc):
+    text = (title + " " + desc).lower()
     score = 0
     tags = []
     severity = {
         "war": 3, "conflict": 2, "crisis": 3, "sanction": 2, "invasion": 3,
         "attack": 2, "nuclear": 3, "tariff": 2, "trade war": 3, "default": 3,
         "coup": 3, "collapse": 2, "emergency": 2, "protest": 1,
-        "embargo": 2, "disruption": 2, "riot": 2, "shutdown": 2,
+        "embargo": 2, "disruption": 2, "riot": 2, "shutdown": 2, "restriction": 2,
     }
     for word, pts in severity.items():
         if word in text:
             score += pts
             tags.append(word)
-    if tone_str is not None:
-        try:
-            t = float(tone_str)
-            if t < -5:
-                score += 2
-            elif t < -2:
-                score += 1
-        except (ValueError, TypeError):
-            pass
-    if any(s in domain for s in SOURCES):
-        score += 1
     return min(score, 10), tags
 
 
 def run():
-    print("Fetching geopolitical risk news from GDELT...")
-
-    params = {
-        "query": QUERY,
-        "mode": "ArtList",
-        "format": "json",
-        "maxrecords": 25,
-        "sort": "DateDesc",
-        "timespan": "72",
-    }
-
-    headers = {"User-Agent": "MarketDashboard/1.0"}
-    data = None
-    for attempt in range(3):
-        try:
-            resp = requests.get("https://api.gdeltproject.org/api/v2/doc/doc", params=params, timeout=25, headers=headers)
-            if resp.status_code == 429 and attempt < 2:
-                wait = 5 * (attempt + 1)
-                print(f"  Rate limited, retrying in {wait}s...")
-                time.sleep(wait)
-                continue
-            if resp.status_code != 200:
-                print(f"  GDELT returned HTTP {resp.status_code}: {resp.text[:200]}")
-            else:
-                data = resp.json()
-            break
-        except Exception as e:
-            print(f"  GDELT attempt {attempt+1} error: {e}")
-            if attempt < 2:
-                time.sleep(3)
-            else:
-                break
+    print("Fetching geopolitical risk news from RSS feeds...")
 
     all_articles = []
     seen = set()
 
-    if data and "articles" in data:
-        for art in data["articles"]:
-            url = art.get("url", "")
-            if not url or url in seen:
+    for source_name, url in FEEDS:
+        items = parse_rss(url)
+        print(f"  {source_name}: {len(items)} items")
+        for art in items:
+            link = art.get("url", "")
+            if not link or link in seen:
                 continue
-            seen.add(url)
+            seen.add(link)
             title = art.get("title", "")
-            seentext = art.get("seentext", "")
-            domain = art.get("domain", "")
-            tone = art.get("tone")
-            relevance, tags = score_article(title, seentext, domain, tone)
+            desc = art.get("description", "")
+            relevance, tags = score_article(title, desc)
             if relevance >= 2:
                 all_articles.append({
                     "title": title,
-                    "url": url,
-                    "domain": domain,
-                    "seentext": seentext[:300],
+                    "url": link,
+                    "domain": source_name.lower(),
+                    "seentext": desc[:300],
                     "relevance": relevance,
                     "tags": tags,
-                    "tone": tone,
-                    "date": art.get("seendate", ""),
+                    "date": art.get("date", ""),
                 })
-    elif data:
-        print(f"  Unexpected response keys: {list(data.keys())[:5]}")
-    else:
-        print("  No data returned from GDELT")
 
     all_articles.sort(key=lambda x: x["relevance"], reverse=True)
-    top = all_articles[:15]
+    top = all_articles[:20]
 
     instr_risk = {}
     for instr, terms in INSTRUMENTS.items():

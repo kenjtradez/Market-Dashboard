@@ -1,7 +1,188 @@
 {
-  "fetched": "2026-07-29T13:35:46.344785",
-  "total_articles": 0,
-  "articles": [],
+  "fetched": "2026-07-29T14:23:14.684854",
+  "total_articles": 16,
+  "articles": [
+    {
+      "title": "Blurred front lines: Trump meets Zelenskyy as Ukraine, Iran wars collide",
+      "url": "https://www.cnbc.com/2026/07/28/trump-zelenskyy-ukraine-russia-iran-war.html",
+      "domain": "cnbc",
+      "seentext": "Trump and Zelenskyy meet as the U.S war against Iran and Russia's full-scale invasion of Ukraine have threatened to overlap in recent days.",
+      "relevance": 6,
+      "tags": [
+        "war",
+        "invasion"
+      ],
+      "date": "Tue, 28 Jul 2026 15:59:04 GMT"
+    },
+    {
+      "title": "Thousands sheltering in key Sudan city under threat again as fighting escalates",
+      "url": "https://www.bbc.co.uk/news/articles/c4gx399l0wyo?at_medium=RSS&at_campaign=rss",
+      "domain": "bbc",
+      "seentext": "International leaders have issued warnings the RSF may be preparing to attack the city, raising fears of further atrocities being committed. ",
+      "relevance": 5,
+      "tags": [
+        "war",
+        "attack"
+      ],
+      "date": "Wed, 29 Jul 2026 05:01:46 GMT"
+    },
+    {
+      "title": "Ukraine has found a new pressure point in Russia\u2019s wartime economy",
+      "url": "https://www.cnbc.com/2026/07/29/ukraine-russia-wildberries-putin-trump.html",
+      "domain": "cnbc",
+      "seentext": "Ukraine's drone attacks on Russia's biggest online retailer Wildberries have ratcheted up the pressure on Moscow's wartime economy.",
+      "relevance": 5,
+      "tags": [
+        "war",
+        "attack"
+      ],
+      "date": "Wed, 29 Jul 2026 10:33:29 GMT"
+    },
+    {
+      "title": "Senate sets up votes to sanction Russia for Ukraine war",
+      "url": "https://www.cnbc.com/2026/07/28/russia-sanctions-congress-key-vote-lindsey-graham-ukraine.html",
+      "domain": "cnbc",
+      "seentext": "The sanctions target Russian officials, oligarchs, their family members, foreign persons, Russian banks and financial institutions and the Russian shadow fleet.",
+      "relevance": 5,
+      "tags": [
+        "war",
+        "sanction"
+      ],
+      "date": "Wed, 29 Jul 2026 00:03:14 GMT"
+    },
+    {
+      "title": "Zelensky and Netanyahu meet Trump as wars in Ukraine and Iran drag on",
+      "url": "https://www.bbc.co.uk/news/articles/cj4k2z8z45ro?at_medium=RSS&at_campaign=rss",
+      "domain": "bbc",
+      "seentext": "The two leaders sound encouraged after holding back-to-back bilaterals at the White House.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Wed, 29 Jul 2026 12:17:42 GMT"
+    },
+    {
+      "title": "What to expect from Zelensky and Netanyahu's visit to Washington",
+      "url": "https://www.bbc.co.uk/news/videos/cd0xlnz2yk1o?at_medium=RSS&at_campaign=rss",
+      "domain": "bbc",
+      "seentext": "Republican Senator Lindsay Graham's funeral is bringing the two world leaders to town, where they'll separately visit the White House to discuss their region's wars.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Tue, 28 Jul 2026 00:30:11 GMT"
+    },
+    {
+      "title": "UBS CEO says the AI pullback is healthy \u2014 but there\u2019s a bigger risk investors should watch",
+      "url": "https://www.cnbc.com/2026/07/29/ubs-earnings-ai-correction-stocks-swiss-bank.html",
+      "domain": "cnbc",
+      "seentext": "The Swiss banking gian reported pre-tax profits of $3.6 billion for the quarter, as CEO Sergio Ermotti warned of geopolitical volatility ahead.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Wed, 29 Jul 2026 09:40:12 GMT"
+    },
+    {
+      "title": "Britain tried war bonds before \u2014 and savers paid the price",
+      "url": "https://www.cnbc.com/2026/07/29/britains-ww1-war-bonds-a-warning-for-todays-investors.html",
+      "domain": "cnbc",
+      "seentext": "Proposals for the U.K. to finance extra spending on defense by issuing \"war bonds\" may bring back some unhappy memories.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Wed, 29 Jul 2026 05:30:01 GMT"
+    },
+    {
+      "title": "Warren probes Pentagon program to hire highly paid private sector workers",
+      "url": "https://www.cnbc.com/2026/07/29/warren-probes-pentagon-program-to-hire-highly-paid-private-sector-workers.html",
+      "domain": "cnbc",
+      "seentext": "Sen. Elizabeth Warren, D-Mass., said she is concerned about a Pentagon program to pay high salaries to Wall Street recruits.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Wed, 29 Jul 2026 10:30:01 GMT"
+    },
+    {
+      "title": "Trump, DOJ ask Supreme Court to toss $83.3M defamation award to E. Jean Carroll",
+      "url": "https://www.cnbc.com/2026/07/28/trump-asks-supreme-court-to-toss-83point3m-defamation-award-to-e-jean-carroll.html",
+      "domain": "cnbc",
+      "seentext": "The Supreme Court recently rejected President Donald Trump's bid to hear his appeal of another $5 million verdict in favor of Carroll.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Wed, 29 Jul 2026 01:17:13 GMT"
+    },
+    {
+      "title": "Saudi Arabia joins US in strikes on Iran-backed militias in Iraq",
+      "url": "https://www.bbc.co.uk/news/articles/c70g6y24d76o?at_medium=RSS&at_campaign=rss",
+      "domain": "bbc",
+      "seentext": "US Central Command says proxy groups launched attacks against US bases and Saudi energy infrastructure.",
+      "relevance": 2,
+      "tags": [
+        "attack"
+      ],
+      "date": "Wed, 29 Jul 2026 09:39:56 GMT"
+    },
+    {
+      "title": "Fifa offers $40m if nations back controversial plan",
+      "url": "https://www.bbc.co.uk/sport/football/articles/cvg7vglq9wpo?at_medium=RSS&at_campaign=rss",
+      "domain": "bbc",
+      "seentext": "Fifa has set a deadline of 19 September for member associations to access cash as FA voice disapproval of world governing body's funding plan ahead of emergency Uefa meeting.",
+      "relevance": 2,
+      "tags": [
+        "emergency"
+      ],
+      "date": "Wed, 29 Jul 2026 11:33:45 GMT"
+    },
+    {
+      "title": "'Israeli settlers laid siege to our home': Inside a Palestinian village under weekly attack",
+      "url": "https://www.bbc.co.uk/news/articles/clyxgn37lg5o?at_medium=RSS&at_campaign=rss",
+      "domain": "bbc",
+      "seentext": "A home on the edge of al-Mughayyir has become a weekly frontline in the battle for the occupied West Bank.",
+      "relevance": 2,
+      "tags": [
+        "attack"
+      ],
+      "date": "Wed, 29 Jul 2026 05:01:12 GMT"
+    },
+    {
+      "title": "Oil prices jump more than 6% after Trump says U.S. will hit Iran hard",
+      "url": "https://www.cnbc.com/2026/07/29/oil-prices-today-brent-wti-iran-us-hormuz.html",
+      "domain": "cnbc",
+      "seentext": "Oil rose sharply amid renewed tensions in the Middle East after Iran launched an attack on U.S. forces using ballistic missiles.",
+      "relevance": 2,
+      "tags": [
+        "attack"
+      ],
+      "date": "Wed, 29 Jul 2026 13:13:49 GMT"
+    },
+    {
+      "title": "CNBC Daily Open: Banking beats, SK Hynix sinks and surprise attack rattles oil",
+      "url": "https://www.cnbc.com/2026/07/29/daily-open-bank-earnings-ubs-sk-hynix.html",
+      "domain": "cnbc",
+      "seentext": "Big banks in Europe beat expectations, but tech stays in the doldrums and oil prices surge after a surprise strike against U.S. forces.",
+      "relevance": 2,
+      "tags": [
+        "attack"
+      ],
+      "date": "Wed, 29 Jul 2026 06:36:49 GMT"
+    },
+    {
+      "title": "U.S. Strategic Petroleum Reserve faces stress as emergency releases strain old infrastructure",
+      "url": "https://www.cnbc.com/2026/07/28/us-strategic-petroleum-reserve-spr-iran-oil-strait-hormuz.html",
+      "domain": "cnbc",
+      "seentext": "The reserve has an authorized storage capacity of 714 million barrels, according to the Department of Energy.",
+      "relevance": 2,
+      "tags": [
+        "emergency"
+      ],
+      "date": "Tue, 28 Jul 2026 18:49:34 GMT"
+    }
+  ],
   "instrument_risk": {
     "Gold": {
       "article_count": 0,
@@ -9,15 +190,15 @@
       "risk_level": "LOW"
     },
     "NAS100": {
-      "article_count": 0,
-      "avg_relevance": 0,
-      "risk_level": "LOW"
+      "article_count": 12,
+      "avg_relevance": 3.4,
+      "risk_level": "MODERATE"
     },
     "EURUSD": {
-      "article_count": 0,
-      "avg_relevance": 0,
-      "risk_level": "LOW"
+      "article_count": 1,
+      "avg_relevance": 2.0,
+      "risk_level": "MODERATE"
     }
   },
-  "global_risk_score": 0.0
+  "global_risk_score": 3.2
 }
