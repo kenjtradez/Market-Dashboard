@@ -714,7 +714,7 @@
       options:{...common,plugins:{...common.plugins,title:{display:true,text:'Max Pain Profile — seller payout at expiry (min at $'+mpStrike+')',color:'var(--muted)',font:{size:11}}},
         scales:{...common.scales,x:{...common.scales.x,type:'linear',title:{display:true,text:'Strike',color:'var(--muted)',font:{size:10}}},
           y:{...common.scales.y,title:{display:true,text:'Total payout',color:'var(--muted)',font:{size:10}}}}
-    }});
+    }}});
     // PCR by strike
     const pcr = s.map((_,i)=> { const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; });
     new Chart(document.getElementById('oiPcrChart'), {...{
