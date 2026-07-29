@@ -7,7 +7,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'screenshots/**'
+      - 'data/**'
+      - 'scripts/**'
   workflow_dispatch:
 
 permissions:
@@ -53,7 +54,11 @@ jobs:
         run: python scripts/fetch_fred.py
         continue-on-error: true
 
-      - name: Extract OME data from screenshots
+      - name: Fetch options data from Yahoo Finance
+        run: python scripts/fetch_options_yf.py
+        continue-on-error: true
+
+      - name: Extract OME data from screenshots (fallback if no yfinance data)
         run: python scripts/extract_ome.py
         continue-on-error: true
 

@@ -19,11 +19,11 @@
   .masthead h1 { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600; color: white; letter-spacing: -0.02em; }
   .masthead .date { font-size: 0.72rem; color: var(--muted); }
 
-  .overall-card { display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid var(--short); border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.25rem; }
-  .overall-card .oc-arrow { font-size: 1.8rem; color: var(--short); }
+  .overall-card { display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid var(--muted); border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.25rem; }
+  .overall-card .oc-arrow { font-size: 1.8rem; color: var(--muted); }
   .overall-card .oc-text { flex: 1; }
   .overall-card .oc-text .oc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
-  .overall-card .oc-text .oc-value { font-size: 1.3rem; font-weight: 600; color: var(--short); }
+  .overall-card .oc-text .oc-value { font-size: 1.3rem; font-weight: 600; color: var(--muted); }
   .overall-card .oc-text .oc-sub { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
   .overall-card .oc-macro { text-align: right; font-family: 'IBM Plex Mono', monospace; padding-left: 1rem; border-left: 1px solid var(--border); }
   .overall-card .oc-macro .oc-m-label { font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
@@ -135,15 +135,15 @@
 
   <div class="masthead">
     <h1>Market Analysis</h1>
-    <span class="date">29/07/2026, 08:50</span>
+    <span class="date">29/07/2026, 11:08</span>
   </div>
 
   <div class="overall-card">
-    <div class="oc-arrow">▼</div>
+    <div class="oc-arrow">→</div>
     <div class="oc-text">
       <div class="oc-label">Overall Market Signal</div>
-      <div class="oc-value">SHORT</div>
-      <div class="oc-sub">Composite: -0.3/8 &bull; OME + Macro</div>
+      <div class="oc-value">NEUTRAL</div>
+      <div class="oc-sub">Composite: 0.0/8 &bull; OME + Macro</div>
     </div>
     <div class="oc-macro">
       <div class="oc-m-label">Macro</div>
@@ -157,14 +157,14 @@
           <div class="analysis-header">
             <div class="analysis-title-row">
               <h2 class="analysis-name">Gold</h2>
-              <div class="analysis-badge" style="background:var(--muted)15;color:var(--muted);border:1px solid var(--muted)40">→ NEUTRAL</div>
-              <div class="analysis-range">31% RANGE</div>
+              <div class="analysis-badge" style="background:var(--short)15;color:var(--short);border:1px solid var(--short)40">▼ SHORT</div>
+              <div class="analysis-range">0% RANGE</div>
               <div class="analysis-fair">near fair value</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
             </div>
             <div class="analysis-sub">
               <span class="analysis-ai">AI — NOT BACKTESTED</span>
-              <span class="analysis-analysts">Low conviction</span>
+              <span class="analysis-analysts">Medium conviction</span>
             </div>
           </div>
 
@@ -175,11 +175,11 @@
                 <span class="sd-title">signal detail</span>
               </div>
               <div class="signal-detail-grid">
-                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--muted);font-weight:600">NEUTRAL</span></div>
-                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">0</span></div>
-                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">0</span></div>
+                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--short);font-weight:600">SHORT</span></div>
+                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">-3</span></div>
+                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">-3</span></div>
                 <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0/3</span></div>
-                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">0/10 <span class="stars">☆☆☆☆☆☆☆☆☆☆</span></span></div>
+                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">4/10 <span class="stars">★★★★☆☆☆☆☆☆</span></span></div>
               </div>
             </div>
 
@@ -187,13 +187,13 @@
               <div class="analysis-narrative-block">
                 <div class="an-block trade-idea">
                   <div class="an-label">Trade Idea</div>
-                  <p>"Neutral: fade pushes toward 4,100 (sell) and treat 4,000 as a floor (buy). Low conviction — small size only."</p>
+                  <p>"Lean short at 324 call-wall resistance, target 286 max pain, stop above 327.24; fade any dip to 288 put wall."</p>
                 </div>
                 <div class="an-block positioning-narrative">
                   <div class="an-label">Positioning Analysis</div>
-                  <p>Gold at 4,068.80 is pinned between two key options reference points — the call wall at 4,100 and put wall at 4,000. The PCR of 1.67 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 4,050 sits very close to the current price — minimal gravitational pull toward max pain. The call wall at 4,100 towers above the put wall at 4,000 — resistance overhead is the dominant structural level.</p><p>The magnet at 4,100 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: 0 (NEUTRAL).</p>
+                  <p>Gold at 369.37 is pinned between two key options reference points — the call wall at 324 and put wall at 288. The PCR of 2.15 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 286 is 22.6% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 324 towers above the put wall at 288 — resistance overhead is the dominant structural level.</p><p>The magnet at 288 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: -3 (SHORT).</p>
                 </div>
-                <p class="an-footer">Generated 29/07/2026, 08:50. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated 29/07/2026, 11:08. AI opinion, not a backtested signal.</p>
               </div>
             </div>
 
@@ -238,7 +238,7 @@
             <div class="analysis-title-row">
               <h2 class="analysis-name">NAS100</h2>
               <div class="analysis-badge" style="background:var(--short)15;color:var(--short);border:1px solid var(--short)40">▼ SHORT</div>
-              <div class="analysis-range">— RANGE</div>
+              <div class="analysis-range">0% RANGE</div>
               <div class="analysis-fair">near fair value</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
             </div>
@@ -267,13 +267,13 @@
               <div class="analysis-narrative-block">
                 <div class="an-block trade-idea">
                   <div class="an-label">Trade Idea</div>
-                  <p>"Bearish bias: look for rallies toward resistance, target a drift lower. Stop above recent range highs."</p>
+                  <p>"Lean short at 549 call-wall resistance, target 444 max pain, stop above 554.49; fade any dip to 269 put wall."</p>
                 </div>
                 <div class="an-block positioning-narrative">
                   <div class="an-label">Positioning Analysis</div>
-                  <p>NAS100 at 27,928.0 is pinned between two key options reference points — the call wall at 28,000 and put wall at 28,000. The PCR of 4.47 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 27,800 sits very close to the current price — minimal gravitational pull toward max pain. Both put and call walls converge at 28,000 — a major battleground.</p><p>The magnet at 28,000 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: -1 (SHORT).</p>
+                  <p>NAS100 at 675.49 is pinned between two key options reference points — the call wall at 549 and put wall at 269. The PCR of 0.75 is balanced.</p><p>Max pain at 444 is 34.3% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 549 towers above the put wall at 269 — resistance overhead is the dominant structural level.</p><p>The magnet at 269 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: -1 (SHORT).</p>
                 </div>
-                <p class="an-footer">Generated 29/07/2026, 08:50. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated 29/07/2026, 11:08. AI opinion, not a backtested signal.</p>
               </div>
             </div>
 
@@ -317,14 +317,14 @@
           <div class="analysis-header">
             <div class="analysis-title-row">
               <h2 class="analysis-name">EURUSD</h2>
-              <div class="analysis-badge" style="background:var(--muted)15;color:var(--muted);border:1px solid var(--muted)40">→ NEUTRAL</div>
-              <div class="analysis-range">61% RANGE</div>
+              <div class="analysis-badge" style="background:var(--long)15;color:var(--long);border:1px solid var(--long)40">▲ LONG</div>
+              <div class="analysis-range">58% RANGE</div>
               <div class="analysis-fair">near fair value</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
             </div>
             <div class="analysis-sub">
               <span class="analysis-ai">AI — NOT BACKTESTED</span>
-              <span class="analysis-analysts">Low conviction</span>
+              <span class="analysis-analysts">Medium conviction</span>
             </div>
           </div>
 
@@ -335,11 +335,11 @@
                 <span class="sd-title">signal detail</span>
               </div>
               <div class="signal-detail-grid">
-                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--muted);font-weight:600">NEUTRAL</span></div>
-                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">0</span></div>
-                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">0</span></div>
+                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--long);font-weight:600">LONG</span></div>
+                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">4</span></div>
+                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">4</span></div>
                 <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0/3</span></div>
-                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">0/10 <span class="stars">☆☆☆☆☆☆☆☆☆☆</span></span></div>
+                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">5/10 <span class="stars">★★★★★☆☆☆☆☆</span></span></div>
               </div>
             </div>
 
@@ -347,13 +347,13 @@
               <div class="analysis-narrative-block">
                 <div class="an-block trade-idea">
                   <div class="an-label">Trade Idea</div>
-                  <p>"Neutral: fade pushes toward 1.1600 (sell) and treat 1.1300 as a floor (buy). Low conviction — small size only."</p>
+                  <p>"Lean long at 98 put-wall support, target 120 range midpoint, stop below 98.00; fade any rip to 115 call wall."</p>
                 </div>
                 <div class="an-block positioning-narrative">
                   <div class="an-label">Positioning Analysis</div>
-                  <p>EURUSD at 1.1416 is pinned between two key options reference points — the call wall at 1.1600 and put wall at 1.1300. The PCR of 1.87 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 1.1325 is 0.8% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 1.1600 towers above the put wall at 1.1300 — resistance overhead is the dominant structural level.</p><p>The magnet at 1.1500 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: 0 (NEUTRAL).</p>
+                  <p>EURUSD at 105.11 is pinned between two key options reference points — the call wall at 115 and put wall at 98. The PCR of 0.13 shows call dominance, traders positioning for upside.</p><p>Max pain at 120 is 14.2% above the current price. Price is below max pain and may drift higher toward it. The call wall at 115 towers above the put wall at 98 — resistance overhead is the dominant structural level.</p><p>The magnet at 115 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: 4 (LONG).</p>
                 </div>
-                <p class="an-footer">Generated 29/07/2026, 08:50. AI opinion, not a backtested signal.</p>
+                <p class="an-footer">Generated 29/07/2026, 11:08. AI opinion, not a backtested signal.</p>
               </div>
             </div>
 

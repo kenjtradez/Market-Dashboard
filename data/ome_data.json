@@ -1,41 +1,47 @@
 {
-  "fetched": "2026-07-29T08:50:17.996098",
+  "fetched": "2026-07-29T11:08:48.677270",
   "instruments": {
     "Gold": {
-      "instrument": null,
-      "max_pain": 4050,
-      "put_call_ratio": 1.6671,
-      "call_wall": 4100,
-      "put_wall": 4000,
-      "magnet_strike": 4100,
-      "skew_percent": null,
-      "total_oi": 46212,
-      "underlying_price": 4068.8,
-      "notes": null
+      "expiry": "2027-01-15",
+      "total_oi_used": 8942,
+      "underlying_price": 369.37,
+      "put_call_ratio": 2.1464,
+      "max_pain": 286,
+      "call_wall": 324,
+      "put_wall": 288,
+      "magnet_strike": 288,
+      "skew_percent": -74.81,
+      "n_calls_used": 69,
+      "proxy_for": "GLD",
+      "proxy_note": "ETF proxy for Gold"
     },
     "NAS100": {
-      "instrument": null,
-      "max_pain": 27800,
-      "put_call_ratio": 4.4683,
-      "call_wall": 28000,
-      "put_wall": 28000,
-      "magnet_strike": 28000,
-      "skew_percent": null,
-      "total_oi": 9318,
-      "underlying_price": 27928.0,
-      "notes": null
+      "expiry": "2026-12-18",
+      "total_oi_used": 19050,
+      "underlying_price": 675.49,
+      "put_call_ratio": 0.7463,
+      "max_pain": 444,
+      "call_wall": 549,
+      "put_wall": 269,
+      "magnet_strike": 269,
+      "skew_percent": -51.79,
+      "n_calls_used": 57,
+      "proxy_for": "QQQ",
+      "proxy_note": "ETF proxy for NAS100"
     },
     "EURUSD": {
-      "instrument": null,
-      "max_pain": 1.1325,
-      "put_call_ratio": 1.8698,
-      "call_wall": 1.16,
-      "put_wall": 1.13,
-      "magnet_strike": 1.15,
-      "skew_percent": null,
-      "total_oi": 174652,
-      "underlying_price": 1.14155,
-      "notes": null
+      "expiry": "2026-09-18",
+      "total_oi_used": 623,
+      "underlying_price": 105.11,
+      "put_call_ratio": 0.1266,
+      "max_pain": 120,
+      "call_wall": 115,
+      "put_wall": 98,
+      "magnet_strike": 115,
+      "skew_percent": -3.99,
+      "n_calls_used": 15,
+      "proxy_for": "FXE",
+      "proxy_note": "ETF proxy for EURUSD"
     }
   }
 }
