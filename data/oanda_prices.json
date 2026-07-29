@@ -1,0 +1,20 @@
+{
+  "fetched": "2026-07-29T14:02:31.152905",
+  "instruments": {
+    "Gold": {
+      "mid": 369.37,
+      "source": "yfinance",
+      "instrument": "XAU_USD"
+    },
+    "NAS100": {
+      "mid": 675.49,
+      "source": "yfinance",
+      "instrument": "US100_USD"
+    },
+    "EURUSD": {
+      "mid": 105.11,
+      "source": "yfinance",
+      "instrument": "EUR_USD"
+    }
+  }
+}
