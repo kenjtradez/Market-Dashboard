@@ -117,6 +117,7 @@ def run():
     print(f"  All files: {[f'{f.name} ({f.suffix})' for f in all_files]}")
 
     results = {}
+    all_dir_files = list(screenshot_dir.iterdir()) if screenshot_dir.exists() else []
     for instr in INSTRUMENTS:
         candidates = []
         if screenshot_dir.exists():
@@ -124,6 +125,9 @@ def run():
                 candidates.extend(screenshot_dir.glob(f"{instr}{ext}"))
                 candidates.extend(screenshot_dir.glob(f"{instr.lower()}{ext}"))
             candidates.extend(screenshot_dir.glob(f"*{instr}*"))
+            for f in all_dir_files:
+                if instr.lower() in f.name.lower() and f.suffix.lower() in SUPPORTED_EXTS:
+                    candidates.append(f)
         seen = set()
         unique = []
         for c in candidates:
