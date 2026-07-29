@@ -5,6 +5,7 @@ import os, json
 from datetime import datetime, timedelta
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..")
 INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 DASH = "\u2014"
@@ -177,8 +178,10 @@ def run():
 
     macro_score = macro.get("score", 0)
 
-    # Vol & Range Forecast
+    # Vol & Range Forecast (check data/ then screenshots/)
     vol_range = load_json(os.path.join(DATA_DIR, "vol_range.json"))
+    if not vol_range:
+        vol_range = load_json(os.path.join(SCREENSHOT_DIR, "vol_range.json"))
     vol_date = vol_range.get("date", "")
     vol_session = vol_range.get("session", "")
     vol_rows = ""
