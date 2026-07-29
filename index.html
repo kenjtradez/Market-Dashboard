@@ -95,6 +95,24 @@
   .vol-table td { padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); color: var(--text); }
   .vol-table tr:last-child td { border-bottom: none; }
   .vol-note { font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }
+  .events-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
+  .events-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+  .events-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .events-source { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }
+  .events-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; }
+  .events-table th { text-align: left; color: var(--muted); font-weight: 400; font-size: 0.52rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--border); }
+  .events-table td { padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  .events-table tr:last-child td { border-bottom: none; }
+  .ev-time { color: var(--accent); white-space: nowrap; }
+  .ev-day { color: var(--muted); font-size: 0.6rem; }
+  .ev-flag { color: var(--muted); font-weight: 500; }
+  .ev-title { color: var(--text); }
+  .imp-badge { padding: 0.05rem 0.35rem; border-radius: 2px; font-size: 0.55rem; font-weight: 500; }
+  .imp-high { background: rgba(255,77,109,0.15); color: var(--short); }
+  .imp-med { background: rgba(74,143,255,0.15); color: var(--accent); }
+  .imp-low { background: rgba(90,96,112,0.15); color: var(--muted); }
+  .ev-fc, .ev-prev { color: var(--muted); font-size: 0.6rem; }
+  .events-note { font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border); }
   .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }
   .macro-card .mc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
   .macro-card .mc-line { font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }
@@ -397,31 +415,326 @@
               
         <tr>
           <td><strong>Gold</strong></td>
-          <td>27.19%</td>
-          <td>1.23%</td>
-          <td>1.87%</td>
-          <td>0.66%</td>
-          <td>1.22%</td>
+          <td>21.9%</td>
+          <td>1.51%</td>
+          <td>1.95%</td>
+          <td>1.02%</td>
+          <td>1.43%</td>
         </tr>
         <tr>
           <td><strong>NAS100</strong></td>
-          <td>18.18%</td>
-          <td>1.53%</td>
+          <td>19.89%</td>
           <td>2.21%</td>
-          <td>0.68%</td>
-          <td>1.29%</td>
+          <td>2.45%</td>
+          <td>1.39%</td>
+          <td>1.67%</td>
         </tr>
         <tr>
           <td><strong>EURUSD</strong></td>
-          <td>5.87%</td>
+          <td>3.45%</td>
+          <td>0.39%</td>
           <td>0.48%</td>
-          <td>0.65%</td>
-          <td>0.22%</td>
-          <td>0.38%</td>
+          <td>0.18%</td>
+          <td>0.27%</td>
         </tr>
             </tbody>
           </table>
           <div class="vol-note">Ranges from daily open at 00:00 &bull; (buy top) (sell bottom)</div>
+        </div>
+
+  
+        <div class="events-card">
+          <div class="events-header">
+            <span class="events-label">Economic Calendar</span>
+            <span class="events-source">ForexFactory</span>
+          </div>
+          <table class="events-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Day</th>
+                <th>Curr</th>
+                <th>Event</th>
+                <th>Impact</th>
+                <th>Forecast</th>
+                <th>Previous</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+          <tr class="imp-low-row">
+            <td class="ev-time">06:00</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">EUR</td>
+            <td class="ev-title">German Buba Monthly Report</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev"></td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">08:15</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">ADP Weekly Employment Change</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev">16.5K</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">08:30</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">Goods Trade Balance</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">-100.3B</td>
+            <td class="ev-prev">-105.8B</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">08:30</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">Prelim Wholesale Inventories m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">0.4%</td>
+            <td class="ev-prev">0.3%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">09:00</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">HPI m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">0.1%</td>
+            <td class="ev-prev">-0.1%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">09:00</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">S&P/CS Composite-20 HPI y/y</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">1.3%</td>
+            <td class="ev-prev">1.1%</td>
+          </tr>
+          <tr class="imp-med-row">
+            <td class="ev-time">10:00</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">CB Consumer Confidence</td>
+            <td class="ev-impact"><span class="imp-badge imp-med">Medium</span></td>
+            <td class="ev-fc">92.4</td>
+            <td class="ev-prev">91.2</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">10:00</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">Richmond Manufacturing Index</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">7</td>
+            <td class="ev-prev">4</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">16:30</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">API Weekly Statistical Bulletin</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev"></td>
+          </tr>
+          <tr class="imp-high-row">
+            <td class="ev-time">21:30</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">AUD</td>
+            <td class="ev-title">CPI m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-high">High</span></td>
+            <td class="ev-fc">0.2%</td>
+            <td class="ev-prev">-0.7%</td>
+          </tr>
+          <tr class="imp-high-row">
+            <td class="ev-time">21:30</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">AUD</td>
+            <td class="ev-title">CPI y/y</td>
+            <td class="ev-impact"><span class="imp-badge imp-high">High</span></td>
+            <td class="ev-fc">4.0%</td>
+            <td class="ev-prev">4.0%</td>
+          </tr>
+          <tr class="imp-high-row">
+            <td class="ev-time">21:30</td>
+            <td class="ev-day">Tue</td>
+            <td class="ev-flag">AUD</td>
+            <td class="ev-title">Trimmed Mean CPI m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-high">High</span></td>
+            <td class="ev-fc">0.3%</td>
+            <td class="ev-prev">0.4%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">02:00</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">EUR</td>
+            <td class="ev-title">German Import Prices m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">-0.7%</td>
+            <td class="ev-prev">0.7%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">04:00</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">CHF</td>
+            <td class="ev-title">UBS Economic Expectations</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev">-25.0</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">04:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">GBP</td>
+            <td class="ev-title">M4 Money Supply m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">0.2%</td>
+            <td class="ev-prev">0.1%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">04:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">GBP</td>
+            <td class="ev-title">Mortgage Approvals</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">57K</td>
+            <td class="ev-prev">56K</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">04:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">GBP</td>
+            <td class="ev-title">Net Lending to Individuals m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">5.5B</td>
+            <td class="ev-prev">4.6B</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">05:42</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">EUR</td>
+            <td class="ev-title">German 10-y Bond Auction</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev">3.09|1.0</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">10:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">Crude Oil Inventories</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">0.7M</td>
+            <td class="ev-prev">2.0M</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">13:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">CAD</td>
+            <td class="ev-title">BOC Summary of Deliberations</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev"></td>
+          </tr>
+          <tr class="imp-high-row">
+            <td class="ev-time">14:00</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">Federal Funds Rate</td>
+            <td class="ev-impact"><span class="imp-badge imp-high">High</span></td>
+            <td class="ev-fc">3.75%</td>
+            <td class="ev-prev">3.75%</td>
+          </tr>
+          <tr class="imp-high-row">
+            <td class="ev-time">14:00</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">FOMC Statement</td>
+            <td class="ev-impact"><span class="imp-badge imp-high">High</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev"></td>
+          </tr>
+          <tr class="imp-high-row">
+            <td class="ev-time">14:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">USD</td>
+            <td class="ev-title">FOMC Press Conference</td>
+            <td class="ev-impact"><span class="imp-badge imp-high">High</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev"></td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">18:40</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">AUD</td>
+            <td class="ev-title">RBA Assist Gov Hunter Speaks</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev"></td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">21:00</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">NZD</td>
+            <td class="ev-title">ANZ Business Confidence</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc"></td>
+            <td class="ev-prev">36.6</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">21:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">AUD</td>
+            <td class="ev-title">Building Approvals m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">-0.7%</td>
+            <td class="ev-prev">-1.1%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">21:30</td>
+            <td class="ev-day">Today</td>
+            <td class="ev-flag">AUD</td>
+            <td class="ev-title">Import Prices q/q</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">0.0%</td>
+            <td class="ev-prev">0.1%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">01:00</td>
+            <td class="ev-day">Thu</td>
+            <td class="ev-flag">JPY</td>
+            <td class="ev-title">Consumer Confidence</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">34.2</td>
+            <td class="ev-prev">33.8</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">01:30</td>
+            <td class="ev-day">Thu</td>
+            <td class="ev-flag">EUR</td>
+            <td class="ev-title">French Consumer Spending m/m</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">-0.1%</td>
+            <td class="ev-prev">0.5%</td>
+          </tr>
+          <tr class="imp-low-row">
+            <td class="ev-time">01:30</td>
+            <td class="ev-day">Thu</td>
+            <td class="ev-flag">EUR</td>
+            <td class="ev-title">French Flash GDP q/q</td>
+            <td class="ev-impact"><span class="imp-badge imp-low">Low</span></td>
+            <td class="ev-fc">0.2%</td>
+            <td class="ev-prev">-0.1%</td>
+          </tr>
+            </tbody>
+          </table>
+          <div class="events-note">Upcoming events &bull; High impact highlighted</div>
         </div>
 
   <div class="macro-card">

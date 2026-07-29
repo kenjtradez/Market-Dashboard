@@ -225,6 +225,57 @@ def run():
           <div class="vol-note">Ranges from daily open at 00:00 &bull; (buy top) (sell bottom)</div>
         </div>"""
 
+    # Economic Events
+    events_data = load_json(os.path.join(DATA_DIR, "events.json")).get("events", [])
+    events_section = ""
+    if events_data:
+        event_rows = ""
+        today = datetime.now().strftime("%Y-%m-%d")
+        for ev in events_data[:30]:
+            try:
+                ev_dt = datetime.fromisoformat(ev["date"])
+                ev_time = ev_dt.strftime("%H:%M")
+                ev_day = "Today" if ev_dt.strftime("%Y-%m-%d") == today else ev_dt.strftime("%a")
+            except:
+                ev_time = ev["date"][11:16] if len(ev["date"]) > 16 else ev["date"]
+                ev_day = ""
+            imp = ev.get("impact", "Low")
+            imp_cls = "imp-high" if imp == "High" else ("imp-med" if imp == "Medium" else "imp-low")
+            event_rows += f"""
+          <tr class="{imp_cls}-row">
+            <td class="ev-time">{ev_time}</td>
+            <td class="ev-day">{ev_day}</td>
+            <td class="ev-flag">{ev.get("country","")}</td>
+            <td class="ev-title">{ev.get("title","")}</td>
+            <td class="ev-impact"><span class="imp-badge {imp_cls}">{imp}</span></td>
+            <td class="ev-fc">{ev.get("forecast","")}</td>
+            <td class="ev-prev">{ev.get("previous","")}</td>
+          </tr>"""
+        events_section = f"""
+        <div class="events-card">
+          <div class="events-header">
+            <span class="events-label">Economic Calendar</span>
+            <span class="events-source">ForexFactory</span>
+          </div>
+          <table class="events-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Day</th>
+                <th>Curr</th>
+                <th>Event</th>
+                <th>Impact</th>
+                <th>Forecast</th>
+                <th>Previous</th>
+              </tr>
+            </thead>
+            <tbody>
+              {event_rows}
+            </tbody>
+          </table>
+          <div class="events-note">Upcoming events &bull; High impact highlighted</div>
+        </div>"""
+
     instr_sections = ""
     for instr in INSTRUMENTS:
         d = instruments.get(instr, {})
@@ -449,6 +500,24 @@ def run():
   .vol-table td {{ padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); color: var(--text); }}
   .vol-table tr:last-child td {{ border-bottom: none; }}
   .vol-note {{ font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }}
+  .events-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
+  .events-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
+  .events-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }}
+  .events-source {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
+  .events-table {{ width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; }}
+  .events-table th {{ text-align: left; color: var(--muted); font-weight: 400; font-size: 0.52rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--border); }}
+  .events-table td {{ padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--border); color: var(--text); }}
+  .events-table tr:last-child td {{ border-bottom: none; }}
+  .ev-time {{ color: var(--accent); white-space: nowrap; }}
+  .ev-day {{ color: var(--muted); font-size: 0.6rem; }}
+  .ev-flag {{ color: var(--muted); font-weight: 500; }}
+  .ev-title {{ color: var(--text); }}
+  .imp-badge {{ padding: 0.05rem 0.35rem; border-radius: 2px; font-size: 0.55rem; font-weight: 500; }}
+  .imp-high {{ background: rgba(255,77,109,0.15); color: var(--short); }}
+  .imp-med {{ background: rgba(74,143,255,0.15); color: var(--accent); }}
+  .imp-low {{ background: rgba(90,96,112,0.15); color: var(--muted); }}
+  .ev-fc, .ev-prev {{ color: var(--muted); font-size: 0.6rem; }}
+  .events-note {{ font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border); }}
   .macro-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }}
   .macro-card .mc-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }}
   .macro-card .mc-line {{ font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }}
@@ -491,6 +560,8 @@ def run():
   {instr_sections}
 
   {vol_section}
+
+  {events_section}
 
   <div class="macro-card">
     <div class="mc-label">Macro Snapshot</div>
