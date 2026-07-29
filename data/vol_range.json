@@ -3,25 +3,25 @@
   "session": "WEDNESDAY, July 29, 2026",
   "instruments": {
     "Gold": {
-      "volatility_annualized": 27.19,
-      "high_low_range_median": 1.23,
-      "high_low_range_p75": 1.87,
-      "open_close_median": 0.66,
-      "open_close_p75": 1.22
+      "volatility_annualized": 21.9,
+      "high_low_range_median": 1.51,
+      "high_low_range_p75": 1.95,
+      "open_close_median": 1.02,
+      "open_close_p75": 1.43
     },
     "NAS100": {
-      "volatility_annualized": 18.18,
-      "high_low_range_median": 1.53,
-      "high_low_range_p75": 2.21,
-      "open_close_median": 0.68,
-      "open_close_p75": 1.29
+      "volatility_annualized": 19.89,
+      "high_low_range_median": 2.21,
+      "high_low_range_p75": 2.45,
+      "open_close_median": 1.39,
+      "open_close_p75": 1.67
     },
     "EURUSD": {
-      "volatility_annualized": 5.87,
-      "high_low_range_median": 0.48,
-      "high_low_range_p75": 0.65,
-      "open_close_median": 0.22,
-      "open_close_p75": 0.38
+      "volatility_annualized": 3.45,
+      "high_low_range_median": 0.39,
+      "high_low_range_p75": 0.48,
+      "open_close_median": 0.18,
+      "open_close_p75": 0.27
     }
   }
 }
