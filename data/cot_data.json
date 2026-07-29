@@ -1,0 +1,47 @@
+{
+  "fetched": "2026-07-29T11:23:09.783231",
+  "instruments": {
+    "Gold": {
+      "date": "07/21/26",
+      "open_interest": 383368,
+      "noncomm_net": 183910,
+      "noncomm_net_pct": 48.0,
+      "noncomm_long": 224785,
+      "noncomm_short": 40875,
+      "comm_net": -213199,
+      "comm_net_pct": -55.6,
+      "comm_long": 80457,
+      "comm_short": 293656,
+      "spec_signal": "BEARISH",
+      "comm_signal": "BEARISH"
+    },
+    "NAS100": {
+      "date": "",
+      "open_interest": 246195,
+      "noncomm_net": 88768,
+      "noncomm_net_pct": 36.1,
+      "noncomm_long": 94039,
+      "noncomm_short": 5271,
+      "comm_net": -150744,
+      "comm_net_pct": -61.2,
+      "comm_long": 55306,
+      "comm_short": 206050,
+      "spec_signal": "BEARISH",
+      "comm_signal": "BEARISH"
+    },
+    "EURUSD": {
+      "date": "",
+      "open_interest": 800061,
+      "noncomm_net": -208219,
+      "noncomm_net_pct": -26.0,
+      "noncomm_long": 51686,
+      "noncomm_short": 259905,
+      "comm_net": 184856,
+      "comm_net_pct": 23.1,
+      "comm_long": 573405,
+      "comm_short": 388549,
+      "spec_signal": "BULLISH",
+      "comm_signal": "BULLISH"
+    }
+  }
+}

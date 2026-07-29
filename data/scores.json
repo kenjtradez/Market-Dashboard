@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-29T11:19:37.448386",
+  "generated": "2026-07-29T11:24:37.019507",
   "macro": {
     "score": 0.0,
     "details": {},
@@ -31,7 +31,12 @@
       },
       "macro_score": 0,
       "macro_details": {},
-      "total_score": -3,
+      "cot_score": -2,
+      "cot_details": {
+        "cot_spec": "48.0% (spec net long bearish, -1)",
+        "cot_comm": "-55.6% (comm short bearish, -1)"
+      },
+      "total_score": -5,
       "signal": "SHORT"
     },
     "NAS100": {
@@ -59,7 +64,12 @@
       },
       "macro_score": 0,
       "macro_details": {},
-      "total_score": -1,
+      "cot_score": -2,
+      "cot_details": {
+        "cot_spec": "36.1% (spec net long bearish, -1)",
+        "cot_comm": "-61.2% (comm short bearish, -1)"
+      },
+      "total_score": -3,
       "signal": "SHORT"
     },
     "EURUSD": {
@@ -87,12 +97,17 @@
       },
       "macro_score": 0,
       "macro_details": {},
-      "total_score": 4,
+      "cot_score": 2,
+      "cot_details": {
+        "cot_spec": "-26.0% (spec net short bullish, +1)",
+        "cot_comm": "23.1% (comm long bullish, +1)"
+      },
+      "total_score": 6,
       "signal": "LONG"
     }
   },
   "overall": {
-    "avg_score": 0.0,
-    "signal": "NEUTRAL"
+    "avg_score": -0.7,
+    "signal": "SHORT"
   }
 }

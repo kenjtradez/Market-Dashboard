@@ -77,7 +77,7 @@ def range_pct(sp, cw, pw):
     pct = (hi - sp_f) / (hi - lo) * 100
     return max(0, min(100, pct))
 
-def generate_narrative(instr, d, ome_raw, macro_score):
+def generate_narrative(instr, d, ome_raw, macro_score, cot=None):
     ts = d.get("total_score")
     sig = d.get("signal", "N/A")
     ps = d.get("positioning_score", 0)
@@ -130,6 +130,10 @@ def generate_narrative(instr, d, ome_raw, macro_score):
     if mg is not None:
         p3 += f"The magnet at {fmt(mg)} holds the highest total OI concentration, acting as a price attractor. "
     p3 += f"Macro contributes {macro_score}/3 to the score. "
+    cot_score = d.get("cot_score", 0)
+    if cot is not None and "error" not in cot:
+        p3 += f"COT: specs {cot.get('noncomm_net_pct')}% net, commercials {cot.get('comm_net_pct')}% net (score {cot_score:+d}). "
+    p3 += f"Net score: {ts} ({sig})."
     p3 += f"Net score: {ts} ({sig})."
     paragraphs.append(p3)
 
@@ -162,6 +166,7 @@ def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
     fred = load_json(os.path.join(DATA_DIR, "fred_macro.json")).get("series", {})
     ome = load_json(os.path.join(DATA_DIR, "ome_data.json")).get("instruments", {})
+    cot_data = load_json(os.path.join(DATA_DIR, "cot_data.json")).get("instruments", {})
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -299,7 +304,7 @@ def run():
         rng = range_pct(sp, cw, pw)
         rng_str = f"{rng:.0f}%" if rng is not None else DASH
 
-        paragraphs = generate_narrative(instr, d, ome_raw, macro_score)
+        paragraphs = generate_narrative(instr, d, ome_raw, macro_score, cot_data.get(instr, {}))
         trade_idea = generate_trade_idea(instr, d, ome_raw)
         stars_html = "\u2605" * conv_stars + "\u2606" * (10 - conv_stars)
 
@@ -336,6 +341,7 @@ def run():
                 <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:{sig_color};font-weight:600">{sig}</span></div>
                 <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">{ts if ts is not None else DASH}</span></div>
                 <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">{ps}</span></div>
+                <div class="sd-item"><span class="sd-label">COT</span><span class="sd-val">{d.get("cot_score", "N/A")}</span></div>
                 <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">{macro_score}/3</span></div>
                 <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">{conv_stars}/10 <span class="stars">{stars_html}</span></span></div>
               </div>

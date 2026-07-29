@@ -70,6 +70,33 @@ def score_positioning(ome):
 
     return score, details
 
+
+def score_cot(cot):
+    """Score CFTC COT positioning. Returns (score, details)."""
+    score = 0
+    details = {}
+    if not cot or "error" in cot:
+        return score, {"cot": "N/A"}
+
+    spec = cot.get("spec_signal")
+    if spec == "BULLISH":
+        score += 1; details["cot_spec"] = f"{cot.get('noncomm_net_pct')}% (spec net short bullish, +1)"
+    elif spec == "BEARISH":
+        score -= 1; details["cot_spec"] = f"{cot.get('noncomm_net_pct')}% (spec net long bearish, -1)"
+    else:
+        details["cot_spec"] = f"{cot.get('noncomm_net_pct')}% (neutral)"
+
+    comm = cot.get("comm_signal")
+    if comm == "BULLISH":
+        score += 1; details["cot_comm"] = f"{cot.get('comm_net_pct')}% (comm long bullish, +1)"
+    elif comm == "BEARISH":
+        score -= 1; details["cot_comm"] = f"{cot.get('comm_net_pct')}% (comm short bearish, -1)"
+    else:
+        details["cot_comm"] = f"{cot.get('comm_net_pct')}% (neutral)"
+
+    return score, details
+
+
 def score_macro(macro, instr=None):
     """Score macro environment. If instr is given, scores against its relevant volatility index."""
     score = 0
@@ -171,6 +198,16 @@ def run():
     else:
         print("WARNING: No OME data found")
 
+    # Load COT data
+    cot_path = os.path.join(DATA_DIR, "cot_data.json")
+    cots = {}
+    if os.path.exists(cot_path):
+        with open(cot_path) as f:
+            cots = json.load(f).get("instruments", {})
+        print(f"\nLoaded COT data ({len(cots)} instruments)")
+    else:
+        print("WARNING: No COT data found")
+
     per_instrument = {}
     for instr in INSTRUMENTS:
         ome = ome_instruments.get(instr, {})
@@ -180,19 +217,24 @@ def run():
 
         pos_score, pos_details = score_positioning(ome)
         instr_macro_score, instr_macro_details = score_macro(macro_data, instr)
-        total = pos_score + instr_macro_score
+        cot_score, cot_details = score_cot(cots.get(instr, {}))
+        total = pos_score + instr_macro_score + cot_score
         per_instrument[instr] = {
             "ome_data": {k: v for k, v in ome.items() if k != "raw"},
             "positioning_score": pos_score,
             "positioning_details": pos_details,
             "macro_score": instr_macro_score,
             "macro_details": instr_macro_details,
+            "cot_score": cot_score,
+            "cot_details": cot_details,
             "total_score": total,
             "signal": "LONG" if total > 0 else ("SHORT" if total < 0 else "NEUTRAL"),
         }
-        print(f"\n{instr}: pos={pos_score} + macro={instr_macro_score} = {total} ({per_instrument[instr]['signal']})")
+        print(f"\n{instr}: pos={pos_score} + macro={instr_macro_score} + cot={cot_score} = {total} ({per_instrument[instr]['signal']})")
         for k, v in instr_macro_details.items():
             print(f"  macro.{k}: {v}")
+        for k, v in cot_details.items():
+            print(f"  cot.{k}: {v}")
 
     # Overall market score
     valid = {k: v for k, v in per_instrument.items() if v.get("total_score") is not None}
