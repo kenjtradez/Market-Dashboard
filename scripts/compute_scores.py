@@ -56,9 +56,11 @@ def score_positioning(ome):
         if call_wall > put_wall:
             score += 1
             details["walls"] = f"C{call_wall} > P{put_wall} (+1)"
-        else:
+        elif call_wall < put_wall:
             score -= 1
             details["walls"] = f"C{call_wall} < P{put_wall} (-1)"
+        else:
+            details["walls"] = f"C{call_wall} = P{put_wall} (neutral)"
     else:
         details["walls"] = "N/A"
 

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Dashboard — OME + Macro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f14; --surface: #161a22; --border: #252b38;
+    --text: #c8cdd8; --muted: #5a6070;
+    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; padding: 1.5rem; }
+  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+  header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: white; }
+  header span { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.5rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; }
+  .card.overall { grid-column: 1 / -1; display: flex; align-items: center; gap: 2rem; padding: 1.5rem 2rem; border-color: var(--short); }
+  .card.overall .big-arrow { font-size: 2.8rem; color: var(--short); line-height: 1; }
+  .card.overall .big-text .label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+  .card.overall .big-text .value { font-size: 1.8rem; font-weight: 600; color: var(--short); }
+  .card.overall .big-text .sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+  .card .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .card .value { font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 600; color: white; }
+  .card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+  .full { grid-column: 1 / -1; }
+  table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; }
+  th { text-align: left; color: var(--muted); font-weight: 400; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .badge { display: inline-block; padding: 0.12rem 0.5rem; border-radius: 3px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; }
+  .badge.long { background: rgba(0,200,150,0.15); color: var(--long); }
+  .badge.short { background: rgba(255,77,109,0.12); color: var(--short); }
+  .badge.neutral { background: rgba(90,96,112,0.15); color: var(--muted); }
+  .pos { color: var(--long); } .neg { color: var(--short); }
+  footer { margin-top: 1.5rem; font-size: 0.68rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } body { padding: 1rem; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Market Dashboard &mdash; OME + Macro</h1>
+  <span>Generated 29 Jul 2026  08:50</span>
+</header>
+
+<div class="grid">
+
+  <div class="card overall">
+    <div class="big-arrow">▼</div>
+    <div class="big-text">
+      <div class="label">Overall Market Signal</div>
+      <div class="value">SHORT</div>
+      <div class="sub">Composite score: -0.3 &nbsp;|&nbsp; Blended positioning + macro</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">Macro Score</div>
+    <div class="value" style="color:var(--muted)">0</div>
+    <div class="sub">Rates &bull; VIX &bull; Dollar &bull; Curve</div>
+  </div>
+
+  <div class="card">
+    <div class="label">Instruments Tracked</div>
+  <div class="value">3</div>
+  <div class="sub">Gold &bull; NAS100 &bull; EUR/USD</div>
+  </div>
+
+  <div class="card">
+    <div class="label">Data Sources</div>
+    <div class="value" style="font-size:1rem">FRED + OME</div>
+    <div class="sub">Macro via API &bull; Positioning via vision</div>
+  </div>
+
+  <div class="card">
+    <div class="label">Status</div>
+    <div class="value" style="font-size:1rem;color:var(--accent)">LIVE</div>
+    <div class="sub">Auto-updated daily</div>
+  </div>
+
+  <!-- Instrument Table -->
+  <div class="card full">
+    <div class="label" style="margin-bottom:0.8rem">Per-Instrument Scores</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Instrument</th>
+          <th>Signal</th>
+          <th>Total</th>
+          <th>Positioning</th>
+          <th>Macro</th>
+          <th>P/C Ratio</th>
+          <th>Max Pain</th>
+          <th>Walls (C/P)</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><strong>Gold</strong></td>
+          <td style="color:var(--muted);font-weight:600">→ NEUTRAL</td>
+          <td style="color:var(--muted)">0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>1.6671</td>
+          <td>4050</td>
+          <td>4100 / 4000</td>
+        </tr>
+        <tr>
+          <td><strong>NAS100</strong></td>
+          <td style="color:var(--short);font-weight:600">▼ SHORT</td>
+          <td style="color:var(--short)">-1</td>
+          <td>-1</td>
+          <td>0</td>
+          <td>4.4683</td>
+          <td>27800</td>
+          <td>28000 / 28000</td>
+        </tr>
+        <tr>
+          <td><strong>EURUSD</strong></td>
+          <td style="color:var(--muted);font-weight:600">→ NEUTRAL</td>
+          <td style="color:var(--muted)">0</td>
+          <td>0</td>
+          <td>0</td>
+          <td>1.8698</td>
+          <td>1.1325</td>
+          <td>1.16 / 1.13</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Macro Table -->
+  <div class="card full">
+    <div class="label" style="margin-bottom:0.8rem">FRED Macro Data</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Series</th>
+          <th>Value</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td>10Y Yield</td>
+          <td>—</td>
+          <td style="color:var(--muted);font-size:0.72rem"></td>
+        </tr>
+        <tr>
+          <td>2Y Yield</td>
+          <td>—</td>
+          <td style="color:var(--muted);font-size:0.72rem"></td>
+        </tr>
+        <tr>
+          <td>5Y Breakeven</td>
+          <td>—</td>
+          <td style="color:var(--muted);font-size:0.72rem"></td>
+        </tr>
+        <tr>
+          <td>VIX</td>
+          <td>—</td>
+          <td style="color:var(--muted);font-size:0.72rem"></td>
+        </tr>
+        <tr>
+          <td>Dollar Index</td>
+          <td>—</td>
+          <td style="color:var(--muted);font-size:0.72rem"></td>
+        </tr>
+        <tr>
+          <td>Fed Funds</td>
+          <td>—</td>
+          <td style="color:var(--muted);font-size:0.72rem"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  Screenshots &rarr; Claude Vision &rarr; FRED API &rarr; Scoring &rarr; Static Site &nbsp;|&nbsp;
+  Upload screenshots to trigger rebuild
+</footer>
+
+</body>
+</html>

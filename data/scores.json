@@ -1,0 +1,89 @@
+{
+  "generated": "2026-07-29T08:50:18.319402",
+  "macro": {
+    "score": 0,
+    "details": {},
+    "raw": {}
+  },
+  "instruments": {
+    "Gold": {
+      "ome_data": {
+        "instrument": null,
+        "max_pain": 4050,
+        "put_call_ratio": 1.6671,
+        "call_wall": 4100,
+        "put_wall": 4000,
+        "magnet_strike": 4100,
+        "skew_percent": null,
+        "total_oi": 46212,
+        "underlying_price": 4068.8,
+        "notes": null
+      },
+      "positioning_score": 0,
+      "positioning_details": {
+        "pcr": "1.67 (bearish puts heavy, -2)",
+        "magnet": "magnet 4100 above spot (+1)",
+        "walls": "C4100 > P4000 (+1)",
+        "max_pain": 4050
+      },
+      "macro_score": 0,
+      "macro_details": {},
+      "total_score": 0,
+      "signal": "NEUTRAL"
+    },
+    "NAS100": {
+      "ome_data": {
+        "instrument": null,
+        "max_pain": 27800,
+        "put_call_ratio": 4.4683,
+        "call_wall": 28000,
+        "put_wall": 28000,
+        "magnet_strike": 28000,
+        "skew_percent": null,
+        "total_oi": 9318,
+        "underlying_price": 27928.0,
+        "notes": null
+      },
+      "positioning_score": -1,
+      "positioning_details": {
+        "pcr": "4.47 (bearish puts heavy, -2)",
+        "magnet": "magnet 28000 above spot (+1)",
+        "walls": "C28000 = P28000 (neutral)",
+        "max_pain": 27800
+      },
+      "macro_score": 0,
+      "macro_details": {},
+      "total_score": -1,
+      "signal": "SHORT"
+    },
+    "EURUSD": {
+      "ome_data": {
+        "instrument": null,
+        "max_pain": 1.1325,
+        "put_call_ratio": 1.8698,
+        "call_wall": 1.16,
+        "put_wall": 1.13,
+        "magnet_strike": 1.15,
+        "skew_percent": null,
+        "total_oi": 174652,
+        "underlying_price": 1.14155,
+        "notes": null
+      },
+      "positioning_score": 0,
+      "positioning_details": {
+        "pcr": "1.87 (bearish puts heavy, -2)",
+        "magnet": "magnet 1.15 above spot (+1)",
+        "walls": "C1.16 > P1.13 (+1)",
+        "max_pain": 1.1325
+      },
+      "macro_score": 0,
+      "macro_details": {},
+      "total_score": 0,
+      "signal": "NEUTRAL"
+    }
+  },
+  "overall": {
+    "avg_score": -0.3,
+    "signal": "SHORT"
+  }
+}
