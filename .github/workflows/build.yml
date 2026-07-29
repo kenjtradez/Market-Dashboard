@@ -2,8 +2,9 @@ name: Build Market Dashboard
 
 on:
   schedule:
-    # Run at 07:30 UTC every weekday (roughly start of US/Europe morning)
-    - cron: '30 7 * * 1-5'
+    # Weekdays 06:30 & 13:00 UK (winter: 06:30/13:00 UTC, summer BST: 07:30/14:00)
+    - cron: '30 6 * * 1-5'
+    - cron: '0 13 * * 1-5'
   push:
     branches: [main]
     paths:
