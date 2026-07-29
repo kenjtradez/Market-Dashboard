@@ -60,6 +60,10 @@ jobs:
       - name: Compute scores
         run: python scripts/compute_scores.py
 
+      - name: Calculate Vol & Range Forecast
+        run: python scripts/calc_vol_range.py
+        continue-on-error: true
+
       - name: Build dashboard
         run: python scripts/build_dashboard.py
 
