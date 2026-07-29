@@ -8,6 +8,7 @@ from datetime import datetime
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..")
 INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
+DASH = "\u2014"
 
 def load_json(path):
     if os.path.exists(path):
@@ -239,7 +240,7 @@ def run():
     <div class="overall-text">
       <div class="label">Overall Market Signal</div>
       <div class="value">{overall_signal}</div>
-      <div class="sub">Composite: {overall_score if overall_score is not None else "\u2014"} / 8  &nbsp;|&nbsp; Instruments: Gold, NAS100, EUR/USD</div>
+      <div class="sub">Composite: {overall_score if overall_score is not None else DASH} / 8  &nbsp;|&nbsp; Instruments: Gold, NAS100, EUR/USD</div>
     </div>
     <div class="overall-macro">
       <div style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.1rem">Macro</div>
