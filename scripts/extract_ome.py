@@ -62,6 +62,7 @@ def process_page(image_bytes, api_key):
         text = result["choices"][0]["message"]["content"]
     except (KeyError, IndexError):
         return {"error": "unexpected response", "raw": str(result)[:500]}
+    print(f"      RAW response from Groq: {text[:800]}")
     json_start = text.find("{")
     json_end = text.rfind("}") + 1
     if json_start >= 0 and json_end > json_start:
