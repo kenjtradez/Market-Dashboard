@@ -240,7 +240,9 @@ def run():
                 ev_time = ev["date"][11:16] if len(ev["date"]) > 16 else ev["date"]
                 ev_day = ""
             imp = ev.get("impact", "Low")
-            imp_cls = "imp-high" if imp == "High" else ("imp-med" if imp == "Medium" else "imp-low")
+            if imp not in ("High", "Medium"):
+                continue
+            imp_cls = "imp-high" if imp == "High" else "imp-med"
             event_rows += f"""
           <tr class="{imp_cls}-row">
             <td class="ev-time">{ev_time}</td>
