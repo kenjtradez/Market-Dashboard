@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Market Dashboard — OME + Macro</title>
+<title>Morning Brief — OME + Macro</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,356 +11,141 @@
     --bg: #0d0f14; --surface: #161a22; --border: #252b38;
     --text: #c8cdd8; --muted: #5a6070;
     --long: #00c896; --short: #ff4d6d; --accent: #4a8fff;
+    --gold: #f0b429;
   }
-  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; padding: 1.5rem; }
-  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
-  header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: white; }
-  header span { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); }
-  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.5rem; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; }
-  .card.overall { grid-column: 1 / -1; display: flex; align-items: center; gap: 2rem; padding: 1.5rem 2rem; border-color: var(--short); }
-  .card.overall .big-arrow { font-size: 2.8rem; color: var(--short); line-height: 1; }
-  .card.overall .big-text .label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
-  .card.overall .big-text .value { font-size: 1.8rem; font-weight: 600; color: var(--short); }
-  .card.overall .big-text .sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
-  .card .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
-  .card .value { font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 600; color: white; }
-  .card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
-  .full { grid-column: 1 / -1; }
-  table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; }
-  th { text-align: left; color: var(--muted); font-weight: 400; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
-  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.02); }
-  footer { margin-top: 1.5rem; font-size: 0.68rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
 
-  /* Tabs */
-  .tabs { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-  .tab-input { display: none; }
-  .tab-labels { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
-  .tab-label { padding: 0.75rem 1.25rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
-  .tab-label:hover { color: var(--text); background: rgba(255,255,255,0.03); }
-  .tab-input:checked + .tab-label { color: white; border-bottom-color: var(--accent); background: var(--surface); }
-  .tab-panel { display: none; padding: 1.25rem; }
-  .tab-visible { display: block; }
-  .tab-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
-  .tab-card { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem; display: flex; flex-direction: column; }
-  .tab-card.signal { border-width: 1px; border-style: solid; }
-  .tab-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
-  .tab-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; color: white; }
-  .tab-card-sub { font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; }
-  .narrative { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
-  .narrative-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
-  .narrative p { font-size: 0.82rem; line-height: 1.7; color: var(--text); }
+  /* Masthead */
+  .masthead { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
+  .masthead-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+  .masthead h1 { font-family: 'IBM Plex Mono', monospace; font-size: 1.4rem; font-weight: 600; color: white; letter-spacing: -0.02em; }
+  .masthead .date { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
 
-  @media (max-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } .tab-grid { grid-template-columns: 1fr 1fr; } body { padding: 1rem; } }
+  /* Overall signal */
+  .overall { display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid var(--short); border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+  .overall-arrow { font-size: 2.2rem; color: var(--short); line-height: 1; }
+  .overall-text { flex: 1; }
+  .overall-text .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.15rem; }
+  .overall-text .value { font-size: 1.5rem; font-weight: 600; color: var(--short); }
+  .overall-text .sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+  .overall-macro { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); padding-left: 1rem; border-left: 1px solid var(--border); }
+  .overall-macro .macro-score { font-size: 1.1rem; font-weight: 600; color: var(--muted); }
+
+  /* Instrument brief cards */
+  .brief-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 6px; padding: 1.15rem 1.25rem; margin-bottom: 0.85rem; }
+  .brief-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+  .brief-name { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: white; }
+  .brief-badge { padding: 0.15rem 0.6rem; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; }
+  .brief-metrics { display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin-bottom: 0.55rem; }
+  .metric { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }
+  .metric-label { color: var(--muted); margin-right: 0.25rem; }
+  .metric-val { color: var(--text); font-weight: 400; }
+  .brief-narrative { font-size: 0.8rem; line-height: 1.6; color: var(--text); border-top: 1px solid var(--border); padding-top: 0.55rem; }
+
+  /* Macro section */
+  .macro-section { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1rem; }
+  .macro-section .macro-label-header { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }
+  .macro-section .macro-line { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.6rem; font-family: 'IBM Plex Mono', monospace; }
+  .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+  .macro-item { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; display: flex; gap: 0.4rem; align-items: baseline; }
+  .macro-item .macro-label { color: var(--muted); }
+  .macro-item .macro-val { color: var(--text); font-weight: 400; }
+  .macro-item .macro-date { color: var(--muted); font-size: 0.62rem; margin-left: auto; }
+
+  footer { margin-top: 1.25rem; font-size: 0.65rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; border-top: 1px solid var(--border); padding-top: 1rem; }
+
+  @media (max-width: 600px) { .container { padding: 1rem; } .overall { flex-direction: column; text-align: center; } .overall-macro { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 0.5rem; width: 100%; text-align: center; } .macro-grid { grid-template-columns: 1fr 1fr; } .brief-metrics { gap: 0.25rem 0.6rem; } }
 </style>
 </head>
 <body>
+<div class="container">
 
-<header>
-  <h1>Market Dashboard — OME + Macro</h1>
-  <span>Generated 29 Jul 2026  08:50</span>
-</header>
+  <div class="masthead">
+    <div class="masthead-label">Daily Briefing</div>
+    <h1>Market Dashboard</h1>
+    <div class="date">29 Jul 2026  08:50  &nbsp;|&nbsp; OME + Macro</div>
+  </div>
 
-<div class="grid">
-
-  <div class="card overall">
-    <div class="big-arrow">▼</div>
-    <div class="big-text">
+  <div class="overall">
+    <div class="overall-arrow">▼</div>
+    <div class="overall-text">
       <div class="label">Overall Market Signal</div>
       <div class="value">SHORT</div>
-      <div class="sub">Composite score: -0.3 &nbsp;|&nbsp; Blended positioning + macro</div>
+      <div class="sub">Composite: -0.3 / 8  &nbsp;|&nbsp; Instruments: Gold, NAS100, EUR/USD</div>
+    </div>
+    <div class="overall-macro">
+      <div style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.1rem">Macro</div>
+      <div class="macro-score">0</div>
+      <div style="font-size:0.62rem;margin-top:0.1rem">/ 3</div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="label">Macro Score</div>
-    <div class="value" style="color:var(--muted)">0</div>
-    <div class="sub">Rates &bull; VIX &bull; Dollar &bull; Curve</div>
-  </div>
+  
+        <div class="brief-card" style="border-left-color:var(--muted)">
+          <div class="brief-header">
+            <div class="brief-name">Gold</div>
+            <div class="brief-badge" style="background:var(--muted)15;color:var(--muted)">→ NEUTRAL</div>
+          </div>
+          <div class="brief-metrics">
+            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">4,068.80</span></div>
+            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">1.6671</span></div>
+            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">4,050</span></div>
+            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">4,100</span></div>
+            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">4,000</span></div>
+            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">4,100</span></div>
+            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">46,212</span></div>
+            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">0</span></div>
+          </div>
+          <div class="brief-narrative">PCR at 1.67 shows heavy puts. Max pain (4,050) is near price. Call wall (4,100) above put wall (4,000). Resistance dominates. Score: 0 (NEUTRAL).</div>
+        </div>
+        <div class="brief-card" style="border-left-color:var(--short)">
+          <div class="brief-header">
+            <div class="brief-name">NAS100</div>
+            <div class="brief-badge" style="background:var(--short)15;color:var(--short)">▼ SHORT</div>
+          </div>
+          <div class="brief-metrics">
+            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">27,928.0</span></div>
+            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">4.4683</span></div>
+            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">27,800</span></div>
+            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">28,000</span></div>
+            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">28,000</span></div>
+            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">28,000</span></div>
+            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">9,318</span></div>
+            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">-1</span></div>
+          </div>
+          <div class="brief-narrative">PCR at 4.47 shows heavy puts. Max pain (27,800) is near price. Both walls at 28,000 — key battleground. Score: -1 (SHORT).</div>
+        </div>
+        <div class="brief-card" style="border-left-color:var(--muted)">
+          <div class="brief-header">
+            <div class="brief-name">EURUSD</div>
+            <div class="brief-badge" style="background:var(--muted)15;color:var(--muted)">→ NEUTRAL</div>
+          </div>
+          <div class="brief-metrics">
+            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">1.1416</span></div>
+            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">1.8698</span></div>
+            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">1.1325</span></div>
+            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">1.1600</span></div>
+            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">1.1300</span></div>
+            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">1.1500</span></div>
+            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">174,652</span></div>
+            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">0</span></div>
+          </div>
+          <div class="brief-narrative">PCR at 1.87 shows heavy puts. Max pain (1.1325) is 0.8% below price — downside pull. Call wall (1.1600) above put wall (1.1300). Resistance dominates. Score: 0 (NEUTRAL).</div>
+        </div>
 
-  <div class="card">
-    <div class="label">Instruments Tracked</div>
-    <div class="value">3</div>
-    <div class="sub">Gold &bull; NAS100 &bull; EUR/USD</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Data Sources</div>
-    <div class="value" style="font-size:1rem">FRED + OME</div>
-    <div class="sub">Macro via API &bull; OI via CME PDF extracts</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Status</div>
-    <div class="value" style="font-size:1rem;color:var(--accent)">LIVE</div>
-    <div class="sub">Auto-updated daily</div>
-  </div>
-
-  <!-- Instrument Table -->
-  <div class="card full">
-    <div class="label" style="margin-bottom:0.8rem">Per-Instrument Scores</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Instrument</th>
-          <th>Signal</th>
-          <th>Total</th>
-          <th>Positioning</th>
-          <th>Macro</th>
-          <th>P/C Ratio</th>
-          <th>Max Pain</th>
-          <th>Walls (C/P)</th>
-        </tr>
-      </thead>
-      <tbody>
-        
-        <tr>
-          <td><strong>Gold</strong></td>
-          <td style="color:var(--muted);font-weight:600">→ NEUTRAL</td>
-          <td style="color:var(--muted)">0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>1.6671</td>
-          <td>4050</td>
-          <td>4100 / 4000</td>
-        </tr>
-        <tr>
-          <td><strong>NAS100</strong></td>
-          <td style="color:var(--short);font-weight:600">▼ SHORT</td>
-          <td style="color:var(--short)">-1</td>
-          <td>-1</td>
-          <td>0</td>
-          <td>4.4683</td>
-          <td>27800</td>
-          <td>28000 / 28000</td>
-        </tr>
-        <tr>
-          <td><strong>EURUSD</strong></td>
-          <td style="color:var(--muted);font-weight:600">→ NEUTRAL</td>
-          <td style="color:var(--muted)">0</td>
-          <td>0</td>
-          <td>0</td>
-          <td>1.8698</td>
-          <td>1.1325</td>
-          <td>1.16 / 1.13</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Instrument Tabs -->
-  <div class="tabs full">
-    <div class="tab-labels">
-      <input type="radio" name="tabs" id="tab0" class="tab-input" checked>
-<label for="tab0" class="tab-label tab-active">Gold</label>
-<input type="radio" name="tabs" id="tab1" class="tab-input" >
-<label for="tab1" class="tab-label ">NAS100</label>
-<input type="radio" name="tabs" id="tab2" class="tab-input" >
-<label for="tab2" class="tab-label ">EURUSD</label>
-
+  <div class="macro-section">
+    <div class="macro-label-header">Macro Snapshot</div>
+    <div class="macro-line"></div>
+    <div class="macro-grid">
+      <div class="macro-item"><span class="macro-label">10Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">2Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">5Y Breakeven</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">VIX</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Dollar Index</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Fed Funds</span><span class="macro-val">—</span><span class="macro-date"></span></div>
     </div>
-    
-        <div class="tab-panel tab-visible">
-          <div class="tab-grid">
-            <div class="tab-card signal" style="border-color:var(--muted)">
-              <span class="tab-card-label">Signal</span>
-              <span class="tab-card-value" style="color:var(--muted)">→ NEUTRAL</span>
-              <span class="tab-card-sub">Score: 0</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Positioning</span>
-              <span class="tab-card-value" style="color:var(--muted)">0</span>
-              <span class="tab-card-sub">/ 5 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Macro</span>
-              <span class="tab-card-value" style="color:var(--muted)">0</span>
-              <span class="tab-card-sub">/ 3 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Max Pain</span>
-              <span class="tab-card-value">4050</span>
-              <span class="tab-card-sub">Underlying: 4068.8</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">P/C Ratio</span>
-              <span class="tab-card-value">1.6671</span>
-              <span class="tab-card-sub">Bearish</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Walls</span>
-              <span class="tab-card-value" style="font-size:0.85rem">C: 4100 / P: 4000</span>
-              <span class="tab-card-sub">Call / Put</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Magnet</span>
-              <span class="tab-card-value">4100</span>
-              <span class="tab-card-sub">Highest OI concentration</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Total OI</span>
-              <span class="tab-card-value" style="font-size:0.85rem">46,212</span>
-              <span class="tab-card-sub">Open Interest</span>
-            </div>
-          </div>
-          <div class="narrative">
-            <div class="narrative-label">What's Happening</div>
-            <p>The overall signal for Gold is **NEUTRAL** (score 0). The put/call ratio of **1.67** signals heavy put positioning — options traders are loading up on downside protection, a bearish sign. Max pain at **4050** sits very close to the current price (4068.8000), so minimal gravitational pull toward max pain. The call wall at **4,100** towers above the put wall at **4,000**, meaning resistance overhead is the dominant structural level. The magnet strike at **4,100** holds the highest total open interest concentration, acting as a price attractor. Macro contributes **0/3**. Net score: **0** (NEUTRAL).</p>
-          </div>
-        </div>
-        <div class="tab-panel ">
-          <div class="tab-grid">
-            <div class="tab-card signal" style="border-color:var(--short)">
-              <span class="tab-card-label">Signal</span>
-              <span class="tab-card-value" style="color:var(--short)">▼ SHORT</span>
-              <span class="tab-card-sub">Score: -1</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Positioning</span>
-              <span class="tab-card-value" style="color:var(--short)">-1</span>
-              <span class="tab-card-sub">/ 5 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Macro</span>
-              <span class="tab-card-value" style="color:var(--muted)">0</span>
-              <span class="tab-card-sub">/ 3 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Max Pain</span>
-              <span class="tab-card-value">27800</span>
-              <span class="tab-card-sub">Underlying: 27928.0</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">P/C Ratio</span>
-              <span class="tab-card-value">4.4683</span>
-              <span class="tab-card-sub">Bearish</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Walls</span>
-              <span class="tab-card-value" style="font-size:0.85rem">C: 28000 / P: 28000</span>
-              <span class="tab-card-sub">Call / Put</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Magnet</span>
-              <span class="tab-card-value">28000</span>
-              <span class="tab-card-sub">Highest OI concentration</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Total OI</span>
-              <span class="tab-card-value" style="font-size:0.85rem">9,318</span>
-              <span class="tab-card-sub">Open Interest</span>
-            </div>
-          </div>
-          <div class="narrative">
-            <div class="narrative-label">What's Happening</div>
-            <p>The overall signal for NAS100 is **SHORT** (score -1). The put/call ratio of **4.47** signals heavy put positioning — options traders are loading up on downside protection, a bearish sign. Max pain at **27800** sits very close to the current price (27928.0000), so minimal gravitational pull toward max pain. Both put and call walls converge at **28,000** — a major battleground where the most open interest sits. The magnet strike at **28,000** holds the highest total open interest concentration, acting as a price attractor. Macro contributes **0/3**. Net score: **-1** (SHORT).</p>
-          </div>
-        </div>
-        <div class="tab-panel ">
-          <div class="tab-grid">
-            <div class="tab-card signal" style="border-color:var(--muted)">
-              <span class="tab-card-label">Signal</span>
-              <span class="tab-card-value" style="color:var(--muted)">→ NEUTRAL</span>
-              <span class="tab-card-sub">Score: 0</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Positioning</span>
-              <span class="tab-card-value" style="color:var(--muted)">0</span>
-              <span class="tab-card-sub">/ 5 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Macro</span>
-              <span class="tab-card-value" style="color:var(--muted)">0</span>
-              <span class="tab-card-sub">/ 3 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Max Pain</span>
-              <span class="tab-card-value">1.1325</span>
-              <span class="tab-card-sub">Underlying: 1.14155</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">P/C Ratio</span>
-              <span class="tab-card-value">1.8698</span>
-              <span class="tab-card-sub">Bearish</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Walls</span>
-              <span class="tab-card-value" style="font-size:0.85rem">C: 1.16 / P: 1.13</span>
-              <span class="tab-card-sub">Call / Put</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Magnet</span>
-              <span class="tab-card-value">1.15</span>
-              <span class="tab-card-sub">Highest OI concentration</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Total OI</span>
-              <span class="tab-card-value" style="font-size:0.85rem">174,652</span>
-              <span class="tab-card-sub">Open Interest</span>
-            </div>
-          </div>
-          <div class="narrative">
-            <div class="narrative-label">What's Happening</div>
-            <p>The overall signal for EURUSD is **NEUTRAL** (score 0). The put/call ratio of **1.87** signals heavy put positioning — options traders are loading up on downside protection, a bearish sign. Max pain at **1.1325** is **0.8%** below the current price (1.1416) — price is stretched above max pain and may drift lower toward it. The call wall at **1.16** towers above the put wall at **1.13**, meaning resistance overhead is the dominant structural level. The magnet strike at **1.15** holds the highest total open interest concentration, acting as a price attractor. Macro contributes **0/3**. Net score: **0** (NEUTRAL).</p>
-          </div>
-        </div>
   </div>
 
-  <!-- Macro Table -->
-  <div class="card full">
-    <div class="label" style="margin-bottom:0.8rem">FRED Macro Data</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Series</th>
-          <th>Value</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        
-        <tr>
-          <td>10Y Yield</td>
-          <td>—</td>
-          <td style="color:var(--muted);font-size:0.72rem"></td>
-        </tr>
-        <tr>
-          <td>2Y Yield</td>
-          <td>—</td>
-          <td style="color:var(--muted);font-size:0.72rem"></td>
-        </tr>
-        <tr>
-          <td>5Y Breakeven</td>
-          <td>—</td>
-          <td style="color:var(--muted);font-size:0.72rem"></td>
-        </tr>
-        <tr>
-          <td>VIX</td>
-          <td>—</td>
-          <td style="color:var(--muted);font-size:0.72rem"></td>
-        </tr>
-        <tr>
-          <td>Dollar Index</td>
-          <td>—</td>
-          <td style="color:var(--muted);font-size:0.72rem"></td>
-        </tr>
-        <tr>
-          <td>Fed Funds</td>
-          <td>—</td>
-          <td style="color:var(--muted);font-size:0.72rem"></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <footer>
+    CME OI PDFs &rarr; pdfplumber &rarr; FRED API &rarr; Scoring &rarr; GitHub Pages
+  </footer>
 
 </div>
-
-<footer>
-  OME reports &rarr; PDF extraction &rarr; FRED API &rarr; Scoring &rarr; Static Site &nbsp;|&nbsp;
-  Upload reports to trigger rebuild
-</footer>
-
 </body>
 </html>

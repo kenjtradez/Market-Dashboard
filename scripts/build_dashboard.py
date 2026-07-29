@@ -1,5 +1,5 @@
 """
-Generate a static HTML dashboard from scores.json and the latest raw data.
+Generate a morning-brief static HTML dashboard from scores and raw data.
 """
 import os
 import json
@@ -29,133 +29,57 @@ def arrow_for(val):
         return "\u25bc"
     return "\u2192"
 
-def generate_narrative(instr, d, ome_raw, macro_score):
+def fmt(v):
+    if v is None or v == "\u2014":
+        return "\u2014"
+    try:
+        if isinstance(v, float):
+            if v < 10:
+                return f"{v:.4f}"
+            return f"{v:,.1f}" if v == int(v) else f"{v:,.2f}"
+        if isinstance(v, int):
+            return f"{v:,}"
+        return str(v)
+    except:
+        return str(v)
+
+def generate_brief(instr, d, ome_raw, macro_score):
     ts = d.get("total_score")
     sig = d.get("signal", "N/A")
-    ps = d.get("positioning_score", 0)
     pcr = ome_raw.get("put_call_ratio")
     mp = ome_raw.get("max_pain")
     cw = ome_raw.get("call_wall")
     pw = ome_raw.get("put_wall")
-    mg = ome_raw.get("magnet_strike")
     sp = ome_raw.get("underlying_price")
 
     parts = []
-    parts.append(f"The overall signal for {instr} is **{sig}** (score {ts}).")
-
     if pcr is not None:
         if pcr > 1.3:
-            parts.append(f"The put/call ratio of **{pcr:.2f}** signals heavy put positioning \u2014 options traders are loading up on downside protection, a bearish sign.")
+            parts.append(f"PCR at {pcr:.2f} shows heavy puts.")
         elif pcr < 0.7:
-            parts.append(f"The put/call ratio of **{pcr:.2f}** shows call dominance \u2014 traders are positioning for upside, a bullish sign.")
+            parts.append(f"PCR at {pcr:.2f} shows call dominance.")
         else:
-            parts.append(f"The put/call ratio of **{pcr:.2f}** is balanced.")
+            parts.append(f"PCR at {pcr:.2f} is neutral.")
 
-    if mp is not None and sp is not None and sp != "\u2014":
-        diff_pct = (mp - sp) / sp * 100
-        if abs(diff_pct) < 0.5:
-            parts.append(f"Max pain at **{mp}** sits very close to the current price ({sp:.4f}), so minimal gravitational pull toward max pain.")
-        elif diff_pct < 0:
-            parts.append(f"Max pain at **{mp}** is **{abs(diff_pct):.1f}%** below the current price ({sp:.4f}) \u2014 price is stretched above max pain and may drift lower toward it.")
+    if mp is not None and sp is not None:
+        diff = ((mp - sp) / sp) * 100
+        if abs(diff) < 0.5:
+            parts.append(f"Max pain ({fmt(mp)}) is near price.")
+        elif diff < 0:
+            parts.append(f"Max pain ({fmt(mp)}) is {abs(diff):.1f}% below price \u2014 downside pull.")
         else:
-            parts.append(f"Max pain at **{mp}** is **{diff_pct:.1f}%** above the current price ({sp:.4f}) \u2014 price is below max pain and may drift higher toward it.")
-    elif mp is not None:
-        parts.append(f"Max pain is at **{mp}**.")
+            parts.append(f"Max pain ({fmt(mp)}) is {diff:.1f}% above price \u2014 upside pull.")
 
     if cw is not None and pw is not None:
         if cw > pw:
-            parts.append(f"The call wall at **{cw:,}** towers above the put wall at **{pw:,}**, meaning resistance overhead is the dominant structural level.")
+            parts.append(f"Call wall ({fmt(cw)}) above put wall ({fmt(pw)}). Resistance dominates.")
         elif cw < pw:
-            parts.append(f"The put wall at **{pw:,}** dominates below the call wall at **{cw:,}**, giving support a stronger footing than resistance.")
+            parts.append(f"Put wall ({fmt(pw)}) below call wall ({fmt(cw)}). Support dominates.")
         else:
-            parts.append(f"Both put and call walls converge at **{cw:,}** \u2014 a major battleground where the most open interest sits.")
+            parts.append(f"Both walls at {fmt(cw)} \u2014 key battleground.")
 
-    if mg is not None:
-        parts.append(f"The magnet strike at **{mg:,}** holds the highest total open interest concentration, acting as a price attractor.")
-
-    parts.append(f"Macro contributes **{macro_score}/3**. Net score: **{ts}** ({sig}).")
-
+    parts.append(f"Score: {ts} ({sig}).")
     return " ".join(parts)
-
-def build_tabs(tabs_data, macro_score):
-    labels_html = ""
-    panels_html = ""
-    for i, td in enumerate(tabs_data):
-        checked = "checked" if i == 0 else ""
-        active = "tab-active" if i == 0 else ""
-        visible = "tab-visible" if i == 0 else ""
-
-        labels_html += f'<input type="radio" name="tabs" id="tab{i}" class="tab-input" {checked}>\n'
-        labels_html += f'<label for="tab{i}" class="tab-label {active}">{td["name"]}</label>\n'
-
-        sig_color = td["sig_color"]
-        arr = td["arr"]
-        sig = td["sig"]
-        ts = td["ts"]
-        ps = td["ps"]
-        macro_color = td["macro_color"]
-        mp = td["mp"]
-        sp = td["sp"]
-        pcr = td["pcr"]
-        cw = td["cw"]
-        pw = td["pw"]
-        mg = td["mg"]
-        oi = td["oi"]
-        narrative = td["narrative"]
-
-        pcr_label = "Bearish" if isinstance(pcr, (int, float)) and pcr > 1.3 else ("Bullish" if isinstance(pcr, (int, float)) and pcr < 0.7 else "Neutral")
-
-        panels_html += f"""
-        <div class="tab-panel {visible}">
-          <div class="tab-grid">
-            <div class="tab-card signal" style="border-color:{sig_color}">
-              <span class="tab-card-label">Signal</span>
-              <span class="tab-card-value" style="color:{sig_color}">{arr} {sig}</span>
-              <span class="tab-card-sub">Score: {ts if ts is not None else "\u2014"}</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Positioning</span>
-              <span class="tab-card-value" style="color:{color_for(ps)}">{ps}</span>
-              <span class="tab-card-sub">/ 5 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Macro</span>
-              <span class="tab-card-value" style="color:{macro_color}">{macro_score}</span>
-              <span class="tab-card-sub">/ 3 possible</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Max Pain</span>
-              <span class="tab-card-value">{mp}</span>
-              <span class="tab-card-sub">Underlying: {sp}</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">P/C Ratio</span>
-              <span class="tab-card-value">{pcr}</span>
-              <span class="tab-card-sub">{pcr_label}</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Walls</span>
-              <span class="tab-card-value" style="font-size:0.85rem">C: {cw} / P: {pw}</span>
-              <span class="tab-card-sub">Call / Put</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Magnet</span>
-              <span class="tab-card-value">{mg}</span>
-              <span class="tab-card-sub">Highest OI concentration</span>
-            </div>
-            <div class="tab-card">
-              <span class="tab-card-label">Total OI</span>
-              <span class="tab-card-value" style="font-size:0.85rem">{oi}</span>
-              <span class="tab-card-sub">Open Interest</span>
-            </div>
-          </div>
-          <div class="narrative">
-            <div class="narrative-label">What's Happening</div>
-            <p>{narrative}</p>
-          </div>
-        </div>"""
-
-    return labels_html, panels_html
 
 def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
@@ -176,9 +100,9 @@ def run():
 
     macro_score = macro.get("score", 0)
     macro_color = color_for(macro_score)
+    macro_details = macro.get("details", {})
 
-    rows = ""
-    tabs_data = []
+    instr_cards = ""
     for instr in INSTRUMENTS:
         d = instruments.get(instr, {})
         ts = d.get("total_score")
@@ -191,66 +115,62 @@ def run():
         mp = ome_raw.get("max_pain", "\u2014")
         cw = ome_raw.get("call_wall", "\u2014")
         pw = ome_raw.get("put_wall", "\u2014")
-        rows += f"""
-        <tr>
-          <td><strong>{instr}</strong></td>
-          <td style="color:{sig_color};font-weight:600">{arr} {sig}</td>
-          <td style="color:{color_for(ts)}">{ts if ts is not None else "\u2014"}</td>
-          <td>{ps}</td>
-          <td>{macro_score}</td>
-          <td>{pcr}</td>
-          <td>{mp}</td>
-          <td>{cw} / {pw}</td>
-        </tr>"""
-
-        narrative = generate_narrative(instr, d, ome_raw, macro_score)
-
         mg = ome_raw.get("magnet_strike", "\u2014")
         sp = ome_raw.get("underlying_price", "\u2014")
-        oi_val = ome_raw.get("total_oi", "\u2014")
+        tot_oi = ome_raw.get("total_oi", "\u2014")
+        brief = generate_brief(instr, d, ome_raw, macro_score)
+
         try:
-            oi_display = f"{oi_val:,}"
+            oi_display = f"{tot_oi:,}"
         except:
-            oi_display = str(oi_val)
+            oi_display = str(tot_oi)
 
-        tabs_data.append({
-            "name": instr,
-            "sig_color": sig_color,
-            "arr": arr,
-            "sig": sig,
-            "ts": ts,
-            "ps": ps,
-            "macro_color": macro_color,
-            "mp": mp,
-            "sp": sp,
-            "pcr": pcr,
-            "cw": cw,
-            "pw": pw,
-            "mg": mg,
-            "oi": oi_display,
-            "narrative": narrative,
-        })
+        instr_cards += f"""
+        <div class="brief-card" style="border-left-color:{sig_color}">
+          <div class="brief-header">
+            <div class="brief-name">{instr}</div>
+            <div class="brief-badge" style="background:{sig_color}15;color:{sig_color}">{arr} {sig}</div>
+          </div>
+          <div class="brief-metrics">
+            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">{fmt(sp)}</span></div>
+            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">{pcr}</span></div>
+            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">{fmt(mp)}</span></div>
+            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">{fmt(cw)}</span></div>
+            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">{fmt(pw)}</span></div>
+            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">{fmt(mg)}</span></div>
+            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">{oi_display}</span></div>
+            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">{ps}</span></div>
+          </div>
+          <div class="brief-narrative">{brief}</div>
+        </div>"""
 
-    tab_labels_html, tab_panels_html = build_tabs(tabs_data, macro_score)
-
-    macro_rows = ""
+    macro_items = ""
     for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "VIX", "Dollar Index", "Fed Funds"]:
         d = fred.get(label, {})
         val = d.get("value", "\u2014")
         dt = d.get("date", "")
-        macro_rows += f"""
-        <tr>
-          <td>{label}</td>
-          <td>{val}</td>
-          <td style="color:var(--muted);font-size:0.72rem">{dt}</td>
-        </tr>"""
+        macro_items += f"""<div class="macro-item"><span class="macro-label">{label}</span><span class="macro-val">{val}</span><span class="macro-date">{dt}</span></div>"""
+
+    vix = fred.get("VIX", {}).get("value")
+    dxy = fred.get("Dollar Index", {}).get("value")
+    macro_line_parts = []
+    if vix:
+        macro_line_parts.append(f"VIX: {vix}")
+    if dxy:
+        macro_line_parts.append(f"DXY: {dxy}")
+    curve_y10 = fred.get("10Y Yield", {}).get("value")
+    curve_y2 = fred.get("2Y Yield", {}).get("value")
+    if curve_y10 and curve_y2:
+        spread = float(curve_y10) - float(curve_y2)
+        macro_line_parts.append(f"2-10 spread: {spread:.2f}%")
+    macro_line = "  |  ".join(macro_line_parts)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Market Dashboard \u2014 OME + Macro</title>
+<title>Morning Brief \u2014 OME + Macro</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -258,147 +178,91 @@ def run():
     --bg: #0d0f14; --surface: #161a22; --border: #252b38;
     --text: #c8cdd8; --muted: #5a6070;
     --long: #00c896; --short: #ff4d6d; --accent: #4a8fff;
+    --gold: #f0b429;
   }}
-  body {{ background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; padding: 1.5rem; }}
-  header {{ display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }}
-  header h1 {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: white; }}
-  header span {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); }}
-  .grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.5rem; }}
-  .card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; }}
-  .card.overall {{ grid-column: 1 / -1; display: flex; align-items: center; gap: 2rem; padding: 1.5rem 2rem; border-color: {overall_color}; }}
-  .card.overall .big-arrow {{ font-size: 2.8rem; color: {overall_color}; line-height: 1; }}
-  .card.overall .big-text .label {{ font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }}
-  .card.overall .big-text .value {{ font-size: 1.8rem; font-weight: 600; color: {overall_color}; }}
-  .card.overall .big-text .sub {{ font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }}
-  .card .label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }}
-  .card .value {{ font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 600; color: white; }}
-  .card .sub {{ font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }}
-  .full {{ grid-column: 1 / -1; }}
-  table {{ width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; }}
-  th {{ text-align: left; color: var(--muted); font-weight: 400; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }}
-  td {{ padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text); }}
-  tr:last-child td {{ border-bottom: none; }}
-  tr:hover td {{ background: rgba(255,255,255,0.02); }}
-  footer {{ margin-top: 1.5rem; font-size: 0.68rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; }}
+  body {{ background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }}
+  .container {{ max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }}
 
-  /* Tabs */
-  .tabs {{ grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }}
-  .tab-input {{ display: none; }}
-  .tab-labels {{ display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }}
-  .tab-label {{ padding: 0.75rem 1.25rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }}
-  .tab-label:hover {{ color: var(--text); background: rgba(255,255,255,0.03); }}
-  .tab-input:checked + .tab-label {{ color: white; border-bottom-color: var(--accent); background: var(--surface); }}
-  .tab-panel {{ display: none; padding: 1.25rem; }}
-  .tab-visible {{ display: block; }}
-  .tab-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }}
-  .tab-card {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem; display: flex; flex-direction: column; }}
-  .tab-card.signal {{ border-width: 1px; border-style: solid; }}
-  .tab-card-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }}
-  .tab-card-value {{ font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; color: white; }}
-  .tab-card-sub {{ font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; }}
-  .narrative {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }}
-  .narrative-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }}
-  .narrative p {{ font-size: 0.82rem; line-height: 1.7; color: var(--text); }}
+  /* Masthead */
+  .masthead {{ border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 1.5rem; }}
+  .masthead-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }}
+  .masthead h1 {{ font-family: 'IBM Plex Mono', monospace; font-size: 1.4rem; font-weight: 600; color: white; letter-spacing: -0.02em; }}
+  .masthead .date {{ font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }}
 
-  @media (max-width: 800px) {{ .grid {{ grid-template-columns: 1fr 1fr; }} .tab-grid {{ grid-template-columns: 1fr 1fr; }} body {{ padding: 1rem; }} }}
+  /* Overall signal */
+  .overall {{ display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid {overall_color}; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }}
+  .overall-arrow {{ font-size: 2.2rem; color: {overall_color}; line-height: 1; }}
+  .overall-text {{ flex: 1; }}
+  .overall-text .label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.15rem; }}
+  .overall-text .value {{ font-size: 1.5rem; font-weight: 600; color: {overall_color}; }}
+  .overall-text .sub {{ font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }}
+  .overall-macro {{ text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); padding-left: 1rem; border-left: 1px solid var(--border); }}
+  .overall-macro .macro-score {{ font-size: 1.1rem; font-weight: 600; color: {macro_color}; }}
+
+  /* Instrument brief cards */
+  .brief-card {{ background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 6px; padding: 1.15rem 1.25rem; margin-bottom: 0.85rem; }}
+  .brief-header {{ display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }}
+  .brief-name {{ font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: white; }}
+  .brief-badge {{ padding: 0.15rem 0.6rem; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; }}
+  .brief-metrics {{ display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin-bottom: 0.55rem; }}
+  .metric {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }}
+  .metric-label {{ color: var(--muted); margin-right: 0.25rem; }}
+  .metric-val {{ color: var(--text); font-weight: 400; }}
+  .brief-narrative {{ font-size: 0.8rem; line-height: 1.6; color: var(--text); border-top: 1px solid var(--border); padding-top: 0.55rem; }}
+
+  /* Macro section */
+  .macro-section {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1rem; }}
+  .macro-section .macro-label-header {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }}
+  .macro-section .macro-line {{ font-size: 0.78rem; color: var(--muted); margin-bottom: 0.6rem; font-family: 'IBM Plex Mono', monospace; }}
+  .macro-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }}
+  .macro-item {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; display: flex; gap: 0.4rem; align-items: baseline; }}
+  .macro-item .macro-label {{ color: var(--muted); }}
+  .macro-item .macro-val {{ color: var(--text); font-weight: 400; }}
+  .macro-item .macro-date {{ color: var(--muted); font-size: 0.62rem; margin-left: auto; }}
+
+  footer {{ margin-top: 1.25rem; font-size: 0.65rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; border-top: 1px solid var(--border); padding-top: 1rem; }}
+
+  @media (max-width: 600px) {{ .container {{ padding: 1rem; }} .overall {{ flex-direction: column; text-align: center; }} .overall-macro {{ border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 0.5rem; width: 100%; text-align: center; }} .macro-grid {{ grid-template-columns: 1fr 1fr; }} .brief-metrics {{ gap: 0.25rem 0.6rem; }} }}
 </style>
 </head>
 <body>
+<div class="container">
 
-<header>
-  <h1>Market Dashboard \u2014 OME + Macro</h1>
-  <span>Generated {gen_display}</span>
-</header>
+  <div class="masthead">
+    <div class="masthead-label">Daily Briefing</div>
+    <h1>Market Dashboard</h1>
+    <div class="date">{gen_display}  &nbsp;|&nbsp; OME + Macro</div>
+  </div>
 
-<div class="grid">
-
-  <div class="card overall">
-    <div class="big-arrow">{overall_arrow}</div>
-    <div class="big-text">
+  <div class="overall">
+    <div class="overall-arrow">{overall_arrow}</div>
+    <div class="overall-text">
       <div class="label">Overall Market Signal</div>
       <div class="value">{overall_signal}</div>
-      <div class="sub">Composite score: {overall_score if overall_score is not None else "\u2014"} &nbsp;|&nbsp; Blended positioning + macro</div>
+      <div class="sub">Composite: {overall_score if overall_score is not None else "\u2014"} / 8  &nbsp;|&nbsp; Instruments: Gold, NAS100, EUR/USD</div>
+    </div>
+    <div class="overall-macro">
+      <div style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.1rem">Macro</div>
+      <div class="macro-score">{macro_score}</div>
+      <div style="font-size:0.62rem;margin-top:0.1rem">/ 3</div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="label">Macro Score</div>
-    <div class="value" style="color:{macro_color}">{macro_score if macro_score is not None else "\u2014"}</div>
-    <div class="sub">Rates &bull; VIX &bull; Dollar &bull; Curve</div>
-  </div>
+  {instr_cards}
 
-  <div class="card">
-    <div class="label">Instruments Tracked</div>
-    <div class="value">3</div>
-    <div class="sub">Gold &bull; NAS100 &bull; EUR/USD</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Data Sources</div>
-    <div class="value" style="font-size:1rem">FRED + OME</div>
-    <div class="sub">Macro via API &bull; OI via CME PDF extracts</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Status</div>
-    <div class="value" style="font-size:1rem;color:var(--accent)">LIVE</div>
-    <div class="sub">Auto-updated daily</div>
-  </div>
-
-  <!-- Instrument Table -->
-  <div class="card full">
-    <div class="label" style="margin-bottom:0.8rem">Per-Instrument Scores</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Instrument</th>
-          <th>Signal</th>
-          <th>Total</th>
-          <th>Positioning</th>
-          <th>Macro</th>
-          <th>P/C Ratio</th>
-          <th>Max Pain</th>
-          <th>Walls (C/P)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Instrument Tabs -->
-  <div class="tabs full">
-    <div class="tab-labels">
-      {tab_labels_html}
+  <div class="macro-section">
+    <div class="macro-label-header">Macro Snapshot</div>
+    <div class="macro-line">{macro_line}</div>
+    <div class="macro-grid">
+      {macro_items}
     </div>
-    {tab_panels_html}
   </div>
 
-  <!-- Macro Table -->
-  <div class="card full">
-    <div class="label" style="margin-bottom:0.8rem">FRED Macro Data</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Series</th>
-          <th>Value</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {macro_rows}
-      </tbody>
-    </table>
-  </div>
+  <footer>
+    CME OI PDFs &rarr; pdfplumber &rarr; FRED API &rarr; Scoring &rarr; GitHub Pages
+  </footer>
 
 </div>
-
-<footer>
-  OME reports &rarr; PDF extraction &rarr; FRED API &rarr; Scoring &rarr; Static Site &nbsp;|&nbsp;
-  Upload reports to trigger rebuild
-</footer>
-
 </body>
 </html>"""
 
