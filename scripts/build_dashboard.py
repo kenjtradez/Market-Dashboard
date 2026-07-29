@@ -200,6 +200,9 @@ def load_gold_forecast():
         "generated": data.get("generated", ""),
     }
 
+def load_yesterday_range():
+    return load_json(os.path.join(DATA_DIR, "yesterday_range.json"))
+
 def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
     fred = load_json(os.path.join(DATA_DIR, "fred_macro.json")).get("series", {})
@@ -208,6 +211,7 @@ def run():
     sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
     oanda = load_json(os.path.join(DATA_DIR, "oanda_prices.json")).get("instruments", {})
     geopolitical = load_json(os.path.join(DATA_DIR, "geopolitical.json"))
+    yrange = load_yesterday_range()
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -279,6 +283,43 @@ def run():
             <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:250px"><canvas id="gfDistChart"></canvas></div></div>
             <div class="an-footer">Forecast for trading day after {gf_detail.get("data_through","")} &middot; model HAR-IV &middot; generated {gf_detail.get("generated","")}</div>
           </div>
+        </div>"""
+
+    # Yesterday's range projection section
+    yrange_section = ""
+    instr_order = ["Gold", "NAS100", "EURUSD"]
+    if yrange:
+        yrange_rows = ""
+        for name in instr_order:
+            d = yrange.get(name)
+            if not d or "error" in d:
+                continue
+            dir_label = "High" if d["direction"] == "high" else "Low"
+            dir_color = "var(--red)" if d["direction"] == "high" else "var(--blue)"
+            yrange_rows += f"""
+          <div class="yr-card">
+            <div class="yr-name">{name}</div>
+            <div class="yr-date">{d["date"]}</div>
+            <div class="yr-stats">
+              <div class="yr-stat"><span class="yr-stat-l">Open</span><span class="yr-stat-v">${d["y_open"]}</span></div>
+              <div class="yr-stat"><span class="yr-stat-l">High</span><span class="yr-stat-v">${d["y_high"]}</span></div>
+              <div class="yr-stat"><span class="yr-stat-l">Low</span><span class="yr-stat-v">${d["y_low"]}</span></div>
+            </div>
+            <div class="yr-max">Max from open: <b style="color:{dir_color}">{d["direction"]=="high" and "+" or ""}{d["max_pct"]}%</b> ({dir_label})</div>
+            <div class="yr-proj">
+              <div class="yr-proj-up"><span>If same move up</span><b style="color:var(--red)">${d["projected_up"]}</b></div>
+              <div class="yr-proj-down"><span>If same move down</span><b style="color:var(--blue)">${d["projected_down"]}</b></div>
+            </div>
+            <div class="yr-today">Today open: <b>${d["t_open"]}</b></div>
+          </div>"""
+        if yrange_rows:
+            yrange_section = f"""
+        <div class="yr-section">
+          <div class="yr-header">
+            <span class="yr-label">Yesterday's Range Projection</span>
+            <span class="yr-sub">Max % from open projected onto today</span>
+          </div>
+          <div class="yr-grid">{yrange_rows}</div>
         </div>"""
 
     # Geopolitical Risk card
@@ -743,12 +784,33 @@ def run():
 
   footer {{ margin-top: 1rem; font-size: 0.6rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; padding-top: 0.75rem; border-top: 1px solid var(--border); }}
 
+  .yr-section {{ margin-top: 1rem; }}
+  .yr-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }}
+  .yr-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text); font-weight: 600; }}
+  .yr-sub {{ font-size: 0.6rem; color: var(--muted); }}
+  .yr-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }}
+  .yr-card {{ background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }}
+  .yr-name {{ font-weight: 600; font-size: 0.85rem; color: var(--text); }}
+  .yr-date {{ font-size: 0.6rem; color: var(--muted); margin-bottom: 8px; }}
+  .yr-stats {{ display: flex; gap: 12px; margin-bottom: 6px; }}
+  .yr-stat {{ display: flex; flex-direction: column; }}
+  .yr-stat-l {{ font-size: 0.55rem; color: var(--muted); text-transform: uppercase; }}
+  .yr-stat-v {{ font-size: 0.85rem; color: var(--text); font-family: 'IBM Plex Mono', monospace; }}
+  .yr-max {{ font-size: 0.7rem; color: var(--muted); margin-bottom: 8px; padding: 4px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }}
+  .yr-proj {{ display: flex; gap: 10px; margin-bottom: 6px; }}
+  .yr-proj-up, .yr-proj-down {{ flex: 1; display: flex; flex-direction: column; background: var(--bg); border-radius: 4px; padding: 4px 8px; }}
+  .yr-proj-up span, .yr-proj-down span {{ font-size: 0.55rem; color: var(--muted); text-transform: uppercase; }}
+  .yr-proj-up b {{ font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }}
+  .yr-proj-down b {{ font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }}
+  .yr-today {{ font-size: 0.65rem; color: var(--muted); }}
+
   @media (max-width: 700px) {{
     .analysis-extra {{ grid-template-columns: 1fr; }}
     .signal-detail-grid {{ grid-template-columns: repeat(2, 1fr); }}
     .corr-grid {{ grid-template-columns: 1fr; }}
     .gold-fc-body {{ grid-template-columns: repeat(2, 1fr); }}
     .geo-body {{ grid-template-columns: 1fr; }}
+    .yr-grid {{ grid-template-columns: 1fr; }}
     .macro-card .mc-grid {{ grid-template-columns: 1fr 1fr; }}
     .container {{ padding: 0.75rem; }}
   }}
@@ -783,6 +845,8 @@ def run():
   {oi_section}
 
   {gold_detail_section}
+
+  {yrange_section}
 
   {vol_section}
 

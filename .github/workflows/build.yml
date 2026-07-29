@@ -86,6 +86,10 @@ jobs:
         run: python scripts/fetch_geopolitical.py
         continue-on-error: true
 
+      - name: Fetch yesterday's max range projection
+        run: python scripts/fetch_yesterday_range.py
+        continue-on-error: true
+
       - name: Compute news sentiment from GDELT articles
         run: python scripts/fetch_sentiment.py
         continue-on-error: true
