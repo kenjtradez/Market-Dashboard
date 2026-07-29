@@ -3,149 +3,384 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Morning Brief — OME + Macro</title>
+<title>Market Analysis — OME + Macro</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0d0f14; --surface: #161a22; --border: #252b38;
-    --text: #c8cdd8; --muted: #5a6070;
+    --bg: #0a0c10; --surface: #12151c; --border: #1e232d;
+    --text: #c8cdd8; --muted: #525866;
     --long: #00c896; --short: #ff4d6d; --accent: #4a8fff;
-    --gold: #f0b429;
   }
   body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }
-  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
 
-  /* Masthead */
-  .masthead { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
-  .masthead-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
-  .masthead h1 { font-family: 'IBM Plex Mono', monospace; font-size: 1.4rem; font-weight: 600; color: white; letter-spacing: -0.02em; }
-  .masthead .date { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+  .masthead { border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: baseline; }
+  .masthead h1 { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600; color: white; letter-spacing: -0.02em; }
+  .masthead .date { font-size: 0.72rem; color: var(--muted); }
 
-  /* Overall signal */
-  .overall { display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid var(--short); border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
-  .overall-arrow { font-size: 2.2rem; color: var(--short); line-height: 1; }
-  .overall-text { flex: 1; }
-  .overall-text .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.15rem; }
-  .overall-text .value { font-size: 1.5rem; font-weight: 600; color: var(--short); }
-  .overall-text .sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
-  .overall-macro { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); padding-left: 1rem; border-left: 1px solid var(--border); }
-  .overall-macro .macro-score { font-size: 1.1rem; font-weight: 600; color: var(--muted); }
+  .overall-card { display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid var(--short); border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.25rem; }
+  .overall-card .oc-arrow { font-size: 1.8rem; color: var(--short); }
+  .overall-card .oc-text { flex: 1; }
+  .overall-card .oc-text .oc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .overall-card .oc-text .oc-value { font-size: 1.3rem; font-weight: 600; color: var(--short); }
+  .overall-card .oc-text .oc-sub { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
+  .overall-card .oc-macro { text-align: right; font-family: 'IBM Plex Mono', monospace; padding-left: 1rem; border-left: 1px solid var(--border); }
+  .overall-card .oc-macro .oc-m-label { font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .overall-card .oc-macro .oc-m-value { font-size: 1rem; font-weight: 600; color: var(--muted); }
 
-  /* Instrument brief cards */
-  .brief-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 6px; padding: 1.15rem 1.25rem; margin-bottom: 0.85rem; }
-  .brief-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
-  .brief-name { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: white; }
-  .brief-badge { padding: 0.15rem 0.6rem; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; }
-  .brief-metrics { display: flex; flex-wrap: wrap; gap: 0.35rem 0.85rem; margin-bottom: 0.55rem; }
-  .metric { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }
-  .metric-label { color: var(--muted); margin-right: 0.25rem; }
-  .metric-val { color: var(--text); font-weight: 400; }
-  .brief-narrative { font-size: 0.8rem; line-height: 1.6; color: var(--text); border-top: 1px solid var(--border); padding-top: 0.55rem; }
+  /* Analysis Sections */
+  .analysis-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; transition: all 0.15s; }
+  .analysis-section.collapsed .analysis-body { display: none; }
+  .analysis-section.collapsed .analysis-close { transform: rotate(45deg); }
 
-  /* Macro section */
-  .macro-section { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1rem; }
-  .macro-section .macro-label-header { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }
-  .macro-section .macro-line { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.6rem; font-family: 'IBM Plex Mono', monospace; }
-  .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
-  .macro-item { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; display: flex; gap: 0.4rem; align-items: baseline; }
-  .macro-item .macro-label { color: var(--muted); }
-  .macro-item .macro-val { color: var(--text); font-weight: 400; }
-  .macro-item .macro-date { color: var(--muted); font-size: 0.62rem; margin-left: auto; }
+  .analysis-header { padding: 1rem 1.25rem; cursor: pointer; }
+  .analysis-title-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .analysis-name { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600; color: white; }
+  .analysis-badge { padding: 0.1rem 0.5rem; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.05em; }
+  .analysis-range { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--accent); letter-spacing: 0.1em; margin-left: 0.5rem; }
+  .analysis-fair { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+  .analysis-close { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; font-family: inherit; transition: 0.15s; }
+  .analysis-close:hover { color: var(--text); }
+  .analysis-sub { display: flex; gap: 0.75rem; margin-top: 0.3rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }
+  .analysis-ai { color: var(--muted); }
 
-  footer { margin-top: 1.25rem; font-size: 0.65rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; border-top: 1px solid var(--border); padding-top: 1rem; }
+  .analysis-body { padding: 0 1.25rem 1.25rem; }
 
-  @media (max-width: 600px) { .container { padding: 1rem; } .overall { flex-direction: column; text-align: center; } .overall-macro { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 0.5rem; width: 100%; text-align: center; } .macro-grid { grid-template-columns: 1fr 1fr; } .brief-metrics { gap: 0.25rem 0.6rem; } }
+  /* Signal detail */
+  .analysis-signal-section { margin-bottom: 1rem; }
+  .signal-detail-header { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .signal-detail-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+  .sd-item { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.6rem; }
+  .sd-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.15rem; }
+  .sd-val { font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; font-weight: 600; color: white; }
+  .stars { font-size: 0.65rem; margin-left: 0.15rem; letter-spacing: 0.05em; }
+
+  /* Narrative */
+  .analysis-narrative-section { margin-bottom: 1rem; }
+  .analysis-narrative-block { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem 1rem; }
+  .an-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem; }
+  .an-block { margin-bottom: 0.75rem; }
+  .an-block p { font-size: 0.78rem; line-height: 1.65; color: var(--text); }
+  .trade-idea p { color: var(--text); font-style: italic; }
+  .an-footer { font-size: 0.62rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+
+  /* Extra columns */
+  .analysis-extra { display: grid; grid-template-columns: 1fr 1.5fr; gap: 0.75rem; }
+  .extra-card { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.75rem; }
+  .extra-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.15rem; }
+  .extra-sub { font-size: 0.62rem; color: var(--muted); margin-bottom: 0.5rem; }
+
+  .news-row { display: flex; gap: 0.4rem; align-items: baseline; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+  .news-row:last-child { border-bottom: none; }
+  .news-time { color: var(--accent); min-width: 3rem; }
+  .news-name { color: var(--text); flex: 1; }
+  .news-forecast { color: var(--muted); }
+  .news-day { color: var(--muted); font-size: 0.6rem; }
+
+  .corr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.4rem; }
+  .corr-group-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.48rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+  .corr-item { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; padding: 0.1rem 0; }
+  .corr-val { font-weight: 600; }
+  .corr-driven { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); line-height: 1.4; }
+  .corr-footer { font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; grid-column: 1 / -1; padding-top: 0.3rem; border-top: 1px solid var(--border); }
+
+  /* Macro bottom */
+  .macro-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-top: 0.5rem; }
+  .macro-card .mc-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .macro-card .mc-line { font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 0.4rem; }
+  .macro-card .mc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
+  .macro-card .macro-item { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; display: flex; gap: 0.3rem; align-items: baseline; }
+
+  footer { margin-top: 1rem; font-size: 0.6rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+
+  @media (max-width: 700px) {
+    .analysis-extra { grid-template-columns: 1fr; }
+    .signal-detail-grid { grid-template-columns: repeat(2, 1fr); }
+    .corr-grid { grid-template-columns: 1fr; }
+    .macro-card .mc-grid { grid-template-columns: 1fr 1fr; }
+    .container { padding: 0.75rem; }
+  }
 </style>
 </head>
 <body>
 <div class="container">
 
   <div class="masthead">
-    <div class="masthead-label">Daily Briefing</div>
-    <h1>Market Dashboard</h1>
-    <div class="date">29 Jul 2026  08:50  &nbsp;|&nbsp; OME + Macro</div>
+    <h1>Market Analysis</h1>
+    <span class="date">29/07/2026, 08:50</span>
   </div>
 
-  <div class="overall">
-    <div class="overall-arrow">▼</div>
-    <div class="overall-text">
-      <div class="label">Overall Market Signal</div>
-      <div class="value">SHORT</div>
-      <div class="sub">Composite: -0.3 / 8  &nbsp;|&nbsp; Instruments: Gold, NAS100, EUR/USD</div>
+  <div class="overall-card">
+    <div class="oc-arrow">▼</div>
+    <div class="oc-text">
+      <div class="oc-label">Overall Market Signal</div>
+      <div class="oc-value">SHORT</div>
+      <div class="oc-sub">Composite: -0.3/8 &bull; OME + Macro</div>
     </div>
-    <div class="overall-macro">
-      <div style="font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.1rem">Macro</div>
-      <div class="macro-score">0</div>
-      <div style="font-size:0.62rem;margin-top:0.1rem">/ 3</div>
+    <div class="oc-macro">
+      <div class="oc-m-label">Macro</div>
+      <div class="oc-m-value">0</div>
+      <div style="font-size:0.58rem;color:var(--muted);margin-top:0.05rem">/3</div>
     </div>
   </div>
 
   
-        <div class="brief-card" style="border-left-color:var(--muted)">
-          <div class="brief-header">
-            <div class="brief-name">Gold</div>
-            <div class="brief-badge" style="background:var(--muted)15;color:var(--muted)">→ NEUTRAL</div>
+        <div class="analysis-section" id="gold">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">Gold</h2>
+              <div class="analysis-badge" style="background:var(--muted)15;color:var(--muted);border:1px solid var(--muted)40">→ NEUTRAL</div>
+              <div class="analysis-range">31% RANGE</div>
+              <div class="analysis-fair">near fair value</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">AI — NOT BACKTESTED</span>
+              <span class="analysis-analysts">Low conviction</span>
+            </div>
           </div>
-          <div class="brief-metrics">
-            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">4,068.80</span></div>
-            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">1.6671</span></div>
-            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">4,050</span></div>
-            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">4,100</span></div>
-            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">4,000</span></div>
-            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">4,100</span></div>
-            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">46,212</span></div>
-            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">0</span></div>
+
+          <div class="analysis-body">
+
+            <div class="analysis-signal-section">
+              <div class="signal-detail-header">
+                <span class="sd-title">signal detail</span>
+              </div>
+              <div class="signal-detail-grid">
+                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--muted);font-weight:600">NEUTRAL</span></div>
+                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">0</span></div>
+                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">0</span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0/3</span></div>
+                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">0/10 <span class="stars">☆☆☆☆☆☆☆☆☆☆</span></span></div>
+              </div>
+            </div>
+
+            <div class="analysis-narrative-section">
+              <div class="analysis-narrative-block">
+                <div class="an-block trade-idea">
+                  <div class="an-label">Trade Idea</div>
+                  <p>"Neutral: fade pushes toward 4,100 (sell) and treat 4,000 as a floor (buy). Low conviction — small size only."</p>
+                </div>
+                <div class="an-block positioning-narrative">
+                  <div class="an-label">Positioning Analysis</div>
+                  <p>Gold at 4,068.80 is pinned between two key options reference points — the call wall at 4,100 and put wall at 4,000. The PCR of 1.67 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 4,050 sits very close to the current price — minimal gravitational pull toward max pain. The call wall at 4,100 towers above the put wall at 4,000 — resistance overhead is the dominant structural level.</p><p>The magnet at 4,100 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: 0 (NEUTRAL).</p>
+                </div>
+                <p class="an-footer">Generated 29/07/2026, 08:50. AI opinion, not a backtested signal.</p>
+              </div>
+            </div>
+
+            <div class="analysis-extra">
+              <div class="extra-col">
+                <div class="extra-card">
+                  <div class="extra-label">Today's News for This Pair</div>
+                  <div class="extra-sub">Next event that may widen the range</div>
+                  
+            <div class="news-row"><span class="news-time">14:00</span><span class="news-name">CB Consumer Confidence</span><span class="news-forecast">92.4c</span><span class="news-day">Today</span></div>
+            <div class="news-row"><span class="news-time">19:00</span><span class="news-name">FOMC Rate Decision</span><span class="news-forecast">5.50%</span><span class="news-day">Wed</span></div>
+            <div class="news-row"><span class="news-time">13:30</span><span class="news-name">US GDP QoQ</span><span class="news-forecast">2.1%</span><span class="news-day">Thu</span></div>
+            <div class="news-row"><span class="news-time">13:30</span><span class="news-name">Nonfarm Payrolls</span><span class="news-forecast">185K</span><span class="news-day">Fri</span></div>
+                </div>
+              </div>
+              <div class="extra-col">
+                <div class="extra-card">
+                  <div class="extra-label">Correlations, Hedges &amp; Beta</div>
+                  <div class="corr-grid">
+                    <div class="corr-group">
+                      <div class="corr-group-label">Moves with</div>
+                      <div class="corr-item"><span>Silver</span><span class="corr-val" style="color:var(--long)">+0.87</span></div><div class="corr-item"><span>Platinum</span><span class="corr-val" style="color:var(--long)">+0.76</span></div><div class="corr-item"><span>EUR/USD</span><span class="corr-val" style="color:var(--long)">+0.61</span></div>
+                    </div>
+                    <div class="corr-group">
+                      <div class="corr-group-label">Natural hedge</div>
+                      <div class="corr-item"><span>USD/ZAR</span><span class="corr-val" style="color:var(--short)">-0.50</span></div><div class="corr-item"><span>USD/CHF</span><span class="corr-val" style="color:var(--short)">-0.50</span></div><div class="corr-item"><span>USD/JPY</span><span class="corr-val" style="color:var(--short)">-0.45</span></div>
+                    </div>
+                    <div class="corr-group">
+                      <div class="corr-group-label">Driven by</div>
+                      <div class="corr-driven">US dollar, rates, risk (VIX)</div>
+                    </div>
+                  </div>
+                  <div class="corr-footer">10-day rolling window &bull; context only, not a signal</div>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div class="brief-narrative">PCR at 1.67 shows heavy puts. Max pain (4,050) is near price. Call wall (4,100) above put wall (4,000). Resistance dominates. Score: 0 (NEUTRAL).</div>
         </div>
-        <div class="brief-card" style="border-left-color:var(--short)">
-          <div class="brief-header">
-            <div class="brief-name">NAS100</div>
-            <div class="brief-badge" style="background:var(--short)15;color:var(--short)">▼ SHORT</div>
+        <div class="analysis-section" id="nas100">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">NAS100</h2>
+              <div class="analysis-badge" style="background:var(--short)15;color:var(--short);border:1px solid var(--short)40">▼ SHORT</div>
+              <div class="analysis-range">— RANGE</div>
+              <div class="analysis-fair">near fair value</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">AI — NOT BACKTESTED</span>
+              <span class="analysis-analysts">Low conviction</span>
+            </div>
           </div>
-          <div class="brief-metrics">
-            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">27,928.0</span></div>
-            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">4.4683</span></div>
-            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">27,800</span></div>
-            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">28,000</span></div>
-            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">28,000</span></div>
-            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">28,000</span></div>
-            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">9,318</span></div>
-            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">-1</span></div>
+
+          <div class="analysis-body">
+
+            <div class="analysis-signal-section">
+              <div class="signal-detail-header">
+                <span class="sd-title">signal detail</span>
+              </div>
+              <div class="signal-detail-grid">
+                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--short);font-weight:600">SHORT</span></div>
+                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">-1</span></div>
+                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">-1</span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0/3</span></div>
+                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">1/10 <span class="stars">★☆☆☆☆☆☆☆☆☆</span></span></div>
+              </div>
+            </div>
+
+            <div class="analysis-narrative-section">
+              <div class="analysis-narrative-block">
+                <div class="an-block trade-idea">
+                  <div class="an-label">Trade Idea</div>
+                  <p>"Bearish bias: look for rallies toward resistance, target a drift lower. Stop above recent range highs."</p>
+                </div>
+                <div class="an-block positioning-narrative">
+                  <div class="an-label">Positioning Analysis</div>
+                  <p>NAS100 at 27,928.0 is pinned between two key options reference points — the call wall at 28,000 and put wall at 28,000. The PCR of 4.47 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 27,800 sits very close to the current price — minimal gravitational pull toward max pain. Both put and call walls converge at 28,000 — a major battleground.</p><p>The magnet at 28,000 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: -1 (SHORT).</p>
+                </div>
+                <p class="an-footer">Generated 29/07/2026, 08:50. AI opinion, not a backtested signal.</p>
+              </div>
+            </div>
+
+            <div class="analysis-extra">
+              <div class="extra-col">
+                <div class="extra-card">
+                  <div class="extra-label">Today's News for This Pair</div>
+                  <div class="extra-sub">Next event that may widen the range</div>
+                  
+            <div class="news-row"><span class="news-time">14:00</span><span class="news-name">CB Consumer Confidence</span><span class="news-forecast">92.4c</span><span class="news-day">Today</span></div>
+            <div class="news-row"><span class="news-time">19:00</span><span class="news-name">FOMC Rate Decision</span><span class="news-forecast">5.50%</span><span class="news-day">Wed</span></div>
+            <div class="news-row"><span class="news-time">13:30</span><span class="news-name">US GDP QoQ</span><span class="news-forecast">2.1%</span><span class="news-day">Thu</span></div>
+            <div class="news-row"><span class="news-time">13:30</span><span class="news-name">Nonfarm Payrolls</span><span class="news-forecast">185K</span><span class="news-day">Fri</span></div>
+                </div>
+              </div>
+              <div class="extra-col">
+                <div class="extra-card">
+                  <div class="extra-label">Correlations, Hedges &amp; Beta</div>
+                  <div class="corr-grid">
+                    <div class="corr-group">
+                      <div class="corr-group-label">Moves with</div>
+                      <div class="corr-item"><span>S&P 500</span><span class="corr-val" style="color:var(--long)">+0.95</span></div><div class="corr-item"><span>Tech</span><span class="corr-val" style="color:var(--long)">+0.92</span></div><div class="corr-item"><span>USD/JPY</span><span class="corr-val" style="color:var(--long)">+0.55</span></div>
+                    </div>
+                    <div class="corr-group">
+                      <div class="corr-group-label">Natural hedge</div>
+                      <div class="corr-item"><span>Gold</span><span class="corr-val" style="color:var(--short)">-0.30</span></div><div class="corr-item"><span>USD/CHF</span><span class="corr-val" style="color:var(--short)">-0.25</span></div><div class="corr-item"><span>VIX</span><span class="corr-val" style="color:var(--short)">-0.70</span></div>
+                    </div>
+                    <div class="corr-group">
+                      <div class="corr-group-label">Driven by</div>
+                      <div class="corr-driven">Tech earnings, rates, USD</div>
+                    </div>
+                  </div>
+                  <div class="corr-footer">10-day rolling window &bull; context only, not a signal</div>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div class="brief-narrative">PCR at 4.47 shows heavy puts. Max pain (27,800) is near price. Both walls at 28,000 — key battleground. Score: -1 (SHORT).</div>
         </div>
-        <div class="brief-card" style="border-left-color:var(--muted)">
-          <div class="brief-header">
-            <div class="brief-name">EURUSD</div>
-            <div class="brief-badge" style="background:var(--muted)15;color:var(--muted)">→ NEUTRAL</div>
+        <div class="analysis-section" id="eurusd">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">EURUSD</h2>
+              <div class="analysis-badge" style="background:var(--muted)15;color:var(--muted);border:1px solid var(--muted)40">→ NEUTRAL</div>
+              <div class="analysis-range">61% RANGE</div>
+              <div class="analysis-fair">near fair value</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">AI — NOT BACKTESTED</span>
+              <span class="analysis-analysts">Low conviction</span>
+            </div>
           </div>
-          <div class="brief-metrics">
-            <div class="metric"><span class="metric-label">Price</span><span class="metric-val">1.1416</span></div>
-            <div class="metric"><span class="metric-label">PCR</span><span class="metric-val">1.8698</span></div>
-            <div class="metric"><span class="metric-label">Max Pain</span><span class="metric-val">1.1325</span></div>
-            <div class="metric"><span class="metric-label">Call Wall</span><span class="metric-val">1.1600</span></div>
-            <div class="metric"><span class="metric-label">Put Wall</span><span class="metric-val">1.1300</span></div>
-            <div class="metric"><span class="metric-label">Magnet</span><span class="metric-val">1.1500</span></div>
-            <div class="metric"><span class="metric-label">Total OI</span><span class="metric-val">174,652</span></div>
-            <div class="metric"><span class="metric-label">Pos. Score</span><span class="metric-val">0</span></div>
+
+          <div class="analysis-body">
+
+            <div class="analysis-signal-section">
+              <div class="signal-detail-header">
+                <span class="sd-title">signal detail</span>
+              </div>
+              <div class="signal-detail-grid">
+                <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--muted);font-weight:600">NEUTRAL</span></div>
+                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">0</span></div>
+                <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">0</span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0/3</span></div>
+                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">0/10 <span class="stars">☆☆☆☆☆☆☆☆☆☆</span></span></div>
+              </div>
+            </div>
+
+            <div class="analysis-narrative-section">
+              <div class="analysis-narrative-block">
+                <div class="an-block trade-idea">
+                  <div class="an-label">Trade Idea</div>
+                  <p>"Neutral: fade pushes toward 1.1600 (sell) and treat 1.1300 as a floor (buy). Low conviction — small size only."</p>
+                </div>
+                <div class="an-block positioning-narrative">
+                  <div class="an-label">Positioning Analysis</div>
+                  <p>EURUSD at 1.1416 is pinned between two key options reference points — the call wall at 1.1600 and put wall at 1.1300. The PCR of 1.87 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 1.1325 is 0.8% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 1.1600 towers above the put wall at 1.1300 — resistance overhead is the dominant structural level.</p><p>The magnet at 1.1500 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0/3 to the score. Net score: 0 (NEUTRAL).</p>
+                </div>
+                <p class="an-footer">Generated 29/07/2026, 08:50. AI opinion, not a backtested signal.</p>
+              </div>
+            </div>
+
+            <div class="analysis-extra">
+              <div class="extra-col">
+                <div class="extra-card">
+                  <div class="extra-label">Today's News for This Pair</div>
+                  <div class="extra-sub">Next event that may widen the range</div>
+                  
+            <div class="news-row"><span class="news-time">14:00</span><span class="news-name">CB Consumer Confidence</span><span class="news-forecast">92.4c</span><span class="news-day">Today</span></div>
+            <div class="news-row"><span class="news-time">19:00</span><span class="news-name">FOMC Rate Decision</span><span class="news-forecast">5.50%</span><span class="news-day">Wed</span></div>
+            <div class="news-row"><span class="news-time">13:30</span><span class="news-name">US GDP QoQ</span><span class="news-forecast">2.1%</span><span class="news-day">Thu</span></div>
+            <div class="news-row"><span class="news-time">13:30</span><span class="news-name">Nonfarm Payrolls</span><span class="news-forecast">185K</span><span class="news-day">Fri</span></div>
+                </div>
+              </div>
+              <div class="extra-col">
+                <div class="extra-card">
+                  <div class="extra-label">Correlations, Hedges &amp; Beta</div>
+                  <div class="corr-grid">
+                    <div class="corr-group">
+                      <div class="corr-group-label">Moves with</div>
+                      <div class="corr-item"><span>GBP/USD</span><span class="corr-val" style="color:var(--long)">+0.85</span></div><div class="corr-item"><span>Gold</span><span class="corr-val" style="color:var(--long)">+0.61</span></div><div class="corr-item"><span>AUD/USD</span><span class="corr-val" style="color:var(--long)">+0.78</span></div>
+                    </div>
+                    <div class="corr-group">
+                      <div class="corr-group-label">Natural hedge</div>
+                      <div class="corr-item"><span>USD/CHF</span><span class="corr-val" style="color:var(--short)">-0.90</span></div><div class="corr-item"><span>USD/JPY</span><span class="corr-val" style="color:var(--short)">-0.65</span></div><div class="corr-item"><span>DXY</span><span class="corr-val" style="color:var(--short)">-0.95</span></div>
+                    </div>
+                    <div class="corr-group">
+                      <div class="corr-group-label">Driven by</div>
+                      <div class="corr-driven">ECB/Fed differential, risk sentiment, USD</div>
+                    </div>
+                  </div>
+                  <div class="corr-footer">10-day rolling window &bull; context only, not a signal</div>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div class="brief-narrative">PCR at 1.87 shows heavy puts. Max pain (1.1325) is 0.8% below price — downside pull. Call wall (1.1600) above put wall (1.1300). Resistance dominates. Score: 0 (NEUTRAL).</div>
         </div>
 
-  <div class="macro-section">
-    <div class="macro-label-header">Macro Snapshot</div>
-    <div class="macro-line"></div>
-    <div class="macro-grid">
-      <div class="macro-item"><span class="macro-label">10Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">2Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">5Y Breakeven</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">VIX</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Dollar Index</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Fed Funds</span><span class="macro-val">—</span><span class="macro-date"></span></div>
-    </div>
+  <div class="macro-card">
+    <div class="mc-label">Macro Snapshot</div>
+    <div class="mc-line"></div>
+    <div class="mc-grid"><div class="macro-item"><span class="macro-label">10Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">2Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">5Y Breakeven</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">VIX</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Dollar Index</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Fed Funds</span><span class="macro-val">—</span><span class="macro-date"></span></div></div>
   </div>
 
-  <footer>
-    CME OI PDFs &rarr; pdfplumber &rarr; FRED API &rarr; Scoring &rarr; GitHub Pages
-  </footer>
+  <footer>CME OI &rarr; pdfplumber &rarr; FRED API &rarr; Scoring &rarr; GitHub Pages</footer>
 
 </div>
+
+<script>
+  document.querySelectorAll('.analysis-header').forEach(h => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('collapsed'));
+  });
+</script>
 </body>
 </html>
