@@ -508,6 +508,7 @@
               <div id="gfGauge" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px"></div>
               <div id="gfLevels" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;overflow-x:auto"></div>
             </div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:250px"><canvas id="gfDistChart"></canvas></div></div>
             <div class="an-footer">Forecast for trading day after 2026-07-28 &middot; model HAR-IV &middot; generated 2026-07-29 10:16:22</div>
           </div>
         </div>
@@ -800,6 +801,29 @@
     }
     rows += '</table>';
     document.getElementById('gfLevels').innerHTML = rows;
+
+    // Distribution chart
+    const distLabels = ['median','p75','p90'];
+    const distDatasets = [
+      {label:'HL Range', data:[A.hl.median,A.hl.p75,A.hl.p90], backgroundColor:'rgba(229,177,58,0.7)', borderColor:'#e5b13a'},
+      {label:'OC Move', data:[A.oc.median,A.oc.p75,A.oc.p90], backgroundColor:'rgba(88,166,255,0.7)', borderColor:'#58a6ff'},
+      {label:'Up Swing', data:[A.oh.median,A.oh.p75,A.oh.p90], backgroundColor:'rgba(46,160,67,0.7)', borderColor:'#2ea043'},
+      {label:'Down Swing', data:[A.ol.median,A.ol.p75,A.ol.p90], backgroundColor:'rgba(218,54,51,0.7)', borderColor:'#da3633'},
+    ];
+    new Chart(document.getElementById('gfDistChart'), {
+      type:'bar', data:{labels:distLabels,datasets:distDatasets},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'bottom',labels:{color:'var(--muted)',font:{size:10},boxWidth:12,padding:8}},
+          title:{display:true,text:'Volatility Profile — % move by percentile',color:'var(--muted)',font:{size:11}}
+        },
+        scales:{
+          x:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}},
+          y:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'},title:{display:true,text:'%',color:'var(--muted)',font:{size:10}}}
+        }
+      }
+    });
   }
 
   // Collapse toggle
