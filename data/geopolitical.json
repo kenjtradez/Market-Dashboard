@@ -1,6 +1,6 @@
 {
-  "fetched": "2026-07-29T14:23:14.684854",
-  "total_articles": 16,
+  "fetched": "2026-07-29T14:24:39.146812",
+  "total_articles": 24,
   "articles": [
     {
       "title": "Blurred front lines: Trump meets Zelenskyy as Ukraine, Iran wars collide",
@@ -51,6 +51,30 @@
       "date": "Wed, 29 Jul 2026 00:03:14 GMT"
     },
     {
+      "title": "The European Union is preparing its biggest sanctions package against companies accused of supporting Russia\u2019s war in Ukraine, targeting more than 1,600 firms with a total annual turnover of over $20 billion.",
+      "url": "https://www.reddit.com/r/worldnews/comments/1v9qvyi/the_european_union_is_preparing_its_biggest/",
+      "domain": "reddit-worldnews",
+      "seentext": "<table> <tr><td> <a href=\"https://www.reddit.com/r/worldnews/comments/1v9qvyi/the_european_union_is_preparing_its_biggest/\"> <img src=\"https://external-preview.redd.it/vKD_RPKiDWdRH5SvxwHsdqs0khdj9RS7pCxE1Jdu3y0.jpeg?width=640&amp;crop=smart&amp;auto=webp&amp;s=f4ccd0a17d3d5467af83a0b8b113df108970c9",
+      "relevance": 5,
+      "tags": [
+        "war",
+        "sanction"
+      ],
+      "date": "2026-07-29T09:14:40+00:00"
+    },
+    {
+      "title": "Zelenskyy asks Trump for emergency delivery of Patriot air defence missiles",
+      "url": "https://www.reddit.com/r/worldnews/comments/1v9vq70/zelenskyy_asks_trump_for_emergency_delivery_of/",
+      "domain": "reddit-worldnews",
+      "seentext": "<table> <tr><td> <a href=\"https://www.reddit.com/r/worldnews/comments/1v9vq70/zelenskyy_asks_trump_for_emergency_delivery_of/\"> <img src=\"https://external-preview.redd.it/gJ7qoAIUzs3v6mfK0EIGKuSNiirfC3eL1dnvF66mBN0.jpeg?width=640&amp;crop=smart&amp;auto=webp&amp;s=6c9d7df6cf62de1402c51ac15678a2c879b",
+      "relevance": 4,
+      "tags": [
+        "emergency",
+        "riot"
+      ],
+      "date": "2026-07-29T13:08:22+00:00"
+    },
+    {
       "title": "Zelensky and Netanyahu meet Trump as wars in Ukraine and Iran drag on",
       "url": "https://www.bbc.co.uk/news/articles/cj4k2z8z45ro?at_medium=RSS&at_campaign=rss",
       "domain": "bbc",
@@ -71,6 +95,17 @@
         "war"
       ],
       "date": "Tue, 28 Jul 2026 00:30:11 GMT"
+    },
+    {
+      "title": "Fed likely to keep rates on hold, but Warsh to face some strong dissension. What to watch: Live coverage",
+      "url": "https://www.cnbc.com/2026/07/29/fed-meeting-today-live-updates.html",
+      "domain": "cnbc",
+      "seentext": "Fed Chairman Kevin Warsh presides over his second meeting with dissent in the air.",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "Wed, 29 Jul 2026 12:57:07 GMT"
     },
     {
       "title": "UBS CEO says the AI pullback is healthy \u2014 but there\u2019s a bigger risk investors should watch",
@@ -106,15 +141,48 @@
       "date": "Wed, 29 Jul 2026 10:30:01 GMT"
     },
     {
-      "title": "Trump, DOJ ask Supreme Court to toss $83.3M defamation award to E. Jean Carroll",
-      "url": "https://www.cnbc.com/2026/07/28/trump-asks-supreme-court-to-toss-83point3m-defamation-award-to-e-jean-carroll.html",
-      "domain": "cnbc",
-      "seentext": "The Supreme Court recently rejected President Donald Trump's bid to hear his appeal of another $5 million verdict in favor of Carroll.",
+      "title": "/r/WorldNews Live Thread: Russian Invasion of Ukraine Day 1616, Part 1 (Thread #1763)",
+      "url": "https://www.reddit.com/r/worldnews/comments/1v9l356/rworldnews_live_thread_russian_invasion_of/",
+      "domain": "reddit-worldnews",
+      "seentext": "&#32; submitted by &#32; <a href=\"https://www.reddit.com/user/WorldNewsMods\"> /u/WorldNewsMods </a> <br/> <span><a href=\"https://www.reddit.com/live/18hnzysb1elcs\">[link]</a></span> &#32; <span><a href=\"https://www.reddit.com/r/worldnews/comments/1v9l356/rworldnews_live_thread_russian_invasion_of/\">",
+      "relevance": 3,
+      "tags": [
+        "invasion"
+      ],
+      "date": "2026-07-29T04:02:37+00:00"
+    },
+    {
+      "title": "Russia\u2019s largest online marketplace, Wildberries, has begun searching for warehouse space in Kazakhstan following a series of Ukrainian drone strikes on its logistics centers across Russia",
+      "url": "https://www.reddit.com/r/worldnews/comments/1v9q1pd/russias_largest_online_marketplace_wildberries/",
+      "domain": "reddit-worldnews",
+      "seentext": "<table> <tr><td> <a href=\"https://www.reddit.com/r/worldnews/comments/1v9q1pd/russias_largest_online_marketplace_wildberries/\"> <img src=\"https://external-preview.redd.it/iInU5SlcDw9yGwn-QmADgC6abUmK_6hsP8wQEB0zlqQ.jpeg?width=640&amp;crop=smart&amp;auto=webp&amp;s=2c88515cf9676f39326aa32f661ae583ba6",
       "relevance": 3,
       "tags": [
         "war"
       ],
-      "date": "Wed, 29 Jul 2026 01:17:13 GMT"
+      "date": "2026-07-29T08:26:20+00:00"
+    },
+    {
+      "title": "Ukraine strikes major oil refinery in Russia\u2019s Ryazan Oblast, Zelensky says, Wildberries warehouse also reportedly hit",
+      "url": "https://www.reddit.com/r/worldnews/comments/1v9up0u/ukraine_strikes_major_oil_refinery_in_russias/",
+      "domain": "reddit-worldnews",
+      "seentext": "<table> <tr><td> <a href=\"https://www.reddit.com/r/worldnews/comments/1v9up0u/ukraine_strikes_major_oil_refinery_in_russias/\"> <img src=\"https://external-preview.redd.it/VACfuhxUy_GaZyW-NoDp0sVpkkHN2phOJIQ1GRY1Nas.jpeg?width=320&amp;crop=smart&amp;auto=webp&amp;s=97c2d617f88666d3e10bc1ba902020390404",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "2026-07-29T12:24:36+00:00"
+    },
+    {
+      "title": "\u2018Sick Man With a Gun\u2019: Polish FM Warns \u2018Desperate\u2019 Putin Could Take Dangerous Risks",
+      "url": "https://www.reddit.com/r/worldnews/comments/1v9i4sm/sick_man_with_a_gun_polish_fm_warns_desperate/",
+      "domain": "reddit-worldnews",
+      "seentext": "<table> <tr><td> <a href=\"https://www.reddit.com/r/worldnews/comments/1v9i4sm/sick_man_with_a_gun_polish_fm_warns_desperate/\"> <img src=\"https://external-preview.redd.it/ZMjaTeKV3oAJw77YfUL8lhoIYD38wpgI_5nR3-qDCgo.jpeg?width=640&amp;crop=smart&amp;auto=webp&amp;s=30554aa9a686e4f21fde4794c59651e7ba02",
+      "relevance": 3,
+      "tags": [
+        "war"
+      ],
+      "date": "2026-07-29T01:46:48+00:00"
     },
     {
       "title": "Saudi Arabia joins US in strikes on Iran-backed militias in Iraq",
@@ -159,28 +227,6 @@
         "attack"
       ],
       "date": "Wed, 29 Jul 2026 13:13:49 GMT"
-    },
-    {
-      "title": "CNBC Daily Open: Banking beats, SK Hynix sinks and surprise attack rattles oil",
-      "url": "https://www.cnbc.com/2026/07/29/daily-open-bank-earnings-ubs-sk-hynix.html",
-      "domain": "cnbc",
-      "seentext": "Big banks in Europe beat expectations, but tech stays in the doldrums and oil prices surge after a surprise strike against U.S. forces.",
-      "relevance": 2,
-      "tags": [
-        "attack"
-      ],
-      "date": "Wed, 29 Jul 2026 06:36:49 GMT"
-    },
-    {
-      "title": "U.S. Strategic Petroleum Reserve faces stress as emergency releases strain old infrastructure",
-      "url": "https://www.cnbc.com/2026/07/28/us-strategic-petroleum-reserve-spr-iran-oil-strait-hormuz.html",
-      "domain": "cnbc",
-      "seentext": "The reserve has an authorized storage capacity of 714 million barrels, according to the Department of Energy.",
-      "relevance": 2,
-      "tags": [
-        "emergency"
-      ],
-      "date": "Tue, 28 Jul 2026 18:49:34 GMT"
     }
   ],
   "instrument_risk": {
@@ -190,15 +236,15 @@
       "risk_level": "LOW"
     },
     "NAS100": {
-      "article_count": 12,
-      "avg_relevance": 3.4,
+      "article_count": 16,
+      "avg_relevance": 3.6,
       "risk_level": "MODERATE"
     },
     "EURUSD": {
       "article_count": 1,
-      "avg_relevance": 2.0,
+      "avg_relevance": 5.0,
       "risk_level": "MODERATE"
     }
   },
-  "global_risk_score": 3.2
+  "global_risk_score": 3.4
 }

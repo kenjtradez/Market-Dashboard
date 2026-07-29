@@ -11,10 +11,11 @@ from xml.etree import ElementTree
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 FEEDS = [
-    ("Reuters", "https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best&best-sectors=geopolitical"),
     ("BBC", "https://feeds.bbci.co.uk/news/world/rss.xml"),
-    ("CNBC", "https://www.cnbc.com/id/100727362/device/rss/rss.html"),
-    ("AP", "https://rsshub.app/apnews/topics/apf-topnews"),
+    ("CNBC", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"),
+    ("GoogleNews-World", "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FuUjFHZ0pTVlZnQVAB"),
+    ("GoogleNews-Business", "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FuUjFHZ0pTVlZnQVAB"),
+    ("Reddit-WorldNews", "https://www.reddit.com/r/worldnews/.rss"),
 ]
 
 KEYWORDS = [
@@ -30,22 +31,37 @@ INSTRUMENTS = {
 }
 
 
-def parse_rss(url, timeout=15):
+def parse_feed(url, timeout=20):
     try:
-        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "MarketDashboard/1.0"})
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0 (compatible; MarketDashboard/1.0)"})
         if resp.status_code != 200:
             return []
         root = ElementTree.fromstring(resp.content)
+        ns = {"atom": "http://www.w3.org/2005/Atom"}
         items = []
+
+        # RSS items
         for item in root.iter("item"):
             title = item.findtext("title", "")
-            link = item.findtext("link", "")
+            link_el = item.find("link")
+            link = link_el.text if link_el is not None and link_el.text else (link_el.get("href", "") if link_el is not None else "")
             desc = item.findtext("description", "")
             pubdate = item.findtext("pubDate", "")
             items.append({"title": title, "url": link, "description": desc, "date": pubdate})
+
+        # Atom entries (Google News)
+        for entry in root.iter("{http://www.w3.org/2005/Atom}entry"):
+            title = entry.findtext("{http://www.w3.org/2005/Atom}title", "")
+            link_el = entry.find("{http://www.w3.org/2005/Atom}link")
+            link = link_el.get("href", "") if link_el is not None else ""
+            desc_el = entry.find("{http://www.w3.org/2005/Atom}content")
+            desc = desc_el.text if desc_el is not None else entry.findtext("{http://www.w3.org/2005/Atom}summary", "")
+            pubdate = entry.findtext("{http://www.w3.org/2005/Atom}published", "")
+            items.append({"title": title, "url": link, "description": desc[:500], "date": pubdate})
+
         return items
     except Exception as e:
-        print(f"  RSS error for {url}: {e}")
+        print(f"  Feed error for {url}: {e}")
         return []
 
 
@@ -73,7 +89,7 @@ def run():
     seen = set()
 
     for source_name, url in FEEDS:
-        items = parse_rss(url)
+        items = parse_feed(url)
         print(f"  {source_name}: {len(items)} items")
         for art in items:
             link = art.get("url", "")

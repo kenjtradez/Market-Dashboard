@@ -67,8 +67,14 @@ def run():
 
     articles = geo.get("articles", [])
     if not articles:
-        print("No articles in geopolitical.json — skipping sentiment")
-        return False
+        print("No articles in geopolitical.json — outputting neutral signals")
+        results = {instr: {"signal": "NEUTRAL", "detail": "no articles available", "source": "gdelt"} for instr in INSTRUMENTS}
+        out_path = os.path.join(DATA_DIR, "sentiment.json")
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(out_path, "w") as f:
+            json.dump({"fetched": datetime.now().isoformat(), "instruments": results}, f, indent=2)
+        print(f"  Saved neutral sentiment to {out_path}")
+        return True
 
     print("Computing news sentiment from GDELT articles...")
     results = {}
