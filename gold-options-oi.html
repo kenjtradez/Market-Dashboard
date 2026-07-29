@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Options OI Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel2: #1c232d; --line: #2a323d;
+    --text: #e6edf3; --muted: #8b98a5; --gold: #e5b13a; --gold2: #f0c65a;
+    --green: #2ea043; --amber: #d29922; --red: #da3633; --blue: #58a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:22px;}
+  h1{font-size:20px;margin:0 0 2px;}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:14px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  .top-bar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+  .back-link{color:var(--gold2);font-size:12.5px;text-decoration:none;}
+  .back-link:hover{text-decoration:underline;}
+  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+  .card .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;}
+  .card .v{font-size:20px;font-weight:650;margin-top:3px;}
+  .card .v small{font-size:11px;color:var(--muted);font-weight:500;}
+  .chart-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+  .chart-panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:0 0 10px;}
+  .chart-wrap{position:relative;width:100%;height:420px;}
+  .chart-wrap-sm{position:relative;width:100%;height:320px;}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:700px){.cards{grid-template-columns:repeat(3,1fr)}.charts-grid{grid-template-columns:1fr}}
+  .err{color:var(--red);text-align:center;padding:40px;font-size:15px;}
+  .note{color:var(--muted);font-size:11px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar">
+    <div>
+      <a href="index.html" class="back-link">&larr; Back to Dashboard</a>
+      <h1>Gold Options OI &mdash; <span id="expirySpan"></span></h1>
+      <div class="sub" id="sub">GLD (ETF proxy) &middot; loading&hellip;</div>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="charts-grid">
+    <div class="chart-panel">
+      <h2>Open Interest by Strike</h2>
+      <div class="chart-wrap-sm"><canvas id="oiChart"></canvas></div>
+    </div>
+    <div class="chart-panel">
+      <h2>Net OI (Put &minus; Call)</h2>
+      <div class="chart-wrap-sm"><canvas id="netOiChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <h2>Max Pain Profile &mdash; option seller P&L at expiry</h2>
+    <div class="chart-wrap"><canvas id="painChart"></canvas></div>
+    <div class="note">The strike with lowest total seller payout is <b id="mpLabel"></b>. Price is naturally drawn toward max pain near expiry.</div>
+  </div>
+
+  <div class="chart-panel">
+    <h2>Put / Call OI ratio by strike</h2>
+    <div class="chart-wrap-sm"><canvas id="pcrChart"></canvas></div>
+    <div class="note">Above 1 = more puts than calls at that strike (bearish skew), below 1 = more calls (bullish).</div>
+  </div>
+</div>
+
+<script>
+async function init(){
+  const resp = await fetch('data/ome_data.json');
+  if(!resp.ok){ document.querySelector('.wrap').innerHTML='<div class="err">Failed to load options data</div>'; return; }
+  const json = await resp.json();
+  const gld = json.instruments.Gold;
+  if(!gld || gld.error){ document.querySelector('.wrap').innerHTML='<div class="err">No GLD options data available: '+(gld?.error||'unknown')+'</div>'; return; }
+
+  const {strikes, call_oi, put_oi, expiry, underlying_price, put_call_ratio, max_pain, call_wall, put_wall, magnet_strike, skew_percent, total_oi_used} = gld;
+
+  document.getElementById('expirySpan').textContent = expiry;
+  document.getElementById('sub').innerHTML = `GLD (ETF proxy for Gold) &middot; expiry ${expiry} &middot; ${strikes.length} strikes`;
+
+  // Cards
+  const cards = [
+    {k:'Underlying', v:'$'+underlying_price?.toFixed(2)},
+    {k:'Put/Call Ratio', v:put_call_ratio?.toFixed(2)},
+    {k:'Max Pain', v:'$'+max_pain},
+    {k:'Call Wall', v:'$'+call_wall},
+    {k:'Put Wall', v:'$'+put_wall},
+    {k:'Magnet', v:'$'+magnet_strike},
+    {k:'Total OI', v:(total_oi_used||0).toLocaleString()},
+    {k:'Skew (ATM IV)', v:skew_percent+'%', c:skew_percent<0?'var(--red)':'var(--green)'},
+  ];
+  document.getElementById('cards').innerHTML = cards.map(c => `<div class="card"><div class="k">${c.k}</div><div class="v"${c.c?' style="color:'+c.c+'"':''}>${c.v}</div></div>`).join('');
+
+  // OI Chart
+  new Chart(document.getElementById('oiChart'), {
+    type:'bar', data:{
+      labels:strikes,
+      datasets:[
+        {label:'Call OI', data:call_oi, backgroundColor:'rgba(88,166,255,0.7)', borderColor:'#58a6ff', borderWidth:1},
+        {label:'Put OI', data:put_oi, backgroundColor:'rgba(218,54,51,0.7)', borderColor:'#da3633', borderWidth:1}
+      ]
+    }, options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'var(--muted)',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'}},
+        y:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'},title:{display:true,text:'Open Interest',color:'var(--muted)',font:{size:11}}}
+      }
+    }
+  });
+
+  // Net OI chart
+  const netOi = strikes.map((s,i) => ({x:s, y:(put_oi[i]||0)-(call_oi[i]||0)}));
+  new Chart(document.getElementById('netOiChart'), {
+    type:'bar', data:{
+      labels:strikes,
+      datasets:[{
+        label:'Net OI (Put-Call)',
+        data:netOi.map(d=>d.y),
+        backgroundColor: netOi.map(d => d.y >= 0 ? 'rgba(218,54,51,0.7)' : 'rgba(88,166,255,0.7)'),
+        borderColor: netOi.map(d => d.y >= 0 ? '#da3633' : '#58a6ff'),
+        borderWidth:1
+      }]
+    }, options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'var(--muted)',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'}},
+        y:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'},title:{display:true,text:'Net OI',color:'var(--muted)',font:{size:11}}}
+      }
+    }
+  });
+
+  // Max Pain chart
+  const pain = [];
+  let mpVal = Infinity, mpStrike = null;
+  for(const k of strikes){
+    let total = 0;
+    for(const s of strikes){
+      const ci = call_oi[strikes.indexOf(s)]||0, pi = put_oi[strikes.indexOf(s)]||0;
+      if(s > k) total += (s - k) * ci;
+      else if(s < k) total += (k - s) * pi;
+    }
+    if(total < mpVal){ mpVal = total; mpStrike = k; }
+    pain.push({x:k, y:total});
+  }
+  document.getElementById('mpLabel').textContent = '$' + mpStrike;
+
+  new Chart(document.getElementById('painChart'), {
+    type:'line', data:{
+      datasets:[{
+        label:'Seller P&L (payout at expiry)',
+        data:pain,
+        borderColor:'var(--gold2)',
+        backgroundColor:'rgba(229,177,58,0.08)',
+        fill:true,
+        tension:0.3,
+        pointRadius:2,
+        pointBackgroundColor:'var(--gold2)'
+      }]
+    }, options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'var(--muted)',font:{size:11}}},
+        annotation: undefined
+      },
+      scales:{
+        x:{type:'linear',ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'},title:{display:true,text:'Strike',color:'var(--muted)',font:{size:11}}},
+        y:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'},title:{display:true,text:'Total payout',color:'var(--muted)',font:{size:11}}}
+      }
+    }
+  });
+
+  // PCR by strike
+  const pcrByStrike = strikes.map((s,i) => {
+    const c = call_oi[i]||0, p = put_oi[i]||0;
+    return c+p > 0 ? p/c : 0;
+  });
+  new Chart(document.getElementById('pcrChart'), {
+    type:'bar', data:{
+      labels:strikes,
+      datasets:[{
+        label:'Put/Call OI',
+        data:pcrByStrike,
+        backgroundColor: pcrByStrike.map(d => d > 1 ? 'rgba(218,54,51,0.7)' : 'rgba(88,166,255,0.7)'),
+        borderColor: pcrByStrike.map(d => d > 1 ? '#da3633' : '#58a6ff'),
+        borderWidth:1
+      }]
+    }, options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'var(--muted)',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'}},
+        y:{ticks:{color:'var(--muted)',font:{size:10}},grid:{color:'var(--line)'},title:{display:true,text:'PCR',color:'var(--muted)',font:{size:11}}}
+      }
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

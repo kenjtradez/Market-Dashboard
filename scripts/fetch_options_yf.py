@@ -121,6 +121,11 @@ def compute_metrics(ticker, expiry, chain):
         else:
             skew = 0.0
 
+    # Build full strike arrays for charting
+    strikes_list = sorted(strike_data.keys()) if strike_data else []
+    call_oi_list = [strike_data[s]["call"] for s in strikes_list]
+    put_oi_list = [strike_data[s]["put"] for s in strikes_list]
+
     return {
         "expiry": expiry,
         "total_oi_used": total_call_oi + total_put_oi,
@@ -132,6 +137,9 @@ def compute_metrics(ticker, expiry, chain):
         "magnet_strike": magnet,
         "skew_percent": skew,
         "n_calls_used": len(strike_data),
+        "strikes": strikes_list,
+        "call_oi": call_oi_list,
+        "put_oi": put_oi_list,
     }
 
 
