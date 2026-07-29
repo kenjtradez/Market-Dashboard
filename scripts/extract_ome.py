@@ -1,90 +1,87 @@
 """
 Extract OME options-wall data from PDF reports or screenshots
-via Groq Vision API (free tier, llama-3.2-90b-vision-preview).
+via Tesseract OCR (free, no API key needed).
 """
 import os
 import json
-import base64
-import requests
+import re
+import io
 from datetime import datetime
 from pathlib import Path
 
 INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
-
-GROQ_MODEL = "llama-3.2-90b-vision-preview"
-GROQ_API = "https://api.groq.com/openai/v1/chat/completions"
-
-PROMPT = """Read all numbers from this financial options page. Return JSON with:
-- instrument: name if visible
-- max_pain: number or null
-- put_call_ratio: number or null
-- call_wall: number or null
-- put_wall: number or null
-- magnet_strike: number or null
-- skew_percent: number or null
-- total_oi: number or null
-Return ONLY valid JSON."""
-
 SUPPORTED_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"}
 
-def image_to_base64(image_bytes):
-    return base64.b64encode(image_bytes).decode("utf-8")
+# Regex patterns to find values in OCR text (case-insensitive)
+PATTERNS = {
+    "max_pain": [
+        r"(?:max\s*pain|maximum\s*pain)\s*:?\s*([\d,]+(?:\.\d+)?)",
+        r"(?:max\s*pain|maximum\s*pain)\s*:?\s*\$?([\d,]+(?:\.\d+)?)",
+    ],
+    "put_call_ratio": [
+        r"(?:put\s*[/\\]?\s*call\s*ratio|pcr|put\s*call\s*ratio)\s*:?\s*([\d.]+)",
+    ],
+    "call_wall": [
+        r"(?:call\s*wall|call\s*resistance)\s*:?\s*([\d,]+(?:\.\d+)?)",
+    ],
+    "put_wall": [
+        r"(?:put\s*wall|put\s*support)\s*:?\s*([\d,]+(?:\.\d+)?)",
+    ],
+    "magnet_strike": [
+        r"(?:magnet\s*strike|magnet)\s*:?\s*([\d,]+(?:\.\d+)?)",
+    ],
+    "skew_percent": [
+        r"(?:skew|volatility\s*skew)\s*:?\s*([\d.]+)\s*%?",
+    ],
+    "total_oi": [
+        r"(?:total\s*oi|open\s*interest|total\s*open\s*interest)\s*:?\s*([\d,]+)",
+    ],
+}
 
-def process_page(image_bytes, api_key):
-    b64 = image_to_base64(image_bytes)
-    body = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": PROMPT},
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}}
-                ]
-            }
-        ],
-        "temperature": 0.1,
-        "max_tokens": 500
-    }
-    resp = requests.post(
-        GROQ_API,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json=body,
-        timeout=90,
-    )
-    if resp.status_code != 200:
-        return {"error": f"HTTP {resp.status_code}: {resp.text[:500]}"}
-    result = resp.json()
-    text = ""
+def ocr_image(image_bytes):
+    import pytesseract
+    from PIL import Image as PILImage
+    img = PILImage.open(io.BytesIO(image_bytes))
+    text = pytesseract.image_to_string(img)
+    return text
+
+def parse_ocr_text(text):
+    result = {key: None for key in PATTERNS}
+    result["notes"] = ""
+    text_lower = text.lower()
+    for key, patterns in PATTERNS.items():
+        for pat in patterns:
+            m = re.search(pat, text_lower, re.IGNORECASE)
+            if m:
+                raw = m.group(1).replace(",", "")
+                try:
+                    if "." in raw:
+                        result[key] = float(raw)
+                    else:
+                        result[key] = int(raw)
+                except ValueError:
+                    pass
+                break
+    return result
+
+def process_page(image_bytes):
+    text = ocr_image(image_bytes)
+    print(f"      OCR text (first 600 chars): {text[:600]}")
+    return parse_ocr_text(text)
+
+def process_image(image_path):
     try:
-        text = result["choices"][0]["message"]["content"]
-    except (KeyError, IndexError):
-        return {"error": "unexpected response", "raw": str(result)[:500]}
-    print(f"      RAW response from Groq: {text[:800]}")
-    json_start = text.find("{")
-    json_end = text.rfind("}") + 1
-    if json_start >= 0 and json_end > json_start:
-        try:
-            return json.loads(text[json_start:json_end])
-        except json.JSONDecodeError:
-            pass
-    return {"error": "No JSON found", "raw": text[:500]}
+        from PIL import Image as PILImage
+        img = PILImage.open(image_path)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return process_page(buf.getvalue())
+    except Exception as e:
+        return {"error": str(e)}
 
-def process_image(image_path, api_key):
-    ext = Path(image_path).suffix.lower()
-    with open(image_path, "rb") as f:
-        data = f.read()
-    if ext == ".png":
-        return process_page(data, api_key)
-    from PIL import Image
-    img = Image.open(image_path)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return process_page(buf.getvalue(), api_key)
-
-def process_pdf(image_path, api_key):
+def process_pdf(image_path):
     import fitz
     doc = fitz.open(str(image_path))
     combined = {"instrument": None, "max_pain": None, "put_call_ratio": None,
@@ -94,53 +91,50 @@ def process_pdf(image_path, api_key):
         page = doc[page_num]
         pix = page.get_pixmap(dpi=200)
         img_bytes = pix.tobytes("png")
-        result = process_page(img_bytes, api_key)
-        if "error" in result:
-            combined["notes"] += f"Page {page_num+1}: {result['error']}. "
+        data = process_page(img_bytes)
+        if "error" in data:
+            combined["notes"] += f"Page {page_num+1}: {data['error']}. "
             continue
         for key in combined:
             if key == "notes":
                 continue
-            val = result.get(key)
+            val = data.get(key)
             if val is not None:
                 if combined[key] is None:
                     combined[key] = val
                 elif key not in ("instrument", "notes"):
                     combined[key] = val
-        if result.get("notes"):
-            combined["notes"] += f"Page {page_num+1}: {result['notes']}. "
+        if data.get("notes"):
+            combined["notes"] += f"Page {page_num+1}: {data['notes']}. "
     doc.close()
     combined["notes"] = combined["notes"].strip() or None
     return combined
 
 def run():
-    api_key = os.environ.get("GROQ_API_KEY")
-    if not api_key:
-        print("ERROR: GROQ_API_KEY not set — skipping OME extraction.")
-        print("Set GROQ_API_KEY in your repo secrets.")
-        return False
-
-    import io
     has_fitz = False
-    has_pil = False
+    has_tesseract = False
     try:
         import fitz
         has_fitz = True
     except ImportError:
         pass
     try:
+        import pytesseract
         from PIL import Image
-        has_pil = True
+        has_tesseract = True
     except ImportError:
         pass
 
+    if not has_tesseract:
+        print("ERROR: pytesseract or Pillow not installed.")
+        print("Run: pip install pytesseract Pillow")
+        return False
+
     screenshot_dir = Path(SCREENSHOT_DIR)
-    print(f"  Model: {GROQ_MODEL}")
-    print(f"  API: {GROQ_API}")
+    print(f"  OCR engine: Tesseract")
     print(f"  Screenshots dir: {screenshot_dir.resolve()}")
     print(f"  Dir exists: {screenshot_dir.exists()}")
     print(f"  PDF support: {'yes' if has_fitz else 'no (pip install PyMuPDF)'}")
-    print(f"  Image conversion (Pillow): {'yes' if has_pil else 'no (pip install Pillow)'}")
 
     all_files = []
     if screenshot_dir.exists():
@@ -182,11 +176,11 @@ def run():
             if ext == ".pdf":
                 if not has_fitz:
                     results[instr] = {"error": "PyMuPDF not installed"}
-                    print(f"    ERROR: PyMuPDF not installed — pip install PyMuPDF")
+                    print(f"    ERROR: PyMuPDF not installed")
                     continue
-                data = process_pdf(str(file_path), api_key)
+                data = process_pdf(str(file_path))
             else:
-                data = process_image(str(file_path), api_key)
+                data = process_image(str(file_path))
             results[instr] = data
             print(f"    max_pain={data.get('max_pain')}, PCR={data.get('put_call_ratio')}")
         except Exception as e:

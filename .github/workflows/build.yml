@@ -36,6 +36,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -54,8 +56,6 @@ jobs:
         continue-on-error: true
 
       - name: Extract OME data from screenshots
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python scripts/extract_ome.py
         continue-on-error: true
 
