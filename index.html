@@ -32,19 +32,34 @@
   td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text); }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,0.02); }
-  .badge { display: inline-block; padding: 0.12rem 0.5rem; border-radius: 3px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; }
-  .badge.long { background: rgba(0,200,150,0.15); color: var(--long); }
-  .badge.short { background: rgba(255,77,109,0.12); color: var(--short); }
-  .badge.neutral { background: rgba(90,96,112,0.15); color: var(--muted); }
-  .pos { color: var(--long); } .neg { color: var(--short); }
   footer { margin-top: 1.5rem; font-size: 0.68rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; }
-  @media (max-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } body { padding: 1rem; } }
+
+  /* Tabs */
+  .tabs { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .tab-input { display: none; }
+  .tab-labels { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .tab-label { padding: 0.75rem 1.25rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab-label:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab-input:checked + .tab-label { color: white; border-bottom-color: var(--accent); background: var(--surface); }
+  .tab-panel { display: none; padding: 1.25rem; }
+  .tab-visible { display: block; }
+  .tab-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+  .tab-card { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem; display: flex; flex-direction: column; }
+  .tab-card.signal { border-width: 1px; border-style: solid; }
+  .tab-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+  .tab-card-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; color: white; }
+  .tab-card-sub { font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; }
+  .narrative { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
+  .narrative-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
+  .narrative p { font-size: 0.82rem; line-height: 1.7; color: var(--text); }
+
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } .tab-grid { grid-template-columns: 1fr 1fr; } body { padding: 1rem; } }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Market Dashboard &mdash; OME + Macro</h1>
+  <h1>Market Dashboard — OME + Macro</h1>
   <span>Generated 29 Jul 2026  08:50</span>
 </header>
 
@@ -67,14 +82,14 @@
 
   <div class="card">
     <div class="label">Instruments Tracked</div>
-  <div class="value">3</div>
-  <div class="sub">Gold &bull; NAS100 &bull; EUR/USD</div>
+    <div class="value">3</div>
+    <div class="sub">Gold &bull; NAS100 &bull; EUR/USD</div>
   </div>
 
   <div class="card">
     <div class="label">Data Sources</div>
     <div class="value" style="font-size:1rem">FRED + OME</div>
-    <div class="sub">Macro via API &bull; Positioning via vision</div>
+    <div class="sub">Macro via API &bull; OI via CME PDF extracts</div>
   </div>
 
   <div class="card">
@@ -135,6 +150,164 @@
     </table>
   </div>
 
+  <!-- Instrument Tabs -->
+  <div class="tabs full">
+    <div class="tab-labels">
+      <input type="radio" name="tabs" id="tab0" class="tab-input" checked>
+<label for="tab0" class="tab-label tab-active">Gold</label>
+<input type="radio" name="tabs" id="tab1" class="tab-input" >
+<label for="tab1" class="tab-label ">NAS100</label>
+<input type="radio" name="tabs" id="tab2" class="tab-input" >
+<label for="tab2" class="tab-label ">EURUSD</label>
+
+    </div>
+    
+        <div class="tab-panel tab-visible">
+          <div class="tab-grid">
+            <div class="tab-card signal" style="border-color:var(--muted)">
+              <span class="tab-card-label">Signal</span>
+              <span class="tab-card-value" style="color:var(--muted)">→ NEUTRAL</span>
+              <span class="tab-card-sub">Score: 0</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Positioning</span>
+              <span class="tab-card-value" style="color:var(--muted)">0</span>
+              <span class="tab-card-sub">/ 5 possible</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Macro</span>
+              <span class="tab-card-value" style="color:var(--muted)">0</span>
+              <span class="tab-card-sub">/ 3 possible</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Max Pain</span>
+              <span class="tab-card-value">4050</span>
+              <span class="tab-card-sub">Underlying: 4068.8</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">P/C Ratio</span>
+              <span class="tab-card-value">1.6671</span>
+              <span class="tab-card-sub">Bearish</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Walls</span>
+              <span class="tab-card-value" style="font-size:0.85rem">C: 4100 / P: 4000</span>
+              <span class="tab-card-sub">Call / Put</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Magnet</span>
+              <span class="tab-card-value">4100</span>
+              <span class="tab-card-sub">Highest OI concentration</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Total OI</span>
+              <span class="tab-card-value" style="font-size:0.85rem">46,212</span>
+              <span class="tab-card-sub">Open Interest</span>
+            </div>
+          </div>
+          <div class="narrative">
+            <div class="narrative-label">What's Happening</div>
+            <p>The overall signal for Gold is **NEUTRAL** (score 0). The put/call ratio of **1.67** signals heavy put positioning — options traders are loading up on downside protection, a bearish sign. Max pain at **4050** sits very close to the current price (4068.8000), so minimal gravitational pull toward max pain. The call wall at **4,100** towers above the put wall at **4,000**, meaning resistance overhead is the dominant structural level. The magnet strike at **4,100** holds the highest total open interest concentration, acting as a price attractor. Macro contributes **0/3**. Net score: **0** (NEUTRAL).</p>
+          </div>
+        </div>
+        <div class="tab-panel ">
+          <div class="tab-grid">
+            <div class="tab-card signal" style="border-color:var(--short)">
+              <span class="tab-card-label">Signal</span>
+              <span class="tab-card-value" style="color:var(--short)">▼ SHORT</span>
+              <span class="tab-card-sub">Score: -1</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Positioning</span>
+              <span class="tab-card-value" style="color:var(--short)">-1</span>
+              <span class="tab-card-sub">/ 5 possible</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Macro</span>
+              <span class="tab-card-value" style="color:var(--muted)">0</span>
+              <span class="tab-card-sub">/ 3 possible</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Max Pain</span>
+              <span class="tab-card-value">27800</span>
+              <span class="tab-card-sub">Underlying: 27928.0</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">P/C Ratio</span>
+              <span class="tab-card-value">4.4683</span>
+              <span class="tab-card-sub">Bearish</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Walls</span>
+              <span class="tab-card-value" style="font-size:0.85rem">C: 28000 / P: 28000</span>
+              <span class="tab-card-sub">Call / Put</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Magnet</span>
+              <span class="tab-card-value">28000</span>
+              <span class="tab-card-sub">Highest OI concentration</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Total OI</span>
+              <span class="tab-card-value" style="font-size:0.85rem">9,318</span>
+              <span class="tab-card-sub">Open Interest</span>
+            </div>
+          </div>
+          <div class="narrative">
+            <div class="narrative-label">What's Happening</div>
+            <p>The overall signal for NAS100 is **SHORT** (score -1). The put/call ratio of **4.47** signals heavy put positioning — options traders are loading up on downside protection, a bearish sign. Max pain at **27800** sits very close to the current price (27928.0000), so minimal gravitational pull toward max pain. Both put and call walls converge at **28,000** — a major battleground where the most open interest sits. The magnet strike at **28,000** holds the highest total open interest concentration, acting as a price attractor. Macro contributes **0/3**. Net score: **-1** (SHORT).</p>
+          </div>
+        </div>
+        <div class="tab-panel ">
+          <div class="tab-grid">
+            <div class="tab-card signal" style="border-color:var(--muted)">
+              <span class="tab-card-label">Signal</span>
+              <span class="tab-card-value" style="color:var(--muted)">→ NEUTRAL</span>
+              <span class="tab-card-sub">Score: 0</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Positioning</span>
+              <span class="tab-card-value" style="color:var(--muted)">0</span>
+              <span class="tab-card-sub">/ 5 possible</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Macro</span>
+              <span class="tab-card-value" style="color:var(--muted)">0</span>
+              <span class="tab-card-sub">/ 3 possible</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Max Pain</span>
+              <span class="tab-card-value">1.1325</span>
+              <span class="tab-card-sub">Underlying: 1.14155</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">P/C Ratio</span>
+              <span class="tab-card-value">1.8698</span>
+              <span class="tab-card-sub">Bearish</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Walls</span>
+              <span class="tab-card-value" style="font-size:0.85rem">C: 1.16 / P: 1.13</span>
+              <span class="tab-card-sub">Call / Put</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Magnet</span>
+              <span class="tab-card-value">1.15</span>
+              <span class="tab-card-sub">Highest OI concentration</span>
+            </div>
+            <div class="tab-card">
+              <span class="tab-card-label">Total OI</span>
+              <span class="tab-card-value" style="font-size:0.85rem">174,652</span>
+              <span class="tab-card-sub">Open Interest</span>
+            </div>
+          </div>
+          <div class="narrative">
+            <div class="narrative-label">What's Happening</div>
+            <p>The overall signal for EURUSD is **NEUTRAL** (score 0). The put/call ratio of **1.87** signals heavy put positioning — options traders are loading up on downside protection, a bearish sign. Max pain at **1.1325** is **0.8%** below the current price (1.1416) — price is stretched above max pain and may drift lower toward it. The call wall at **1.16** towers above the put wall at **1.13**, meaning resistance overhead is the dominant structural level. The magnet strike at **1.15** holds the highest total open interest concentration, acting as a price attractor. Macro contributes **0/3**. Net score: **0** (NEUTRAL).</p>
+          </div>
+        </div>
+  </div>
+
   <!-- Macro Table -->
   <div class="card full">
     <div class="label" style="margin-bottom:0.8rem">FRED Macro Data</div>
@@ -185,8 +358,8 @@
 </div>
 
 <footer>
-  Screenshots &rarr; Claude Vision &rarr; FRED API &rarr; Scoring &rarr; Static Site &nbsp;|&nbsp;
-  Upload screenshots to trigger rebuild
+  OME reports &rarr; PDF extraction &rarr; FRED API &rarr; Scoring &rarr; Static Site &nbsp;|&nbsp;
+  Upload reports to trigger rebuild
 </footer>
 
 </body>
