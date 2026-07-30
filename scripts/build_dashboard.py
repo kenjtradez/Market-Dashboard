@@ -856,6 +856,8 @@ def run():
     <div class="mc-grid">{macro_items}</div>
   </div>
 
+  <canvas id="testChart" style="width:100px;height:50px;position:absolute;left:-9999px"></canvas>
+
   <footer>Yahoo Finance &rarr; Scoring &rarr; GitHub Pages &bull; Data updates 2x daily</footer>
 
 </div>
@@ -1019,6 +1021,17 @@ def run():
       }}
     }});
   }}
+
+  // Test chart — verify Chart.js renders
+  try {{
+    const tc = document.getElementById('testChart');
+    if (tc) {{
+      new Chart(tc, {{type:'bar', data:{{labels:['A','B','C'],datasets:[{{label:'test',data:[1,2,3]}}]}},
+        options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}}}}
+      }});
+      console.log('TEST CHART OK');
+    }} else {{ console.log('NO TEST CANVAS'); }}
+  }} catch(e) {{ console.log('TEST CHART ERR:', e); }}
 
   // Collapse toggle
   document.querySelectorAll('.analysis-header').forEach(h => {{
