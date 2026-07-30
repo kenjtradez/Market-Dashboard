@@ -872,6 +872,19 @@ def run():
   }})();
   const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
+  console.log('DBG ChartJS:',typeof Chart!=='undefined','OI keys:',Object.keys(ALLOI).join(','),'GF:',!!GF);
+  console.log('DBG OI data:', JSON.stringify(ALLOI).slice(0,200));
+  Object.keys(INSTR_TAGS).forEach(instr => {{
+    const OI = ALLOI[instr];
+    console.log('DBG instr', instr, 'has OI:', !!OI, 'strikes:', OI?.strikes?.length);
+    if (!OI || !OI.strikes || !OI.strikes.length) return;
+    const tag = INSTR_TAGS[instr], s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
+    const bar1 = document.getElementById(tag+'OiBarChart');
+    const netC = document.getElementById(tag+'OiNetChart');
+    const painC = document.getElementById(tag+'OiPainChart');
+    const pcrC = document.getElementById(tag+'OiPcrChart');
+    console.log('DBG canvases for', instr, ':', !!bar1, !!netC, !!painC, !!pcrC);
+    if (!bar1 || !netC || !painC || !pcrC) return;
 
   // OI Charts — one set per instrument
   const INSTR_TAGS = {{Gold:'gold',NAS100:'nas100',EURUSD:'eurusd'}};
@@ -893,11 +906,13 @@ def run():
     const pcrC = document.getElementById(tag+'OiPcrChart');
     if (!bar1 || !netC || !painC || !pcrC) return;
 
-    new Chart(bar1, {{type:'bar', data:{{labels:s,datasets:[
-      {{label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1}},
-      {{label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}}
-    ]}}, options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Open Interest by Strike',color:'#525866',font:{{size:11}}}}}}}}
-    }});
+    try {{
+      new Chart(bar1, {{type:'bar', data:{{labels:s,datasets:[
+        {{label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1}},
+        {{label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}}
+      ]}}, options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Open Interest by Strike',color:'#525866',font:{{size:11}}}}}}}}
+      }});
+    }} catch(e){{console.log('OI bar err:',e,'for',instr)}}
     const net = s.map((_,i)=> (po[i]||0)-(co[i]||0));
     new Chart(netC, {{type:'bar', data:{{labels:s,datasets:[{{label:'Net OI (Put-Call)',data:net,
       backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
