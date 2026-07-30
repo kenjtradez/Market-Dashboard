@@ -23,8 +23,8 @@ def load_events():
 
 def filter_and_sort(events):
     now = datetime.now(timezone.utc)
-    # Consider events from 24h ago to 7 days ahead
-    start = now - timedelta(hours=24)
+    # Only future events (up to 7 days ahead)
+    start = now
     end = now + timedelta(days=7)
 
     filtered = []

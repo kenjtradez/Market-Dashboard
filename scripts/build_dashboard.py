@@ -22,13 +22,8 @@ CORRELATIONS = {
                 "driven_by":  "ECB/Fed differential, risk sentiment, USD"},
 }
 
-# Economic events for the next few days (updated periodically)
-ECON_EVENTS = [
-    ("CB Consumer Confidence", "14:00", "92.4c", "Today"),
-    ("FOMC Rate Decision", "19:00", "5.50%", "Wed"),
-    ("US GDP QoQ", "13:30", "2.1%", "Thu"),
-    ("Nonfarm Payrolls", "13:30", "185K", "Fri"),
-]
+# Populated from events.json at build time
+ECON_EVENTS = []
 
 def load_json(path):
     if os.path.exists(path):
@@ -432,13 +427,37 @@ def run():
 
     # Economic Events
     events_data = load_json(os.path.join(DATA_DIR, "events.json")).get("events", [])
+    # Build ECON_EVENTS from fetched data (upcoming high-impact events)
+    econ_list = []
+    now = datetime.now()
+    for ev in events_data:
+        imp = ev.get("impact", "")
+        if imp not in ("High", "Medium"):
+            continue
+        try:
+            ev_dt = datetime.fromisoformat(ev["date"])
+            if ev_dt < now:
+                continue
+            ev_time = ev_dt.strftime("%H:%M")
+            ev_day = "Today" if ev_dt.strftime("%Y-%m-%d") == now.strftime("%Y-%m-%d") else ev_dt.strftime("%a")
+        except:
+            ev_time = ev["date"][11:16] if len(ev["date"]) > 16 else ev["date"]
+            ev_day = ""
+        econ_list.append((ev["title"], ev_time, ev.get("forecast", ""), ev_day))
+    ECON_EVENTS = econ_list[:4]
     events_section = ""
     if events_data:
         event_rows = ""
-        today = datetime.now().strftime("%Y-%m-%d")
-        for ev in events_data[:30]:
+        row_count = 0
+        now_dt = datetime.now()
+        today = now_dt.strftime("%Y-%m-%d")
+        for ev in events_data:
+            if row_count >= 30:
+                break
             try:
                 ev_dt = datetime.fromisoformat(ev["date"])
+                if ev_dt < now_dt:
+                    continue
                 ev_time = ev_dt.strftime("%H:%M")
                 ev_day = "Today" if ev_dt.strftime("%Y-%m-%d") == today else ev_dt.strftime("%a")
             except:
@@ -448,6 +467,7 @@ def run():
             if imp not in ("High", "Medium"):
                 continue
             imp_cls = "imp-high" if imp == "High" else "imp-med"
+            row_count += 1
             event_rows += f"""
           <tr class="{imp_cls}-row">
             <td class="ev-time">{ev_time}</td>
