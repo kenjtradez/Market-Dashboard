@@ -912,7 +912,7 @@ def run():
       options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Max Pain Profile — min at $'+fmt(mpStrike),color:'#525866',font:{{size:11}}}}}},
         scales:{{...commonChart.scales,x:{{...commonChart.scales.x,type:'linear',title:{{display:true,text:'Strike',color:'#525866',font:{{size:10}}}}}},
           y:{{...commonChart.scales.y,title:{{display:true,text:'Total payout',color:'#525866',font:{{size:10}}}}}}}}
-    }});
+    }}}});
     // PCR by strike
     const pcr = s.map((_,i)=> {{ const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; }});
     new Chart(pcrC, {{type:'bar', data:{{labels:s,datasets:[{{label:'Put/Call OI',data:pcr,
