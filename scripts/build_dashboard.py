@@ -873,18 +873,6 @@ def run():
   const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
   console.log('DBG ChartJS:',typeof Chart!=='undefined','OI keys:',Object.keys(ALLOI).join(','),'GF:',!!GF);
-  console.log('DBG OI data:', JSON.stringify(ALLOI).slice(0,200));
-  Object.keys(INSTR_TAGS).forEach(instr => {{
-    const OI = ALLOI[instr];
-    console.log('DBG instr', instr, 'has OI:', !!OI, 'strikes:', OI?.strikes?.length);
-    if (!OI || !OI.strikes || !OI.strikes.length) return;
-    const tag = INSTR_TAGS[instr], s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
-    const bar1 = document.getElementById(tag+'OiBarChart');
-    const netC = document.getElementById(tag+'OiNetChart');
-    const painC = document.getElementById(tag+'OiPainChart');
-    const pcrC = document.getElementById(tag+'OiPcrChart');
-    console.log('DBG canvases for', instr, ':', !!bar1, !!netC, !!painC, !!pcrC);
-    if (!bar1 || !netC || !painC || !pcrC) return;
 
   // OI Charts — one set per instrument
   const INSTR_TAGS = {{Gold:'gold',NAS100:'nas100',EURUSD:'eurusd'}};
