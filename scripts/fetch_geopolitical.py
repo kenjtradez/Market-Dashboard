@@ -66,6 +66,7 @@ def parse_feed(url, timeout=20):
 
 
 def score_article(title, desc):
+    import re
     text = (title + " " + desc).lower()
     score = 0
     tags = []
@@ -76,7 +77,7 @@ def score_article(title, desc):
         "embargo": 2, "disruption": 2, "riot": 2, "shutdown": 2, "restriction": 2,
     }
     for word, pts in severity.items():
-        if word in text:
+        if re.search(r"\b" + re.escape(word) + r"\b", text):
             score += pts
             tags.append(word)
     return min(score, 10), tags

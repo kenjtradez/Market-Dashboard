@@ -146,6 +146,7 @@ def compute_metrics(ticker, expiry, chain):
 def run():
     print("Fetching options data from Yahoo Finance...")
     results = {}
+    all_ok = True
     for instr, cfg in INSTRUMENTS.items():
         ticker = cfg["ticker"]
         print(f"  {instr} ({ticker})...", end=" ", flush=True)
@@ -153,6 +154,7 @@ def run():
         if err:
             results[instr] = {"error": err}
             print(f"ERROR: {err}")
+            all_ok = False
             continue
         data = compute_metrics(ticker, expiry, chain)
         data["proxy_for"] = ticker
@@ -161,6 +163,19 @@ def run():
         print(f"OK — expiry={expiry}, OI={data['total_oi_used']}, PCR={data['put_call_ratio']}, spot={data['underlying_price']}")
 
     out_path = os.path.join(DATA_DIR, "ome_data.json")
+    if not all_ok and os.path.exists(out_path):
+        existing = json.load(open(out_path))
+        # merge: keep existing data for failed instruments
+        for instr in INSTRUMENTS:
+            if instr in results and "error" in results[instr]:
+                if instr in existing.get("instruments", {}) and "error" not in existing["instruments"][instr]:
+                    results[instr] = existing["instruments"][instr]
+                    print(f"  Kept existing data for {instr}")
+                else:
+                    del results[instr]
+        if not results:
+            print("  All instruments failed, preserving existing file")
+            return True
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump({"fetched": datetime.now().isoformat(), "instruments": results}, f, indent=2)
