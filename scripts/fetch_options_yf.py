@@ -13,9 +13,9 @@ from datetime import datetime
 import yfinance as yf
 
 INSTRUMENTS = {
-    "Gold":   {"ticker": "GLD",  "note": "ETF proxy for Gold"},
-    "NAS100": {"ticker": "QQQ",  "note": "ETF proxy for NAS100"},
-    "EURUSD": {"ticker": "FXE",  "note": "ETF proxy for EURUSD"},
+    "Gold":   {"ticker": "GLD",  "real_ticker": "GC=F",     "note": "ETF proxy for Gold"},
+    "NAS100": {"ticker": "QQQ",  "real_ticker": "NQ=F",     "note": "ETF proxy for NAS100"},
+    "EURUSD": {"ticker": "FXE",  "real_ticker": "EURUSD=X", "note": "ETF proxy for EURUSD"},
 }
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -143,6 +143,45 @@ def compute_metrics(ticker, expiry, chain):
     }
 
 
+def scale_to_futures(data, etf_ticker, real_ticker):
+    """Scale ETF strikes/prices to futures-equivalent levels using yfinance prices."""
+    if "error" in data:
+        return data
+    etf_price = data.get("underlying_price")
+    if not etf_price:
+        return data
+    try:
+        t = yf.Ticker(real_ticker)
+        info = t.info
+        real_price = info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
+    except Exception:
+        return data
+    if not real_price:
+        return data
+    ratio = real_price / etf_price
+
+    scaled = dict(data)
+    scaled["underlying_price"] = round(real_price, 2)
+    scaled["proxy_for"] = etf_ticker
+    scaled["proxy_note"] = f"ETF proxy for {real_ticker}, scaled by {ratio:.2f}x"
+    scaled["scale_ratio"] = round(ratio, 4)
+
+    for field in ["max_pain", "call_wall", "put_wall", "magnet_strike"]:
+        val = data.get(field)
+        if val is not None:
+            scaled_val = val * ratio
+            scaled[field] = round(scaled_val, 4) if abs(scaled_val) < 100 else round(scaled_val)
+
+    raw_strikes = data.get("strikes", [])
+    if raw_strikes:
+        scaled["strikes"] = [round(s * ratio, 4) if abs(ratio * s) < 100 else round(s * ratio) for s in raw_strikes]
+
+    # Add raw (unscaled) data for reference
+    scaled["raw_price"] = round(etf_price, 2)
+    scaled["raw_strikes"] = raw_strikes
+    return scaled
+
+
 def run():
     print("Fetching options data from Yahoo Finance...")
     results = {}
@@ -159,8 +198,12 @@ def run():
         data = compute_metrics(ticker, expiry, chain)
         data["proxy_for"] = ticker
         data["proxy_note"] = cfg["note"]
+        # Scale ETF strikes to futures-equivalent levels
+        if "error" not in data:
+            data = scale_to_futures(data, ticker, cfg["real_ticker"])
         results[instr] = data
-        print(f"OK — expiry={expiry}, OI={data['total_oi_used']}, PCR={data['put_call_ratio']}, spot={data['underlying_price']}")
+        sp = data.get("underlying_price", "?")
+        print(f"OK — expiry={expiry}, OI={data['total_oi_used']}, PCR={data['put_call_ratio']}, spot={sp}")
 
     out_path = os.path.join(DATA_DIR, "ome_data.json")
     if not all_ok and os.path.exists(out_path):
