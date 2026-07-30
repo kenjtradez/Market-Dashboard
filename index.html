@@ -936,10 +936,10 @@
   const INSTR_TAGS = {Gold:'gold',NAS100:'nas100',EURUSD:'eurusd'};
   const commonChart = {
     responsive:true, maintainAspectRatio:false,
-    plugins:{legend:{labels:{color:'var(--muted)',font:{size:10},boxWidth:12}}},
+    plugins:{legend:{labels:{color:'#525866',font:{size:10},boxWidth:12}}},
     scales:{
-      x:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}},
-      y:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}}
+      x:{ticks:{color:'#525866',font:{size:9}},grid:{color:'#1e232d'}},
+      y:{ticks:{color:'#525866',font:{size:9}},grid:{color:'#1e232d'}}
     }
   };
   Object.keys(INSTR_TAGS).forEach(instr => {
@@ -955,30 +955,30 @@
     new Chart(bar1, {type:'bar', data:{labels:s,datasets:[
       {label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1},
       {label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}
-    ]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{size:11}}}}
+    ]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Open Interest by Strike',color:'#525866',font:{size:11}}}}
     });
     const net = s.map((_,i)=> (po[i]||0)-(co[i]||0));
     new Chart(netC, {type:'bar', data:{labels:s,datasets:[{label:'Net OI (Put-Call)',data:net,
       backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
       borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
-    }]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{size:11}}}}
+    }]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Net OI (bearish / bullish)',color:'#525866',font:{size:11}}}}
     });
     // Max Pain
     const pain = []; let mpStrike=null, mpVal=Infinity;
     const idxMap = new Map(s.map((v,i)=>[v,i]));
     for(const k of s){ let t=0; for(const st of s){ const ci=co[idxMap.get(st)]||0, pi=po[idxMap.get(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; } if(t<mpVal){ mpVal=t; mpStrike=k; } pain.push({x:k,y:t}); }
-    new Chart(painC, {type:'line', data:{datasets:[{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
-      backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}]},
-      options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Max Pain Profile — min at $'+fmt(mpStrike),color:'var(--muted)',font:{size:11}}},
-        scales:{...commonChart.scales,x:{...commonChart.scales.x,type:'linear',title:{display:true,text:'Strike',color:'var(--muted)',font:{size:10}}},
-          y:{...commonChart.scales.y,title:{display:true,text:'Total payout',color:'var(--muted)',font:{size:10}}}}
+    new Chart(painC, {type:'line', data:{datasets:[{label:'Seller P&L at expiry',data:pain,borderColor:'#e5b13a',
+      backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#e5b13a'}]},
+      options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Max Pain Profile — min at $'+fmt(mpStrike),color:'#525866',font:{size:11}}},
+        scales:{...commonChart.scales,x:{...commonChart.scales.x,type:'linear',title:{display:true,text:'Strike',color:'#525866',font:{size:10}}},
+          y:{...commonChart.scales.y,title:{display:true,text:'Total payout',color:'#525866',font:{size:10}}}}
     });
     // PCR by strike
     const pcr = s.map((_,i)=> { const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; });
     new Chart(pcrC, {type:'bar', data:{labels:s,datasets:[{label:'Put/Call OI',data:pcr,
       backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
       borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
-    }]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{size:11}}}}
+    }]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Put/Call Ratio by Strike',color:'#525866',font:{size:11}}}}
     });
   });
 
@@ -1071,12 +1071,12 @@
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{
-          legend:{position:'bottom',labels:{color:'var(--muted)',font:{size:10},boxWidth:12,padding:8}},
-          title:{display:true,text:'Volatility Profile — % move by percentile',color:'var(--muted)',font:{size:11}}
+          legend:{position:'bottom',labels:{color:'#525866',font:{size:10},boxWidth:12,padding:8}},
+          title:{display:true,text:'Volatility Profile — % move by percentile',color:'#525866',font:{size:11}}
         },
         scales:{
-          x:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}},
-          y:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'},title:{display:true,text:'%',color:'var(--muted)',font:{size:10}}}
+          x:{ticks:{color:'#525866',font:{size:9}},grid:{color:'#1e232d'}},
+          y:{ticks:{color:'#525866',font:{size:9}},grid:{color:'#1e232d'},title:{display:true,text:'%',color:'#525866',font:{size:10}}}
         }
       }
     });
