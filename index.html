@@ -28,7 +28,7 @@
   .overall-card .oc-text .oc-sub { font-size: 0.68rem; color: var(--muted); margin-top: 0.15rem; }
   .overall-card .oc-macro { text-align: right; font-family: 'IBM Plex Mono', monospace; padding-left: 1rem; border-left: 1px solid var(--border); }
   .overall-card .oc-macro .oc-m-label { font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
-  .overall-card .oc-macro .oc-m-value { font-size: 1rem; font-weight: 600; color: var(--muted); }
+  .overall-card .oc-macro .oc-m-value { font-size: 1rem; font-weight: 600; color: var(--short); }
 
   /* Analysis Sections */
   .analysis-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; transition: all 0.15s; }
@@ -132,6 +132,15 @@
   .gold-fc-link:hover { text-decoration: underline; }
   .gold-fc-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }
   .gold-fc-note { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }
+  .snap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
+  .snap-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.15s; }
+  .snap-card:hover { border-color: var(--accent); }
+  .snap-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .snap-signal { font-size: 0.85rem; font-weight: 600; margin: 0.1rem 0; }
+  .snap-score { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--muted); }
+  .snap-bar { height: 3px; background: var(--border); border-radius: 2px; margin: 0.3rem 0; overflow: hidden; }
+  .snap-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+  .snap-price { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--text); }
   .geo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
   .geo-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
   .geo-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
@@ -156,25 +165,7 @@
 
   footer { margin-top: 1rem; font-size: 0.6rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; padding-top: 0.75rem; border-top: 1px solid var(--border); }
 
-  .yr-section { margin-top: 1rem; }
-  .yr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
-  .yr-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text); font-weight: 600; }
-  .yr-sub { font-size: 0.6rem; color: var(--muted); }
-  .yr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .yr-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-  .yr-name { font-weight: 600; font-size: 0.85rem; color: var(--text); }
-  .yr-date { font-size: 0.6rem; color: var(--muted); margin-bottom: 8px; }
-  .yr-stats { display: flex; gap: 12px; margin-bottom: 6px; }
-  .yr-stat { display: flex; flex-direction: column; }
-  .yr-stat-l { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; }
-  .yr-stat-v { font-size: 0.85rem; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
-  .yr-max { font-size: 0.7rem; color: var(--muted); margin-bottom: 8px; padding: 4px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  .yr-proj { display: flex; gap: 10px; margin-bottom: 6px; }
-  .yr-proj-up, .yr-proj-down { flex: 1; display: flex; flex-direction: column; background: var(--bg); border-radius: 4px; padding: 4px 8px; }
-  .yr-proj-up span, .yr-proj-down span { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; }
-  .yr-proj-up b { font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }
-  .yr-proj-down b { font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }
-  .yr-today { font-size: 0.65rem; color: var(--muted); }
+
 
   @media (max-width: 700px) {
     .analysis-extra { grid-template-columns: 1fr; }
@@ -182,8 +173,8 @@
     .corr-grid { grid-template-columns: 1fr; }
     .gold-fc-body { grid-template-columns: repeat(2, 1fr); }
     .geo-body { grid-template-columns: 1fr; }
-    .yr-grid { grid-template-columns: 1fr; }
     .macro-card .mc-grid { grid-template-columns: 1fr 1fr; }
+    .snap-grid { grid-template-columns: 1fr; }
     .container { padding: 0.75rem; }
   }
 </style>
@@ -193,7 +184,7 @@
 
   <div class="masthead">
     <h1>Market Analysis</h1>
-    <span class="date">30/07/2026, 11:41</span>
+    <span class="date">30/07/2026, 11:50</span>
   </div>
 
   <div class="overall-card">
@@ -201,14 +192,37 @@
     <div class="oc-text">
       <div class="oc-label">Overall Market Signal</div>
       <div class="oc-value">SHORT</div>
-      <div class="oc-sub">Composite: -0.3/8 &bull; OME + Macro</div>
+      <div class="oc-sub">Composite: -0.7/8 &bull; OME + Macro</div>
     </div>
     <div class="oc-macro">
       <div class="oc-m-label">Macro</div>
-      <div class="oc-m-value">0.0</div>
+      <div class="oc-m-value">-0.3</div>
       <div style="font-size:0.58rem;color:var(--muted);margin-top:0.05rem">/3</div>
     </div>
   </div>
+
+  <div class="snap-grid">
+        <div class="snap-card" onclick="document.getElementById('gold').scrollIntoView({behavior:'smooth'})">
+          <div class="snap-name">Gold</div>
+          <div class="snap-signal" style="color:var(--short)">▼ SHORT</div>
+          <div class="snap-score">-5</div>
+          <div class="snap-bar"><div class="snap-bar-fill" style="width:62%;background:var(--short)"></div></div>
+          <div class="snap-price">4,133.90</div>
+        </div>
+        <div class="snap-card" onclick="document.getElementById('nas100').scrollIntoView({behavior:'smooth'})">
+          <div class="snap-name">NAS100</div>
+          <div class="snap-signal" style="color:var(--short)">▼ SHORT</div>
+          <div class="snap-score">-4</div>
+          <div class="snap-bar"><div class="snap-bar-fill" style="width:50%;background:var(--short)"></div></div>
+          <div class="snap-price">27,615.50</div>
+        </div>
+        <div class="snap-card" onclick="document.getElementById('eurusd').scrollIntoView({behavior:'smooth'})">
+          <div class="snap-name">EURUSD</div>
+          <div class="snap-signal" style="color:var(--long)">▲ LONG</div>
+          <div class="snap-score">7</div>
+          <div class="snap-bar"><div class="snap-bar-fill" style="width:88%;background:var(--long)"></div></div>
+          <div class="snap-price">1.1500</div>
+        </div></div>
 
   
         <div class="analysis-section" id="gold">
@@ -217,7 +231,7 @@
               <h2 class="analysis-name">Gold</h2>
               <div class="analysis-badge" style="background:var(--short)15;color:var(--short);border:1px solid var(--short)40">▼ SHORT</div>
               <div class="analysis-range">0% RANGE</div>
-              <div class="analysis-fair">near fair value</div>
+              <div class="analysis-fair">+21.3% above fair value</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
             </div>
             <div class="analysis-sub">
@@ -237,7 +251,7 @@
                 <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">-5</span></div>
                 <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">-3</span></div>
                 <div class="sd-item"><span class="sd-label">COT</span><span class="sd-val">-2</span></div>
-                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0.0/3</span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">-0.3/3</span></div>
                 <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">6/10 <span class="stars">★★★★★★☆☆☆☆</span></span></div>
                 
               </div>
@@ -251,9 +265,9 @@
                 </div>
                 <div class="an-block positioning-narrative">
                   <div class="an-label">Positioning Analysis</div>
-                  <p>Gold at 4,133.90 is pinned between two key options reference points — the call wall at 3,609 and put wall at 3,208. The PCR of 1.94 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 3,186 is 22.9% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 3,609 towers above the put wall at 3,208 — resistance overhead is the dominant structural level.</p><p>The magnet at 3,208 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0.0/3 to the score. COT: specs 48.0% net, commercials -55.6% net (score -2). Net score: -5 (SHORT).Net score: -5 (SHORT).</p>
+                  <p>Gold at 4,133.90 is pinned between two key options reference points — the call wall at 3,609 and put wall at 3,208. The PCR of 1.94 signals heavy put positioning, with options traders loading up on downside protection.</p><p>Max pain at 3,186 is 22.9% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 3,609 towers above the put wall at 3,208 — resistance overhead is the dominant structural level.</p><p>The magnet at 3,208 holds the highest total OI concentration, acting as a price attractor. Macro contributes -0.3/3 to the score. COT: specs 48.0% net, commercials -55.6% net (score -2). Net score: -5 (SHORT).Net score: -5 (SHORT).</p>
                 </div>
-                <p class="an-footer">Generated 30/07/2026, 11:41. AI opinion, not a backtested signal. | Oanda: 369.37</p>
+                <p class="an-footer">Generated 30/07/2026, 11:50. AI opinion, not a backtested signal. | Oanda: 369.37</p>
               </div>
             </div>
 
@@ -299,7 +313,7 @@
               <h2 class="analysis-name">NAS100</h2>
               <div class="analysis-badge" style="background:var(--short)15;color:var(--short);border:1px solid var(--short)40">▼ SHORT</div>
               <div class="analysis-range">0% RANGE</div>
-              <div class="analysis-fair">near fair value</div>
+              <div class="analysis-fair">+61.8% above fair value</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
             </div>
             <div class="analysis-sub">
@@ -316,11 +330,11 @@
               </div>
               <div class="signal-detail-grid">
                 <div class="sd-item"><span class="sd-label">Signal</span><span class="sd-val" style="color:var(--short);font-weight:600">SHORT</span></div>
-                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">-3</span></div>
+                <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">-4</span></div>
                 <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">-1</span></div>
                 <div class="sd-item"><span class="sd-label">COT</span><span class="sd-val">-2</span></div>
-                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0.0/3</span></div>
-                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">4/10 <span class="stars">★★★★☆☆☆☆☆☆</span></span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">-0.3/3</span></div>
+                <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">5/10 <span class="stars">★★★★★☆☆☆☆☆</span></span></div>
                 
               </div>
             </div>
@@ -333,9 +347,9 @@
                 </div>
                 <div class="an-block positioning-narrative">
                   <div class="an-label">Positioning Analysis</div>
-                  <p>NAS100 at 27,615.50 is pinned between two key options reference points — the call wall at 22,911 and put wall at 11,226. The PCR of 0.74 is balanced.</p><p>Max pain at 18,529 is 32.9% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 22,911 towers above the put wall at 11,226 — resistance overhead is the dominant structural level.</p><p>The magnet at 11,226 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0.0/3 to the score. COT: specs 36.1% net, commercials -61.2% net (score -2). Net score: -3 (SHORT).Net score: -3 (SHORT).</p>
+                  <p>NAS100 at 27,615.50 is pinned between two key options reference points — the call wall at 22,911 and put wall at 11,226. The PCR of 0.74 is balanced.</p><p>Max pain at 18,529 is 32.9% below the current price. Price is stretched above max pain and may drift lower toward it. The call wall at 22,911 towers above the put wall at 11,226 — resistance overhead is the dominant structural level.</p><p>The magnet at 11,226 holds the highest total OI concentration, acting as a price attractor. Macro contributes -0.3/3 to the score. COT: specs 36.1% net, commercials -61.2% net (score -2). Net score: -4 (SHORT).Net score: -4 (SHORT).</p>
                 </div>
-                <p class="an-footer">Generated 30/07/2026, 11:41. AI opinion, not a backtested signal. | Oanda: 675.49</p>
+                <p class="an-footer">Generated 30/07/2026, 11:50. AI opinion, not a backtested signal. | Oanda: 675.49</p>
               </div>
             </div>
 
@@ -401,7 +415,7 @@
                 <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">7</span></div>
                 <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">5</span></div>
                 <div class="sd-item"><span class="sd-label">COT</span><span class="sd-val">2</span></div>
-                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">0.0/3</span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">-0.3/3</span></div>
                 <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">9/10 <span class="stars">★★★★★★★★★☆</span></span></div>
                 
               </div>
@@ -415,9 +429,9 @@
                 </div>
                 <div class="an-block positioning-narrative">
                   <div class="an-label">Positioning Analysis</div>
-                  <p>EURUSD at 1.1500 is pinned between two key options reference points — the call wall at 1.2487 and put wall at 1.0641. The PCR of 0.16 shows call dominance, traders positioning for upside.</p><p>Max pain at 1.3030 is 13.3% above the current price. Price is below max pain and may drift higher toward it. The call wall at 1.2487 towers above the put wall at 1.0641 — resistance overhead is the dominant structural level.</p><p>The magnet at 1.2487 holds the highest total OI concentration, acting as a price attractor. Macro contributes 0.0/3 to the score. COT: specs -26.0% net, commercials 23.1% net (score +2). Net score: 7 (LONG).Net score: 7 (LONG).</p>
+                  <p>EURUSD at 1.1500 is pinned between two key options reference points — the call wall at 1.2487 and put wall at 1.0641. The PCR of 0.16 shows call dominance, traders positioning for upside.</p><p>Max pain at 1.3030 is 13.3% above the current price. Price is below max pain and may drift higher toward it. The call wall at 1.2487 towers above the put wall at 1.0641 — resistance overhead is the dominant structural level.</p><p>The magnet at 1.2487 holds the highest total OI concentration, acting as a price attractor. Macro contributes -0.3/3 to the score. COT: specs -26.0% net, commercials 23.1% net (score +2). Net score: 7 (LONG).Net score: 7 (LONG).</p>
                 </div>
-                <p class="an-footer">Generated 30/07/2026, 11:41. AI opinion, not a backtested signal. | Oanda: 105.11</p>
+                <p class="an-footer">Generated 30/07/2026, 11:50. AI opinion, not a backtested signal. | Oanda: 105.11</p>
               </div>
             </div>
 
@@ -502,11 +516,51 @@
           </div>
           <div class="analysis-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiBarChart"></canvas></div></div>
-              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiNetChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="goldOiBarChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="goldOiNetChart"></canvas></div></div>
             </div>
-            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="oiPainChart"></canvas></div></div>
-            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiPcrChart"></canvas></div></div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="goldOiPainChart"></canvas></div></div>
+            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="goldOiPcrChart"></canvas></div></div>
+          </div>
+        </div>
+        <div class="analysis-section" id="nas100-oi">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">NAS100 Options OI</h2>
+              <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">QQQ</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">Expiry 2026-12-18 &middot; 57 strikes</span>
+            </div>
+          </div>
+          <div class="analysis-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="nas100OiBarChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="nas100OiNetChart"></canvas></div></div>
+            </div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="nas100OiPainChart"></canvas></div></div>
+            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="nas100OiPcrChart"></canvas></div></div>
+          </div>
+        </div>
+        <div class="analysis-section" id="eurusd-oi">
+          <div class="analysis-header">
+            <div class="analysis-title-row">
+              <h2 class="analysis-name">EURUSD Options OI</h2>
+              <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">FXE</div>
+              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">✕</button>
+            </div>
+            <div class="analysis-sub">
+              <span class="analysis-ai">Expiry 2026-09-18 &middot; 14 strikes</span>
+            </div>
+          </div>
+          <div class="analysis-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="eurusdOiBarChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="eurusdOiNetChart"></canvas></div></div>
+            </div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="eurusdOiPainChart"></canvas></div></div>
+            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="eurusdOiPcrChart"></canvas></div></div>
           </div>
         </div>
 
@@ -533,8 +587,6 @@
             <div class="an-footer">Forecast for trading day after 2026-07-28 &middot; model HAR-IV &middot; generated 2026-07-29 10:16:22</div>
           </div>
         </div>
-
-  
 
   
         <div class="vol-card">
@@ -882,19 +934,19 @@
 
   <div class="macro-card">
     <div class="mc-label">Macro Snapshot</div>
-    <div class="mc-line"></div>
-    <div class="mc-grid"><div class="macro-item"><span class="macro-label">10Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">2Y Yield</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">5Y Breakeven</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">10Y Breakeven</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">VIX</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">VXN</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">GVZ</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">EVZ</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">SKEW</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Dollar Index</span><span class="macro-val">—</span><span class="macro-date"></span></div><div class="macro-item"><span class="macro-label">Fed Funds</span><span class="macro-val">—</span><span class="macro-date"></span></div></div>
+    <div class="mc-line">VIX: 19.52 &bull; DXY: 100.68 &bull; VXN: 30.84 &bull; GVZ: 24.64 &bull; SKEW: 139.55</div>
+    <div class="mc-grid"><div class="macro-item"><span class="macro-label">10Y Yield</span><span class="macro-val">4.62</span><span class="macro-date">2026-07-29</span></div><div class="macro-item"><span class="macro-label">2Y Yield</span><span class="macro-val">None</span><span class="macro-date">None</span></div><div class="macro-item"><span class="macro-label">5Y Breakeven</span><span class="macro-val">None</span><span class="macro-date">None</span></div><div class="macro-item"><span class="macro-label">10Y Breakeven</span><span class="macro-val">None</span><span class="macro-date">None</span></div><div class="macro-item"><span class="macro-label">VIX</span><span class="macro-val">19.52</span><span class="macro-date">2026-07-30</span></div><div class="macro-item"><span class="macro-label">VXN</span><span class="macro-val">30.84</span><span class="macro-date">2026-07-29</span></div><div class="macro-item"><span class="macro-label">GVZ</span><span class="macro-val">24.64</span><span class="macro-date">2026-07-29</span></div><div class="macro-item"><span class="macro-label">EVZ</span><span class="macro-val">None</span><span class="macro-date">None</span></div><div class="macro-item"><span class="macro-label">SKEW</span><span class="macro-val">139.55</span><span class="macro-date">2026-07-29</span></div><div class="macro-item"><span class="macro-label">Dollar Index</span><span class="macro-val">100.68</span><span class="macro-date">2026-07-30</span></div><div class="macro-item"><span class="macro-label">Fed Funds</span><span class="macro-val">None</span><span class="macro-date">None</span></div></div>
   </div>
 
-  <footer>CME OI &rarr; pdfplumber &rarr; FRED API &rarr; Scoring &rarr; GitHub Pages</footer>
+  <footer>Yahoo Finance &rarr; Scoring &rarr; GitHub Pages &bull; Data updates 2x daily</footer>
 
 </div>
 
-<script id="inlineData" type="application/json">{"expiry": "2027-01-15", "total_oi_used": 8368, "underlying_price": 4133.9, "put_call_ratio": 1.9444, "max_pain": 3186, "call_wall": 3609, "put_wall": 3208, "magnet_strike": 3208, "skew_percent": -29.32, "n_calls_used": 68, "strikes": [1727, 1838, 1950, 2117, 2161, 2172, 2183, 2195, 2217, 2339, 2451, 2562, 2685, 2696, 2707, 2718, 2729, 2740, 2752, 2763, 2774, 2807, 2818, 2852, 2874, 2885, 2908, 2919, 2941, 2974, 2986, 2997, 3019, 3030, 3075, 3086, 3097, 3108, 3130, 3153, 3164, 3186, 3208, 3242, 3253, 3275, 3320, 3387, 3409, 3431, 3442, 3476, 3498, 3531, 3543, 3554, 3576, 3587, 3598, 3609, 3643, 3699, 6406, 6461, 6517, 6963, 7018, 7074], "call_oi": [17, 3, 20, 15, 169, 56, 3, 17, 1, 188, 112, 152, 4, 12, 1, 11, 96, 2, 4, 3, 0, 8, 2, 8, 8, 34, 22, 1, 54, 20, 61, 25, 24, 16, 44, 71, 0, 50, 37, 180, 0, 26, 0, 29, 16, 0, 148, 115, 44, 0, 0, 97, 0, 215, 105, 0, 101, 88, 0, 218, 0, 89, 0, 0, 0, 0, 0, 0], "put_oi": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 700, 0, 0, 0, 219, 845, 1232, 0, 0, 121, 0, 0, 828, 180, 136, 0, 95, 0, 0, 111, 0, 0, 172, 0, 459, 0, 23, 48, 57, 19, 64, 48], "proxy_for": "GLD", "proxy_note": "ETF proxy for GC=F, scaled by 11.14x", "scale_ratio": 11.1402, "raw_price": 371.08, "raw_strikes": [155, 165, 175, 190, 194, 195, 196, 197, 199, 210, 220, 230, 241, 242, 243, 244, 245, 246, 247, 248, 249, 252, 253, 256, 258, 259, 261, 262, 264, 267, 268, 269, 271, 272, 276, 277, 278, 279, 281, 283, 284, 286, 288, 291, 292, 294, 298, 304, 306, 308, 309, 312, 314, 317, 318, 319, 321, 322, 323, 324, 327, 332, 575, 580, 585, 625, 630, 635]}</script>
+<script id="inlineData" type="application/json">{"Gold": {"strikes": [1727, 1838, 1950, 2117, 2161, 2172, 2183, 2195, 2217, 2339, 2451, 2562, 2685, 2696, 2707, 2718, 2729, 2740, 2752, 2763, 2774, 2807, 2818, 2852, 2874, 2885, 2908, 2919, 2941, 2974, 2986, 2997, 3019, 3030, 3075, 3086, 3097, 3108, 3130, 3153, 3164, 3186, 3208, 3242, 3253, 3275, 3320, 3387, 3409, 3431, 3442, 3476, 3498, 3531, 3543, 3554, 3576, 3587, 3598, 3609, 3643, 3699, 6406, 6461, 6517, 6963, 7018, 7074], "call_oi": [17, 3, 20, 15, 169, 56, 3, 17, 1, 188, 112, 152, 4, 12, 1, 11, 96, 2, 4, 3, 0, 8, 2, 8, 8, 34, 22, 1, 54, 20, 61, 25, 24, 16, 44, 71, 0, 50, 37, 180, 0, 26, 0, 29, 16, 0, 148, 115, 44, 0, 0, 97, 0, 215, 105, 0, 101, 88, 0, 218, 0, 89, 0, 0, 0, 0, 0, 0], "put_oi": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 700, 0, 0, 0, 219, 845, 1232, 0, 0, 121, 0, 0, 828, 180, 136, 0, 95, 0, 0, 111, 0, 0, 172, 0, 459, 0, 23, 48, 57, 19, 64, 48], "total_oi_used": 8368, "put_call_ratio": 1.9444, "max_pain": 3186, "call_wall": 3609, "put_wall": 3208, "magnet_strike": 3208, "underlying_price": 4133.9, "expiry": "2027-01-15", "proxy_for": "GLD"}, "NAS100": {"strikes": [8931, 9348, 9765, 10183, 10391, 10433, 10600, 10642, 10809, 10850, 11017, 11226, 11643, 11852, 11894, 12061, 12269, 12311, 12478, 12687, 12937, 13104, 13354, 13521, 13563, 13730, 13980, 14147, 14189, 14356, 14815, 15608, 16025, 16234, 16651, 17069, 17277, 17486, 17528, 17694, 17903, 18112, 18529, 18738, 18946, 19406, 19781, 19823, 19990, 20198, 20407, 20824, 21659, 22076, 22327, 22911, 23537], "call_oi": [27, 6, 0, 40, 99, 102, 132, 1, 0, 2, 41, 124, 44, 23, 7, 19, 57, 9, 122, 123, 4, 47, 13, 37, 2, 27, 3, 22, 5, 198, 3, 54, 31, 46, 247, 66, 85, 40, 181, 183, 117, 137, 1386, 32, 203, 19, 146, 103, 148, 424, 854, 322, 695, 279, 246, 3010, 516], "put_oi": [0, 241, 2236, 0, 0, 0, 0, 0, 1358, 0, 358, 3606, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 297, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "total_oi_used": 19005, "put_call_ratio": 0.7421, "max_pain": 18529, "call_wall": 22911, "put_wall": 11226, "magnet_strike": 11226, "underlying_price": 27615.5, "expiry": "2026-12-18", "proxy_for": "QQQ"}, "EURUSD": {"strikes": [1.0207, 1.0424, 1.0532, 1.0641, 1.075, 1.0967, 1.2053, 1.227, 1.2487, 1.2595, 1.303, 1.3138, 1.3247, 1.4116], "call_oi": [20, 14, 11, 12, 11, 24, 29, 17, 182, 23, 71, 14, 6, 1], "put_oi": [0, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "total_oi_used": 505, "put_call_ratio": 0.1609, "max_pain": 1.303, "call_wall": 1.2487, "put_wall": 1.0641, "magnet_strike": 1.2487, "underlying_price": 1.15, "expiry": "2026-09-18", "proxy_for": "FXE"}}</script>
 <script id="gfData" type="application/json">{"symbol": "XAU/USD (Gold)", "model": "HAR-IV (HAR + implied vol)", "generated": "2026-07-29 10:16:22", "data_through": "2026-07-28", "iv_asof": "2026-07-27", "iv_used": 24.13, "rngfrac": 0.021337, "intraday_grid": [{"elapsed": 0.1, "used_bucket": 1, "n": 235, "used_lo": 0.073, "used_hi": 0.171, "used_mid": 0.144, "up_p50": 0.354, "up_p75": 0.5849, "up_p90": 1.0724, "dn_p50": 0.247, "dn_p75": 0.5277, "dn_p90": 0.8199, "full_mean": 0.928}, {"elapsed": 0.1, "used_bucket": 2, "n": 234, "used_lo": 0.171, "used_hi": 0.216, "used_mid": 0.194, "up_p50": 0.2953, "up_p75": 0.551, "up_p90": 0.9159, "dn_p50": 0.2646, "dn_p75": 0.5104, "dn_p90": 0.9576, "full_mean": 0.953}, {"elapsed": 0.1, "used_bucket": 3, "n": 234, "used_lo": 0.216, "used_hi": 0.266, "used_mid": 0.238, "up_p50": 0.2358, "up_p75": 0.532, "up_p90": 0.8743, "dn_p50": 0.2363, "dn_p75": 0.5331, "dn_p90": 0.8495, "full_mean": 0.932}, {"elapsed": 0.1, "used_bucket": 4, "n": 234, "used_lo": 0.266, "used_hi": 0.382, "used_mid": 0.314, "up_p50": 0.2671, "up_p75": 0.5225, "up_p90": 0.7979, "dn_p50": 0.1626, "dn_p75": 0.5567, "dn_p90": 0.8853, "full_mean": 0.999}, {"elapsed": 0.1, "used_bucket": 5, "n": 234, "used_lo": 0.382, "used_hi": 1.999, "used_mid": 0.491, "up_p50": 0.233, "up_p75": 0.5522, "up_p90": 0.8712, "dn_p50": 0.1732, "dn_p75": 0.6052, "dn_p90": 1.0504, "full_mean": 1.334}, {"elapsed": 0.2, "used_bucket": 1, "n": 235, "used_lo": 0.092, "used_hi": 0.221, "used_mid": 0.186, "up_p50": 0.3021, "up_p75": 0.5618, "up_p90": 0.9296, "dn_p50": 0.2464, "dn_p75": 0.4913, "dn_p90": 0.7423, "full_mean": 0.885}, {"elapsed": 0.2, "used_bucket": 2, "n": 234, "used_lo": 0.221, "used_hi": 0.275, "used_mid": 0.246, "up_p50": 0.2486, "up_p75": 0.5283, "up_p90": 0.9498, "dn_p50": 0.2302, "dn_p75": 0.5195, "dn_p90": 0.8046, "full_mean": 0.945}, {"elapsed": 0.2, "used_bucket": 3, "n": 235, "used_lo": 0.276, "used_hi": 0.357, "used_mid": 0.314, "up_p50": 0.2442, "up_p75": 0.4582, "up_p90": 0.7996, "dn_p50": 0.1679, "dn_p75": 0.4875, "dn_p90": 0.8124, "full_mean": 0.943}, {"elapsed": 0.2, "used_bucket": 4, "n": 234, "used_lo": 0.357, "used_hi": 0.463, "used_mid": 0.4, "up_p50": 0.1692, "up_p75": 0.4849, "up_p90": 0.7514, "dn_p50": 0.1381, "dn_p75": 0.5253, "dn_p90": 0.7425, "full_mean": 1.002}, {"elapsed": 0.2, "used_bucket": 5, "n": 235, "used_lo": 0.464, "used_hi": 2.397, "used_mid": 0.596, "up_p50": 0.1629, "up_p75": 0.5006, "up_p90": 0.8282, "dn_p50": 0.0334, "dn_p75": 0.5479, "dn_p90": 1.0844, "full_mean": 1.368}, {"elapsed": 0.3, "used_bucket": 1, "n": 235, "used_lo": 0.124, "used_hi": 0.273, "used_mid": 0.228, "up_p50": 0.2721, "up_p75": 0.5675, "up_p90": 0.9085, "dn_p50": 0.1962, "dn_p75": 0.4586, "dn_p90": 0.7433, "full_mean": 0.91}, {"elapsed": 0.3, "used_bucket": 2, "n": 234, "used_lo": 0.273, "used_hi": 0.345, "used_mid": 0.307, "up_p50": 0.23, "up_p75": 0.4378, "up_p90": 0.7981, "dn_p50": 0.154, "dn_p75": 0.4086, "dn_p90": 0.6558, "full_mean": 0.885}, {"elapsed": 0.3, "used_bucket": 3, "n": 235, "used_lo": 0.345, "used_hi": 0.432, "used_mid": 0.387, "up_p50": 0.1822, "up_p75": 0.4012, "up_p90": 0.716, "dn_p50": 0.1593, "dn_p75": 0.4375, "dn_p90": 0.6865, "full_mean": 0.913}, {"elapsed": 0.3, "used_bucket": 4, "n": 234, "used_lo": 0.432, "used_hi": 0.576, "used_mid": 0.476, "up_p50": 0.1478, "up_p75": 0.4412, "up_p90": 0.7365, "dn_p50": 0.0607, "dn_p75": 0.4209, "dn_p90": 0.7215, "full_mean": 1.015}, {"elapsed": 0.3, "used_bucket": 5, "n": 235, "used_lo": 0.578, "used_hi": 3.215, "used_mid": 0.72, "up_p50": 0.0473, "up_p75": 0.4159, "up_p90": 0.7586, "dn_p50": 0.0209, "dn_p75": 0.4732, "dn_p90": 1.0936, "full_mean": 1.42}, {"elapsed": 0.4, "used_bucket": 1, "n": 235, "used_lo": 0.147, "used_hi": 0.345, "used_mid": 0.292, "up_p50": 0.2359, "up_p75": 0.465, "up_p90": 0.7554, "dn_p50": 0.1437, "dn_p75": 0.3506, "dn_p90": 0.6669, "full_mean": 0.856}, {"elapsed": 0.4, "used_bucket": 2, "n": 234, "used_lo": 0.346, "used_hi": 0.426, "used_mid": 0.389, "up_p50": 0.1423, "up_p75": 0.3667, "up_p90": 0.7896, "dn_p50": 0.0988, "dn_p75": 0.3471, "dn_p90": 0.6427, "full_mean": 0.879}, {"elapsed": 0.4, "used_bucket": 3, "n": 235, "used_lo": 0.427, "used_hi": 0.522, "used_mid": 0.468, "up_p50": 0.0978, "up_p75": 0.3533, "up_p90": 0.6837, "dn_p50": 0.0957, "dn_p75": 0.3657, "dn_p90": 0.5908, "full_mean": 0.93}, {"elapsed": 0.4, "used_bucket": 4, "n": 234, "used_lo": 0.522, "used_hi": 0.681, "used_mid": 0.597, "up_p50": 0.0569, "up_p75": 0.3454, "up_p90": 0.6485, "dn_p50": 0.0317, "dn_p75": 0.3241, "dn_p90": 0.6255, "full_mean": 1.022}, {"elapsed": 0.4, "used_bucket": 5, "n": 235, "used_lo": 0.681, "used_hi": 3.215, "used_mid": 0.839, "up_p50": 0.0, "up_p75": 0.3445, "up_p90": 0.7238, "dn_p50": 0.0, "dn_p75": 0.3646, "dn_p90": 0.9823, "full_mean": 1.455}, {"elapsed": 0.5, "used_bucket": 1, "n": 235, "used_lo": 0.147, "used_hi": 0.391, "used_mid": 0.332, "up_p50": 0.1916, "up_p75": 0.3834, "up_p90": 0.693, "dn_p50": 0.0893, "dn_p75": 0.319, "dn_p90": 0.6097, "full_mean": 0.829}, {"elapsed": 0.5, "used_bucket": 2, "n": 234, "used_lo": 0.393, "used_hi": 0.478, "used_mid": 0.433, "up_p50": 0.0725, "up_p75": 0.3963, "up_p90": 0.7596, "dn_p50": 0.1015, "dn_p75": 0.2871, "dn_p90": 0.5724, "full_mean": 0.888}, {"elapsed": 0.5, "used_bucket": 3, "n": 235, "used_lo": 0.478, "used_hi": 0.592, "used_mid": 0.526, "up_p50": 0.0504, "up_p75": 0.2647, "up_p90": 0.5578, "dn_p50": 0.0473, "dn_p75": 0.3075, "dn_p90": 0.5942, "full_mean": 0.902}, {"elapsed": 0.5, "used_bucket": 4, "n": 234, "used_lo": 0.592, "used_hi": 0.765, "used_mid": 0.665, "up_p50": 0.052, "up_p75": 0.3239, "up_p90": 0.6054, "dn_p50": 0.0, "dn_p75": 0.2169, "dn_p90": 0.5109, "full_mean": 1.035}, {"elapsed": 0.5, "used_bucket": 5, "n": 235, "used_lo": 0.765, "used_hi": 3.603, "used_mid": 0.933, "up_p50": 0.0, "up_p75": 0.2736, "up_p90": 0.6836, "dn_p50": 0.0, "dn_p75": 0.2891, "dn_p90": 0.7732, "full_mean": 1.488}, {"elapsed": 0.6, "used_bucket": 1, "n": 235, "used_lo": 0.164, "used_hi": 0.468, "used_mid": 0.406, "up_p50": 0.0564, "up_p75": 0.2894, "up_p90": 0.5258, "dn_p50": 0.0, "dn_p75": 0.1772, "dn_p90": 0.4581, "full_mean": 0.752}, {"elapsed": 0.6, "used_bucket": 2, "n": 234, "used_lo": 0.468, "used_hi": 0.592, "used_mid": 0.526, "up_p50": 0.0051, "up_p75": 0.1665, "up_p90": 0.4696, "dn_p50": 0.0327, "dn_p75": 0.2258, "dn_p90": 0.4636, "full_mean": 0.817}, {"elapsed": 0.6, "used_bucket": 3, "n": 235, "used_lo": 0.592, "used_hi": 0.73, "used_mid": 0.656, "up_p50": 0.0197, "up_p75": 0.2357, "up_p90": 0.5134, "dn_p50": 0.0, "dn_p75": 0.1146, "dn_p90": 0.3201, "full_mean": 0.905}, {"elapsed": 0.6, "used_bucket": 4, "n": 234, "used_lo": 0.731, "used_hi": 0.926, "used_mid": 0.821, "up_p50": 0.0, "up_p75": 0.1296, "up_p90": 0.4564, "dn_p50": 0.0, "dn_p75": 0.2192, "dn_p90": 0.4455, "full_mean": 1.089}, {"elapsed": 0.6, "used_bucket": 5, "n": 235, "used_lo": 0.927, "used_hi": 3.603, "used_mid": 1.109, "up_p50": 0.0, "up_p75": 0.1991, "up_p90": 0.5644, "dn_p50": 0.0, "dn_p75": 0.0999, "dn_p90": 0.5649, "full_mean": 1.579}, {"elapsed": 0.7, "used_bucket": 1, "n": 235, "used_lo": 0.204, "used_hi": 0.587, "used_mid": 0.492, "up_p50": 0.0, "up_p75": 0.0664, "up_p90": 0.2598, "dn_p50": 0.0, "dn_p75": 0.0262, "dn_p90": 0.2199, "full_mean": 0.622}, {"elapsed": 0.7, "used_bucket": 2, "n": 234, "used_lo": 0.587, "used_hi": 0.724, "used_mid": 0.655, "up_p50": 0.0, "up_p75": 0.0192, "up_p90": 0.2653, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.124, "full_mean": 0.77}, {"elapsed": 0.7, "used_bucket": 3, "n": 235, "used_lo": 0.726, "used_hi": 0.903, "used_mid": 0.814, "up_p50": 0.0, "up_p75": 0.0129, "up_p90": 0.1995, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.1501, "full_mean": 0.919}, {"elapsed": 0.7, "used_bucket": 4, "n": 234, "used_lo": 0.904, "used_hi": 1.154, "used_mid": 1.0, "up_p50": 0.0, "up_p75": 0.0585, "up_p90": 0.2645, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.1736, "full_mean": 1.138}, {"elapsed": 0.7, "used_bucket": 5, "n": 234, "used_lo": 1.154, "used_hi": 4.447, "used_mid": 1.355, "up_p50": 0.0, "up_p75": 0.0237, "up_p90": 0.2539, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.307, "full_mean": 1.694}, {"elapsed": 0.8, "used_bucket": 1, "n": 235, "used_lo": 0.234, "used_hi": 0.617, "used_mid": 0.521, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0954, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0748, "full_mean": 0.577}, {"elapsed": 0.8, "used_bucket": 2, "n": 234, "used_lo": 0.618, "used_hi": 0.777, "used_mid": 0.699, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0536, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0651, "full_mean": 0.749}, {"elapsed": 0.8, "used_bucket": 3, "n": 235, "used_lo": 0.779, "used_hi": 0.961, "used_mid": 0.865, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0788, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0481, "full_mean": 0.916}, {"elapsed": 0.8, "used_bucket": 4, "n": 234, "used_lo": 0.963, "used_hi": 1.22, "used_mid": 1.074, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.1014, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0716, "full_mean": 1.152}, {"elapsed": 0.8, "used_bucket": 5, "n": 235, "used_lo": 1.22, "used_hi": 4.447, "used_mid": 1.461, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.2026, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0887, "full_mean": 1.749}, {"elapsed": 0.9, "used_bucket": 1, "n": 235, "used_lo": 0.234, "used_hi": 0.639, "used_mid": 0.548, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 0.545}, {"elapsed": 0.9, "used_bucket": 2, "n": 234, "used_lo": 0.639, "used_hi": 0.812, "used_mid": 0.726, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 0.737}, {"elapsed": 0.9, "used_bucket": 3, "n": 235, "used_lo": 0.814, "used_hi": 1.01, "used_mid": 0.901, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.0114, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 0.919}, {"elapsed": 0.9, "used_bucket": 4, "n": 234, "used_lo": 1.01, "used_hi": 1.267, "used_mid": 1.123, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.032, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 1.15}, {"elapsed": 0.9, "used_bucket": 5, "n": 234, "used_lo": 1.27, "used_hi": 5.455, "used_mid": 1.546, "up_p50": 0.0, "up_p75": 0.0, "up_p90": 0.1053, "dn_p50": 0.0, "dn_p75": 0.0, "dn_p90": 0.0, "full_mean": 1.791}], "anchor_price": 4024.95, "news_info": {"has_event": true, "tier": "major", "forecast_date": "2026-07-29", "events": ["Federal Funds Rate", "FOMC Statement", "FOMC Press Conference"], "base_daily_pct": 1.1508, "news_daily_pct": 1.3547, "base_annual_pct": 18.27, "news_annual_pct": 21.5, "calendar_through": "2025-04-04", "source": "ForexFactory live feed", "feed_ok": true, "feed_coverage": ["2026-07-26", "2026-07-31"], "feed_reachable": true}, "base": {"forecast_daily_pct": 1.1508, "forecast_annual_pct": 18.27, "oc": {"median": 0.7458, "p75": 1.2923, "p90": 1.8427}, "hl": {"median": 1.7338, "p75": 2.1061, "p90": 2.5208}, "oh": {"median": 0.8133, "p75": 1.3514, "p90": 1.9505}, "ol": {"median": 0.7574, "p75": 1.2905, "p90": 1.8442}, "oh_curve": [0.00952, 0.02117, 0.03677, 0.04894, 0.05931, 0.07461, 0.08857, 0.10766, 0.12169, 0.13241, 0.14315, 0.15993, 0.17341, 0.18673, 0.20509, 0.2229, 0.23951, 0.25257, 0.26617, 0.28349, 0.30197, 0.32093, 0.33851, 0.3549, 0.3668, 0.38462, 0.39993, 0.41326, 0.43323, 0.45076, 0.46876, 0.48518, 0.5013, 0.52546, 0.5479, 0.56867, 0.58632, 0.607, 0.62466, 0.64689, 0.66428, 0.67948, 0.69535, 0.71027, 0.72498, 0.74154, 0.75801, 0.77746, 0.79831, 0.81329, 0.82988, 0.8471, 0.864, 0.883, 0.90448, 0.92219, 0.94544, 0.9625, 0.98658, 1.00671, 1.02785, 1.04632, 1.06246, 1.08522, 1.10847, 1.1332, 1.15219, 1.17622, 1.19751, 1.22632, 1.25645, 1.28429, 1.30178, 1.33063, 1.35142, 1.38579, 1.41776, 1.44836, 1.47818, 1.50837, 1.54596, 1.58937, 1.62928, 1.6643, 1.70292, 1.74766, 1.79198, 1.84269, 1.89668, 1.95052, 2.03324, 2.08127, 2.14576, 2.22846, 2.32276, 2.38656, 2.47638, 2.58334, 2.89293], "ol_curve": [0.01162, 0.02629, 0.04353, 0.05892, 0.07211, 0.08307, 0.0947, 0.10873, 0.12132, 0.13486, 0.14795, 0.15839, 0.17363, 0.18794, 0.20089, 0.21461, 0.22839, 0.23859, 0.24818, 0.26474, 0.27794, 0.29594, 0.3098, 0.32256, 0.33809, 0.35361, 0.3654, 0.38374, 0.39964, 0.41716, 0.43185, 0.44928, 0.46776, 0.47668, 0.49546, 0.51332, 0.52756, 0.54502, 0.56327, 0.57424, 0.59032, 0.60598, 0.62354, 0.63903, 0.65307, 0.67511, 0.69914, 0.71866, 0.73673, 0.75736, 0.77098, 0.79176, 0.807, 0.82346, 0.84402, 0.86464, 0.88593, 0.90712, 0.92466, 0.93828, 0.96295, 0.9831, 1.00433, 1.0243, 1.04781, 1.06382, 1.08989, 1.11397, 1.13421, 1.15299, 1.1848, 1.20751, 1.22975, 1.25962, 1.29049, 1.32036, 1.34796, 1.37434, 1.40458, 1.43636, 1.47012, 1.49546, 1.53303, 1.57211, 1.62564, 1.67599, 1.72937, 1.76614, 1.80523, 1.84424, 1.89072, 1.94473, 2.01647, 2.07709, 2.15355, 2.26438, 2.35522, 2.52294, 2.81098], "oc_curve": [0.01582, 0.02919, 0.03882, 0.05572, 0.07382, 0.08622, 0.10205, 0.11475, 0.12527, 0.1397, 0.15663, 0.16833, 0.18347, 0.19492, 0.21598, 0.2262, 0.24457, 0.25958, 0.2796, 0.29426, 0.30527, 0.31827, 0.33362, 0.34724, 0.36125, 0.37654, 0.39037, 0.40944, 0.42299, 0.43267, 0.44578, 0.46278, 0.48596, 0.49966, 0.51734, 0.53473, 0.55218, 0.56481, 0.57744, 0.58856, 0.60579, 0.62045, 0.63252, 0.64738, 0.66642, 0.67754, 0.68997, 0.71291, 0.72636, 0.74575, 0.75985, 0.77717, 0.79792, 0.81892, 0.83744, 0.8549, 0.87716, 0.89773, 0.91381, 0.93716, 0.9611, 0.98295, 1.00212, 1.0306, 1.0516, 1.06987, 1.09528, 1.11297, 1.14425, 1.17096, 1.19025, 1.21822, 1.2418, 1.2634, 1.29235, 1.31297, 1.3401, 1.37563, 1.41042, 1.44733, 1.47866, 1.51851, 1.55061, 1.58494, 1.64279, 1.68272, 1.72367, 1.76094, 1.80478, 1.84273, 1.91143, 1.98559, 2.03023, 2.08964, 2.17236, 2.23517, 2.35755, 2.52956, 2.74083]}, "news": {"forecast_daily_pct": 1.3547, "forecast_annual_pct": 21.5, "oc": {"median": 0.8778, "p75": 1.5212, "p90": 2.1691}, "hl": {"median": 2.0409, "p75": 2.4791, "p90": 2.9673}, "oh": {"median": 0.9573, "p75": 1.5908, "p90": 2.296}, "ol": {"median": 0.8915, "p75": 1.5191, "p90": 2.1709}, "oh_curve": [0.0112, 0.02492, 0.04329, 0.05761, 0.06981, 0.08782, 0.10425, 0.12673, 0.14324, 0.15586, 0.1685, 0.18826, 0.20413, 0.2198, 0.24141, 0.26238, 0.28193, 0.29731, 0.31331, 0.3337, 0.35545, 0.37777, 0.39846, 0.41775, 0.43177, 0.45274, 0.47077, 0.48645, 0.50996, 0.5306, 0.55178, 0.57111, 0.59009, 0.61853, 0.64494, 0.66939, 0.69017, 0.71451, 0.73529, 0.76146, 0.78193, 0.79983, 0.8185, 0.83607, 0.85339, 0.87288, 0.89226, 0.91515, 0.9397, 0.95734, 0.97686, 0.99713, 1.01703, 1.03939, 1.06467, 1.08552, 1.11289, 1.13297, 1.16131, 1.18501, 1.2099, 1.23163, 1.25064, 1.27743, 1.3048, 1.3339, 1.35625, 1.38455, 1.4096, 1.44352, 1.47899, 1.51176, 1.53235, 1.5663, 1.59077, 1.63123, 1.66886, 1.70488, 1.73998, 1.77552, 1.81978, 1.87086, 1.91784, 1.95907, 2.00453, 2.05719, 2.10937, 2.16905, 2.23261, 2.29599, 2.39335, 2.44989, 2.5258, 2.62315, 2.73415, 2.80925, 2.91498, 3.04089, 3.40531], "ol_curve": [0.01368, 0.03095, 0.05124, 0.06936, 0.08489, 0.09778, 0.11148, 0.12798, 0.14281, 0.15875, 0.17415, 0.18645, 0.20439, 0.22123, 0.23647, 0.25262, 0.26884, 0.28084, 0.29214, 0.31163, 0.32717, 0.34835, 0.36466, 0.37969, 0.39797, 0.41624, 0.43012, 0.4517, 0.47042, 0.49105, 0.50834, 0.52886, 0.55061, 0.5611, 0.58322, 0.60423, 0.621, 0.64155, 0.66303, 0.67595, 0.69487, 0.71331, 0.73397, 0.75221, 0.76874, 0.79468, 0.82297, 0.84594, 0.86721, 0.8915, 0.90753, 0.93199, 0.94993, 0.96931, 0.99351, 1.01778, 1.04284, 1.06778, 1.08843, 1.10446, 1.1335, 1.15722, 1.18221, 1.20572, 1.2334, 1.25224, 1.28292, 1.31126, 1.33509, 1.3572, 1.39464, 1.42138, 1.44755, 1.48271, 1.51906, 1.55421, 1.5867, 1.61775, 1.65334, 1.69076, 1.7305, 1.76033, 1.80455, 1.85055, 1.91356, 1.97283, 2.03567, 2.07895, 2.12496, 2.17088, 2.22559, 2.28917, 2.37362, 2.44497, 2.53497, 2.66544, 2.77236, 2.96979, 3.30884], "oc_curve": [0.01862, 0.03436, 0.04569, 0.06559, 0.08689, 0.10149, 0.12013, 0.13508, 0.14746, 0.16445, 0.18437, 0.19814, 0.21597, 0.22944, 0.25424, 0.26626, 0.28788, 0.30555, 0.32912, 0.34638, 0.35934, 0.37464, 0.39271, 0.40875, 0.42523, 0.44323, 0.45951, 0.48195, 0.49791, 0.5093, 0.52473, 0.54475, 0.57203, 0.58816, 0.60897, 0.62944, 0.64997, 0.66484, 0.67972, 0.6928, 0.71308, 0.73034, 0.74455, 0.76204, 0.78446, 0.79754, 0.81217, 0.83918, 0.85501, 0.87784, 0.89443, 0.91482, 0.93924, 0.96397, 0.98576, 1.00631, 1.03251, 1.05673, 1.07566, 1.10314, 1.13132, 1.15704, 1.17961, 1.21313, 1.23785, 1.25936, 1.28926, 1.31009, 1.34691, 1.37836, 1.40105, 1.43398, 1.46175, 1.48717, 1.52124, 1.54552, 1.57745, 1.61928, 1.66022, 1.70367, 1.74055, 1.78746, 1.82525, 1.86566, 1.93375, 1.98076, 2.02895, 2.07283, 2.12443, 2.16911, 2.24997, 2.33726, 2.38982, 2.45975, 2.55712, 2.63105, 2.7751, 2.97758, 3.22627]}, "day_open": 4024.99, "atm_iv": 22.6, "atm_iv_date": "2026-07-23"}</script>
 <script>
 (() => {
-  const OI = (() => {
+  const ALLOI = (() => {
     try { return JSON.parse(document.getElementById('inlineData').textContent); } catch(e) { return {}; }
   })();
   const GF = (() => {
@@ -903,49 +955,55 @@
   const fmt = x => x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
 
-  // OI Charts
-  if (OI.strikes && OI.strikes.length) {
-    const s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
-    const common = {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'var(--muted)',font:{size:10},boxWidth:12}}},
-      scales:{
-        x:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}},
-        y:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}}
-      }
-    };
-    new Chart(document.getElementById('oiBarChart'), {...{
-      type:'bar', data:{labels:s,datasets:[
-        {label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1},
-        {label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}
-      ]}, options:{...common,plugins:{...common.plugins,title:{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{size:11}}}}
-    }});
+  // OI Charts — one set per instrument
+  const INSTR_TAGS = {Gold:'gold',NAS100:'nas100',EURUSD:'eurusd'};
+  const commonChart = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'var(--muted)',font:{size:10},boxWidth:12}}},
+    scales:{
+      x:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}},
+      y:{ticks:{color:'var(--muted)',font:{size:9}},grid:{color:'var(--line)'}}
+    }
+  };
+  Object.keys(INSTR_TAGS).forEach(instr => {
+    const OI = ALLOI[instr];
+    if (!OI || !OI.strikes || !OI.strikes.length) return;
+    const tag = INSTR_TAGS[instr], s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
+    const bar1 = document.getElementById(tag+'OiBarChart');
+    const netC = document.getElementById(tag+'OiNetChart');
+    const painC = document.getElementById(tag+'OiPainChart');
+    const pcrC = document.getElementById(tag+'OiPcrChart');
+    if (!bar1 || !netC || !painC || !pcrC) return;
+
+    new Chart(bar1, {type:'bar', data:{labels:s,datasets:[
+      {label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1},
+      {label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}
+    ]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{size:11}}}}
+    });
     const net = s.map((_,i)=> (po[i]||0)-(co[i]||0));
-    new Chart(document.getElementById('oiNetChart'), {...{
-      type:'bar', data:{labels:s,datasets:[{label:'Net OI (Put-Call)',data:net,
-        backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
-        borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
-      }]}, options:{...common,plugins:{...common.plugins,title:{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{size:11}}}}
-    }});
+    new Chart(netC, {type:'bar', data:{labels:s,datasets:[{label:'Net OI (Put-Call)',data:net,
+      backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+      borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
+    }]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{size:11}}}}
+    });
     // Max Pain
     const pain = []; let mpStrike=null, mpVal=Infinity;
-    for(const k of s){ let t=0; for(const st of s){ const ci=co[s.indexOf(st)]||0, pi=po[s.indexOf(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; } if(t<mpVal){ mpVal=t; mpStrike=k; } pain.push({x:k,y:t}); }
-    new Chart(document.getElementById('oiPainChart'), {...{
-      type:'line', data:{datasets:[{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
-        backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}]},
-      options:{...common,plugins:{...common.plugins,title:{display:true,text:'Max Pain Profile — seller payout at expiry (min at $'+mpStrike+')',color:'var(--muted)',font:{size:11}}},
-        scales:{...common.scales,x:{...common.scales.x,type:'linear',title:{display:true,text:'Strike',color:'var(--muted)',font:{size:10}}},
-          y:{...common.scales.y,title:{display:true,text:'Total payout',color:'var(--muted)',font:{size:10}}}}
-    }}});
+    const idxMap = new Map(s.map((v,i)=>[v,i]));
+    for(const k of s){ let t=0; for(const st of s){ const ci=co[idxMap.get(st)]||0, pi=po[idxMap.get(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; } if(t<mpVal){ mpVal=t; mpStrike=k; } pain.push({x:k,y:t}); }
+    new Chart(painC, {type:'line', data:{datasets:[{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
+      backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}]},
+      options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Max Pain Profile — min at $'+fmt(mpStrike),color:'var(--muted)',font:{size:11}}},
+        scales:{...commonChart.scales,x:{...commonChart.scales.x,type:'linear',title:{display:true,text:'Strike',color:'var(--muted)',font:{size:10}}},
+          y:{...commonChart.scales.y,title:{display:true,text:'Total payout',color:'var(--muted)',font:{size:10}}}}
+    });
     // PCR by strike
     const pcr = s.map((_,i)=> { const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; });
-    new Chart(document.getElementById('oiPcrChart'), {...{
-      type:'bar', data:{labels:s,datasets:[{label:'Put/Call OI',data:pcr,
-        backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
-        borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
-      }]}, options:{...common,plugins:{...common.plugins,title:{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{size:11}}}}
-    }});
-  }
+    new Chart(pcrC, {type:'bar', data:{labels:s,datasets:[{label:'Put/Call OI',data:pcr,
+      backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+      borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
+    }]}, options:{...commonChart,plugins:{...commonChart.plugins,title:{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{size:11}}}}
+    });
+  });
 
   // Gold Forecast detail
   if (GF && GF.base) {

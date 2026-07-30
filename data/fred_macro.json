@@ -1,0 +1,49 @@
+{
+  "fetched": "2026-07-30T11:49:56.199148",
+  "series": {
+    "10Y Yield": {
+      "date": "2026-07-29",
+      "value": 4.62
+    },
+    "2Y Yield": {
+      "date": null,
+      "value": null
+    },
+    "5Y Breakeven": {
+      "date": null,
+      "value": null
+    },
+    "10Y Breakeven": {
+      "date": null,
+      "value": null
+    },
+    "VIX": {
+      "date": "2026-07-30",
+      "value": 19.52
+    },
+    "VXN": {
+      "date": "2026-07-29",
+      "value": 30.84
+    },
+    "GVZ": {
+      "date": "2026-07-29",
+      "value": 24.64
+    },
+    "EVZ": {
+      "date": null,
+      "value": null
+    },
+    "SKEW": {
+      "date": "2026-07-29",
+      "value": 139.55
+    },
+    "Dollar Index": {
+      "date": "2026-07-30",
+      "value": 100.68
+    },
+    "Fed Funds": {
+      "date": null,
+      "value": null
+    }
+  }
+}

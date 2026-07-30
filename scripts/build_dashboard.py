@@ -195,9 +195,6 @@ def load_gold_forecast():
         "generated": data.get("generated", ""),
     }
 
-def load_yesterday_range():
-    return load_json(os.path.join(DATA_DIR, "yesterday_range.json"))
-
 def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
     fred = load_json(os.path.join(DATA_DIR, "fred_macro.json")).get("series", {})
@@ -206,7 +203,6 @@ def run():
     sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
     oanda = load_json(os.path.join(DATA_DIR, "oanda_prices.json")).get("instruments", {})
     geopolitical = load_json(os.path.join(DATA_DIR, "geopolitical.json"))
-    yrange = load_yesterday_range()
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -223,32 +219,38 @@ def run():
 
     macro_score = macro.get("score", 0)
 
-    # Gold Options OI inline section
-    gold_ome = ome.get("Gold", {})
-    gold_strikes = gold_ome.get("strikes", [])
-    gold_call_oi = gold_ome.get("call_oi", [])
-    gold_put_oi = gold_ome.get("put_oi", [])
+    # Options OI inline sections for all instruments
+    all_oi_data = {}
     oi_section = ""
-    if gold_strikes:
-        oi_section = f"""
-        <div class="analysis-section" id="gold-oi">
+    for instr in INSTRUMENTS:
+        ome_i = ome.get(instr, {})
+        strikes_i = ome_i.get("strikes", [])
+        if strikes_i:
+            tag = instr.lower().replace(" ", "")
+            all_oi_data[instr] = {"strikes": strikes_i, "call_oi": ome_i.get("call_oi", []), "put_oi": ome_i.get("put_oi", []),
+                                  "total_oi_used": ome_i.get("total_oi_used"), "put_call_ratio": ome_i.get("put_call_ratio"),
+                                  "max_pain": ome_i.get("max_pain"), "call_wall": ome_i.get("call_wall"), "put_wall": ome_i.get("put_wall"),
+                                  "magnet_strike": ome_i.get("magnet_strike"), "underlying_price": ome_i.get("underlying_price"),
+                                  "expiry": ome_i.get("expiry",""), "proxy_for": ome_i.get("proxy_for","")}
+            oi_section += f"""
+        <div class="analysis-section" id="{tag}-oi">
           <div class="analysis-header">
             <div class="analysis-title-row">
-              <h2 class="analysis-name">Gold Options OI</h2>
-              <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">GLD</div>
+              <h2 class="analysis-name">{instr} Options OI</h2>
+              <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">{ome_i.get("proxy_for",instr)}</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
             </div>
             <div class="analysis-sub">
-              <span class="analysis-ai">Expiry {gold_ome.get("expiry","")} &middot; {len(gold_strikes)} strikes</span>
+              <span class="analysis-ai">Expiry {ome_i.get("expiry","")} &middot; {len(strikes_i)} strikes</span>
             </div>
           </div>
           <div class="analysis-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiBarChart"></canvas></div></div>
-              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiNetChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="{tag}OiBarChart"></canvas></div></div>
+              <div class="extra-card"><div class="chart-wrap-oi"><canvas id="{tag}OiNetChart"></canvas></div></div>
             </div>
-            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="oiPainChart"></canvas></div></div>
-            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="oiPcrChart"></canvas></div></div>
+            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:280px"><canvas id="{tag}OiPainChart"></canvas></div></div>
+            <div class="extra-card"><div class="chart-wrap-oi"><canvas id="{tag}OiPcrChart"></canvas></div></div>
           </div>
         </div>"""
 
@@ -278,43 +280,6 @@ def run():
             <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:250px"><canvas id="gfDistChart"></canvas></div></div>
             <div class="an-footer">Forecast for trading day after {gf_detail.get("data_through","")} &middot; model HAR-IV &middot; generated {gf_detail.get("generated","")}</div>
           </div>
-        </div>"""
-
-    # Yesterday's range projection section
-    yrange_section = ""
-    instr_order = ["Gold", "NAS100", "EURUSD"]
-    if yrange:
-        yrange_rows = ""
-        for name in instr_order:
-            d = yrange.get(name)
-            if not d or "error" in d:
-                continue
-            dir_label = "High" if d["direction"] == "high" else "Low"
-            dir_color = "var(--red)" if d["direction"] == "high" else "var(--blue)"
-            yrange_rows += f"""
-          <div class="yr-card">
-            <div class="yr-name">{name}</div>
-            <div class="yr-date">{d["date"]}</div>
-            <div class="yr-stats">
-              <div class="yr-stat"><span class="yr-stat-l">Open</span><span class="yr-stat-v">${d["y_open"]}</span></div>
-              <div class="yr-stat"><span class="yr-stat-l">High</span><span class="yr-stat-v">${d["y_high"]}</span></div>
-              <div class="yr-stat"><span class="yr-stat-l">Low</span><span class="yr-stat-v">${d["y_low"]}</span></div>
-            </div>
-            <div class="yr-max">Max from open: <b style="color:{dir_color}">{d["direction"]=="high" and "+" or ""}{d["max_pct"]}%</b> ({dir_label})</div>
-            <div class="yr-proj">
-              <div class="yr-proj-up"><span>If same move up</span><b style="color:var(--red)">${d["projected_up"]}</b></div>
-              <div class="yr-proj-down"><span>If same move down</span><b style="color:var(--blue)">${d["projected_down"]}</b></div>
-            </div>
-            <div class="yr-today">Today open: <b>${d["t_open"]}</b></div>
-          </div>"""
-        if yrange_rows:
-            yrange_section = f"""
-        <div class="yr-section">
-          <div class="yr-header">
-            <span class="yr-label">Yesterday's Range Projection</span>
-            <span class="yr-sub">Max % from open projected onto today</span>
-          </div>
-          <div class="yr-grid">{yrange_rows}</div>
         </div>"""
 
     # Geopolitical Risk card
@@ -503,6 +468,8 @@ def run():
           <div class="events-note">Upcoming events &bull; High impact highlighted</div>
         </div>"""
 
+    # Snapshot scoreboard (pre-pass to collect instrument data)
+    snapshot_rows = ""
     instr_sections = ""
     for instr in INSTRUMENTS:
         d = instruments.get(instr, {})
@@ -531,9 +498,39 @@ def run():
         rng = range_pct(sp, cw, pw)
         rng_str = f"{rng:.0f}%" if rng is not None else DASH
 
+        # Compute dynamic fair value distance
+        fair_str = DASH
+        if cw not in (None, DASH) and pw not in (None, DASH) and sp not in (None, DASH):
+            try:
+                cwf = float(cw)
+                pwf = float(pw)
+                spf = float(sp)
+                fair_mid = (cwf + pwf) / 2
+                fair_pct = (spf - fair_mid) / fair_mid * 100
+                if abs(fair_pct) < 2:
+                    fair_str = "near fair value"
+                elif fair_pct > 0:
+                    fair_str = f"{fair_pct:+.1f}% above fair value"
+                else:
+                    fair_str = f"{fair_pct:+.1f}% below fair value"
+            except (TypeError, ValueError):
+                pass
+
         paragraphs = generate_narrative(instr, d, ome_raw, macro_score, cot_data.get(instr, {}))
         trade_idea = generate_trade_idea(instr, d, ome_raw)
         stars_html = "\u2605" * conv_stars + "\u2606" * (10 - conv_stars)
+
+        # Snapshot card
+        score_bar_pct = min(abs(ts) / 8 * 100, 100) if ts is not None else 0
+        bar_color = "var(--long)" if (ts or 0) > 0 else "var(--short)"
+        snapshot_rows += f"""
+        <div class="snap-card" onclick="document.getElementById('{instr.lower()}').scrollIntoView({{behavior:'smooth'}})">
+          <div class="snap-name">{instr}</div>
+          <div class="snap-signal" style="color:{sig_color}">{arr} {sig}</div>
+          <div class="snap-score">{ts if ts is not None else DASH}</div>
+          <div class="snap-bar"><div class="snap-bar-fill" style="width:{score_bar_pct:.0f}%;background:{bar_color}"></div></div>
+          <div class="snap-price">{fmt(sp) if sp else DASH}</div>
+        </div>"""
 
         corr = CORRELATIONS.get(instr, {})
 
@@ -549,7 +546,7 @@ def run():
               <h2 class="analysis-name">{instr}</h2>
               <div class="analysis-badge" style="background:{sig_color}15;color:{sig_color};border:1px solid {sig_color}40">{arr} {sig}</div>
               <div class="analysis-range">{rng_str} RANGE</div>
-              <div class="analysis-fair">near fair value</div>
+              <div class="analysis-fair">{fair_str}</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
             </div>
             <div class="analysis-sub">
@@ -780,6 +777,15 @@ def run():
   .gold-fc-link:hover {{ text-decoration: underline; }}
   .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
   .gold-fc-note {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
+  .snap-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }}
+  .snap-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.15s; }}
+  .snap-card:hover {{ border-color: var(--accent); }}
+  .snap-name {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }}
+  .snap-signal {{ font-size: 0.85rem; font-weight: 600; margin: 0.1rem 0; }}
+  .snap-score {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--muted); }}
+  .snap-bar {{ height: 3px; background: var(--border); border-radius: 2px; margin: 0.3rem 0; overflow: hidden; }}
+  .snap-bar-fill {{ height: 100%; border-radius: 2px; transition: width 0.3s; }}
+  .snap-price {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--text); }}
   .geo-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
   .geo-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
   .geo-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }}
@@ -804,25 +810,7 @@ def run():
 
   footer {{ margin-top: 1rem; font-size: 0.6rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; padding-top: 0.75rem; border-top: 1px solid var(--border); }}
 
-  .yr-section {{ margin-top: 1rem; }}
-  .yr-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }}
-  .yr-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text); font-weight: 600; }}
-  .yr-sub {{ font-size: 0.6rem; color: var(--muted); }}
-  .yr-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }}
-  .yr-card {{ background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }}
-  .yr-name {{ font-weight: 600; font-size: 0.85rem; color: var(--text); }}
-  .yr-date {{ font-size: 0.6rem; color: var(--muted); margin-bottom: 8px; }}
-  .yr-stats {{ display: flex; gap: 12px; margin-bottom: 6px; }}
-  .yr-stat {{ display: flex; flex-direction: column; }}
-  .yr-stat-l {{ font-size: 0.55rem; color: var(--muted); text-transform: uppercase; }}
-  .yr-stat-v {{ font-size: 0.85rem; color: var(--text); font-family: 'IBM Plex Mono', monospace; }}
-  .yr-max {{ font-size: 0.7rem; color: var(--muted); margin-bottom: 8px; padding: 4px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }}
-  .yr-proj {{ display: flex; gap: 10px; margin-bottom: 6px; }}
-  .yr-proj-up, .yr-proj-down {{ flex: 1; display: flex; flex-direction: column; background: var(--bg); border-radius: 4px; padding: 4px 8px; }}
-  .yr-proj-up span, .yr-proj-down span {{ font-size: 0.55rem; color: var(--muted); text-transform: uppercase; }}
-  .yr-proj-up b {{ font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }}
-  .yr-proj-down b {{ font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }}
-  .yr-today {{ font-size: 0.65rem; color: var(--muted); }}
+
 
   @media (max-width: 700px) {{
     .analysis-extra {{ grid-template-columns: 1fr; }}
@@ -830,8 +818,8 @@ def run():
     .corr-grid {{ grid-template-columns: 1fr; }}
     .gold-fc-body {{ grid-template-columns: repeat(2, 1fr); }}
     .geo-body {{ grid-template-columns: 1fr; }}
-    .yr-grid {{ grid-template-columns: 1fr; }}
     .macro-card .mc-grid {{ grid-template-columns: 1fr 1fr; }}
+    .snap-grid {{ grid-template-columns: 1fr; }}
     .container {{ padding: 0.75rem; }}
   }}
 </style>
@@ -858,6 +846,8 @@ def run():
     </div>
   </div>
 
+  <div class="snap-grid">{snapshot_rows}</div>
+
   {instr_sections}
 
   {gold_forecast_section}
@@ -865,8 +855,6 @@ def run():
   {oi_section}
 
   {gold_detail_section}
-
-  {yrange_section}
 
   {vol_section}
 
@@ -880,15 +868,15 @@ def run():
     <div class="mc-grid">{macro_items}</div>
   </div>
 
-  <footer>CME OI &rarr; pdfplumber &rarr; FRED API &rarr; Scoring &rarr; GitHub Pages</footer>
+  <footer>Yahoo Finance &rarr; Scoring &rarr; GitHub Pages &bull; Data updates 2x daily</footer>
 
 </div>
 
-<script id="inlineData" type="application/json">{json.dumps(gold_ome) if gold_strikes else "{}"}</script>
+<script id="inlineData" type="application/json">{json.dumps(all_oi_data) if all_oi_data else "{}"}</script>
 <script id="gfData" type="application/json">{json.dumps(gf_detail) if gf_detail else "{}"}</script>
 <script>
 (() => {{
-  const OI = (() => {{
+  const ALLOI = (() => {{
     try {{ return JSON.parse(document.getElementById('inlineData').textContent); }} catch(e) {{ return {{}}; }}
   }})();
   const GF = (() => {{
@@ -897,49 +885,55 @@ def run():
   const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
 
-  // OI Charts
-  if (OI.strikes && OI.strikes.length) {{
-    const s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
-    const common = {{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{{legend:{{labels:{{color:'var(--muted)',font:{{size:10}},boxWidth:12}}}}}},
-      scales:{{
-        x:{{ticks:{{color:'var(--muted)',font:{{size:9}}}},grid:{{color:'var(--line)'}}}},
-        y:{{ticks:{{color:'var(--muted)',font:{{size:9}}}},grid:{{color:'var(--line)'}}}}
-      }}
-    }};
-    new Chart(document.getElementById('oiBarChart'), {{...{{
-      type:'bar', data:{{labels:s,datasets:[
-        {{label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1}},
-        {{label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}}
-      ]}}, options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{{size:11}}}}}}}}
-    }}}});
+  // OI Charts — one set per instrument
+  const INSTR_TAGS = {{Gold:'gold',NAS100:'nas100',EURUSD:'eurusd'}};
+  const commonChart = {{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{{legend:{{labels:{{color:'var(--muted)',font:{{size:10}},boxWidth:12}}}}}},
+    scales:{{
+      x:{{ticks:{{color:'var(--muted)',font:{{size:9}}}},grid:{{color:'var(--line)'}}}},
+      y:{{ticks:{{color:'var(--muted)',font:{{size:9}}}},grid:{{color:'var(--line)'}}}}
+    }}
+  }};
+  Object.keys(INSTR_TAGS).forEach(instr => {{
+    const OI = ALLOI[instr];
+    if (!OI || !OI.strikes || !OI.strikes.length) return;
+    const tag = INSTR_TAGS[instr], s = OI.strikes, co = OI.call_oi, po = OI.put_oi;
+    const bar1 = document.getElementById(tag+'OiBarChart');
+    const netC = document.getElementById(tag+'OiNetChart');
+    const painC = document.getElementById(tag+'OiPainChart');
+    const pcrC = document.getElementById(tag+'OiPcrChart');
+    if (!bar1 || !netC || !painC || !pcrC) return;
+
+    new Chart(bar1, {{type:'bar', data:{{labels:s,datasets:[
+      {{label:'Call OI',data:co,backgroundColor:'rgba(88,166,255,0.7)',borderColor:'#58a6ff',borderWidth:1}},
+      {{label:'Put OI',data:po,backgroundColor:'rgba(218,54,51,0.7)',borderColor:'#da3633',borderWidth:1}}
+    ]}}, options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Open Interest by Strike',color:'var(--muted)',font:{{size:11}}}}}}}}
+    }});
     const net = s.map((_,i)=> (po[i]||0)-(co[i]||0));
-    new Chart(document.getElementById('oiNetChart'), {{...{{
-      type:'bar', data:{{labels:s,datasets:[{{label:'Net OI (Put-Call)',data:net,
-        backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
-        borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
-      }}]}}, options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{{size:11}}}}}}}}
-    }}}});
+    new Chart(netC, {{type:'bar', data:{{labels:s,datasets:[{{label:'Net OI (Put-Call)',data:net,
+      backgroundColor:net.map(d=>d>=0?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+      borderColor:net.map(d=>d>=0?'#da3633':'#58a6ff'),borderWidth:1
+    }}]}}, options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Net OI (bearish / bullish)',color:'var(--muted)',font:{{size:11}}}}}}}}
+    }});
     // Max Pain
     const pain = []; let mpStrike=null, mpVal=Infinity;
-    for(const k of s){{ let t=0; for(const st of s){{ const ci=co[s.indexOf(st)]||0, pi=po[s.indexOf(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; }} if(t<mpVal){{ mpVal=t; mpStrike=k; }} pain.push({{x:k,y:t}}); }}
-    new Chart(document.getElementById('oiPainChart'), {{...{{
-      type:'line', data:{{datasets:[{{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
-        backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}}]}},
-      options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Max Pain Profile — seller payout at expiry (min at $'+mpStrike+')',color:'var(--muted)',font:{{size:11}}}}}},
-        scales:{{...common.scales,x:{{...common.scales.x,type:'linear',title:{{display:true,text:'Strike',color:'var(--muted)',font:{{size:10}}}}}},
-          y:{{...common.scales.y,title:{{display:true,text:'Total payout',color:'var(--muted)',font:{{size:10}}}}}}}}
-    }}}}}});
+    const idxMap = new Map(s.map((v,i)=>[v,i]));
+    for(const k of s){{ let t=0; for(const st of s){{ const ci=co[idxMap.get(st)]||0, pi=po[idxMap.get(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; }} if(t<mpVal){{ mpVal=t; mpStrike=k; }} pain.push({{x:k,y:t}}); }}
+    new Chart(painC, {{type:'line', data:{{datasets:[{{label:'Seller P&L at expiry',data:pain,borderColor:'var(--gold2)',
+      backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'var(--gold2)'}}]}},
+      options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Max Pain Profile — min at $'+fmt(mpStrike),color:'var(--muted)',font:{{size:11}}}}}},
+        scales:{{...commonChart.scales,x:{{...commonChart.scales.x,type:'linear',title:{{display:true,text:'Strike',color:'var(--muted)',font:{{size:10}}}}}},
+          y:{{...commonChart.scales.y,title:{{display:true,text:'Total payout',color:'var(--muted)',font:{{size:10}}}}}}}}
+    }});
     // PCR by strike
     const pcr = s.map((_,i)=> {{ const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; }});
-    new Chart(document.getElementById('oiPcrChart'), {{...{{
-      type:'bar', data:{{labels:s,datasets:[{{label:'Put/Call OI',data:pcr,
-        backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
-        borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
-      }}]}}, options:{{...common,plugins:{{...common.plugins,title:{{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{{size:11}}}}}}}}
-    }}}});
-  }}
+    new Chart(pcrC, {{type:'bar', data:{{labels:s,datasets:[{{label:'Put/Call OI',data:pcr,
+      backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
+      borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1
+    }}]}}, options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Put/Call Ratio by Strike',color:'var(--muted)',font:{{size:11}}}}}}}}
+    }});
+  }});
 
   // Gold Forecast detail
   if (GF && GF.base) {{

@@ -1,9 +1,58 @@
 {
-  "generated": "2026-07-30T11:41:12.613024",
+  "generated": "2026-07-30T11:50:01.516764",
   "macro": {
-    "score": 0.0,
-    "details": {},
-    "raw": {}
+    "score": -0.3,
+    "details": {
+      "GVZ": "24.64 (neutral)",
+      "dxy": "100.68 (neutral)",
+      "skew": "139.55 (neutral)"
+    },
+    "raw": {
+      "10Y Yield": {
+        "date": "2026-07-29",
+        "value": 4.62
+      },
+      "2Y Yield": {
+        "date": null,
+        "value": null
+      },
+      "5Y Breakeven": {
+        "date": null,
+        "value": null
+      },
+      "10Y Breakeven": {
+        "date": null,
+        "value": null
+      },
+      "VIX": {
+        "date": "2026-07-30",
+        "value": 19.52
+      },
+      "VXN": {
+        "date": "2026-07-29",
+        "value": 30.84
+      },
+      "GVZ": {
+        "date": "2026-07-29",
+        "value": 24.64
+      },
+      "EVZ": {
+        "date": null,
+        "value": null
+      },
+      "SKEW": {
+        "date": "2026-07-29",
+        "value": 139.55
+      },
+      "Dollar Index": {
+        "date": "2026-07-30",
+        "value": 100.68
+      },
+      "Fed Funds": {
+        "date": null,
+        "value": null
+      }
+    }
   },
   "instruments": {
     "Gold": {
@@ -312,7 +361,11 @@
         "max_pain": 3186
       },
       "macro_score": 0,
-      "macro_details": {},
+      "macro_details": {
+        "GVZ": "24.64 (neutral)",
+        "dxy": "100.68 (neutral)",
+        "skew": "139.55 (neutral)"
+      },
       "cot_score": -2,
       "cot_details": {
         "cot_spec": "48.0% (spec net long bearish, -1)",
@@ -582,14 +635,18 @@
         "walls": "C22911 > P11226 (+1)",
         "max_pain": 18529
       },
-      "macro_score": 0,
-      "macro_details": {},
+      "macro_score": -1,
+      "macro_details": {
+        "VXN": "30.84 (high fear, -1)",
+        "dxy": "100.68 (neutral)",
+        "skew": "139.55 (neutral)"
+      },
       "cot_score": -2,
       "cot_details": {
         "cot_spec": "36.1% (spec net long bearish, -1)",
         "cot_comm": "-61.2% (comm short bearish, -1)"
       },
-      "total_score": -3,
+      "total_score": -4,
       "signal": "SHORT"
     },
     "EURUSD": {
@@ -682,7 +739,10 @@
         "max_pain": 1.303
       },
       "macro_score": 0,
-      "macro_details": {},
+      "macro_details": {
+        "dxy": "100.68 (neutral)",
+        "skew": "139.55 (neutral)"
+      },
       "cot_score": 2,
       "cot_details": {
         "cot_spec": "-26.0% (spec net short bullish, +1)",
@@ -693,7 +753,7 @@
     }
   },
   "overall": {
-    "avg_score": -0.3,
+    "avg_score": -0.7,
     "signal": "SHORT"
   }
 }

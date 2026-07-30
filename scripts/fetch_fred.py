@@ -1,8 +1,9 @@
 """
-Fetch macro-economic data from FRED API.
+Fetch macro-economic data from FRED API, with yfinance fallback.
 Core series: DGS10, DGS2, T5YIE, VIXCLS, DTWEXBGS, FEDFUNDS
 CBOE volatility: VXNCLS (Nasdaq), GVZCLS (Gold), EVZCLS (Euro), SKEW (tail risk)
 Inflation: T10YIE (10Y breakeven)
+When FRED_API_KEY is missing, falls back to yfinance tickers.
 """
 import os
 import json
@@ -22,6 +23,15 @@ SERIES = {
     "SKEW":            "SKEW",
     "Dollar Index":    "DTWEXBGS",
     "Fed Funds":       "FEDFUNDS",
+}
+YF_FALLBACK = {
+    "10Y Yield":     "^TNX",
+    "VIX":           "^VIX",
+    "VXN":           "^VXN",
+    "GVZ":           "^GVZ",
+    "EVZ":           "^EVZ",
+    "SKEW":          "^SKEW",
+    "Dollar Index":  "DX-Y.NYB",
 }
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -57,14 +67,42 @@ def fetch_series(series_id, api_key):
         "value": float(latest["value"]),
     }
 
+def fetch_yfinance(label, ticker):
+    import yfinance as yf
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period="2d")
+        if hist.empty:
+            return None
+        val = hist["Close"].iloc[-1]
+        # ^TNX yields percent (e.g. 4.25 = 4.25%), DX-Y.NYB is the index level
+        return {"date": hist.index[-1].strftime("%Y-%m-%d"), "value": round(float(val), 2)}
+    except Exception as e:
+        print(f"    yfinance error for {ticker}: {e}")
+        return None
+
 def run():
     api_key = os.environ.get("FRED_API_KEY")
-    if not api_key:
-        print("ERROR: FRED_API_KEY environment variable not set.")
-        return False
+    use_yfinance = not api_key
+    if use_yfinance:
+        print("FRED_API_KEY not set — using yfinance fallback")
 
     results = {}
     for label, sid in SERIES.items():
+        if use_yfinance:
+            yf_ticker = YF_FALLBACK.get(label)
+            if yf_ticker:
+                result = fetch_yfinance(label, yf_ticker)
+                if result:
+                    results[label] = result
+                    print(f"  {label}: {result['value']} (yfinance)")
+                    continue
+            results[label] = {"date": None, "value": None}
+            if label in YF_FALLBACK:
+                print(f"  {label}: no yfinance data")
+            else:
+                print(f"  {label}: no fallback available")
+            continue
         try:
             result = fetch_series(sid, api_key)
             if result:
