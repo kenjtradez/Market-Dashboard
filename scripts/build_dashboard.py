@@ -354,15 +354,17 @@ def run():
         v = vol_range.get("instruments", {}).get(instr, {})
         if not v:
             continue
-        vol_rows += f"""
-        <tr>
-          <td><strong>{instr}</strong></td>
-          <td>{v.get("volatility_annualized", DASH)}%</td>
-          <td>{v.get("high_low_range_median", DASH)}%</td>
-          <td>{v.get("high_low_range_p75", DASH)}%</td>
-          <td>{v.get("open_close_median", DASH)}%</td>
-          <td>{v.get("open_close_p75", DASH)}%</td>
-        </tr>"""
+        vol = v.get("volatility_annualized", DASH)
+        hl_m = v.get("high_low_range_median", DASH)
+        hl_p = v.get("high_low_range_p75", DASH)
+        oc_m = v.get("open_close_median", DASH)
+        oc_p = v.get("open_close_p75", DASH)
+        vol_rows += f"""<div class="vol-block">
+          <div class="vol-block-head">&mdash;&mdash;&mdash;&mdash; {instr} &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
+          <div class="vol-block-line">Volatility (annualized) : <strong>{vol}%</strong></div>
+          <div class="vol-block-line">High to Low range       : <strong>{hl_m}%</strong> median &middot; <strong>{hl_p}%</strong> 75th Percentile</div>
+          <div class="vol-block-line">Open to Close move      : <strong>{oc_m}%</strong> median &middot; <strong>{oc_p}%</strong> 75th Percentile</div>
+        </div>"""
 
     vol_section = ""
     if vol_rows:
@@ -370,24 +372,9 @@ def run():
         <div class="vol-card">
           <div class="vol-header">
             <span class="vol-label">Vol &amp; Range Forecast</span>
-            <span class="vol-session">{vol_session}</span>
+            <span class="vol-session">For session: {vol_session}</span>
           </div>
-          <table class="vol-table">
-            <thead>
-              <tr>
-                <th>Instrument</th>
-                <th>Vol (ann.)</th>
-                <th>HL Range Median</th>
-                <th>HL Range P75</th>
-                <th>OC Move Median</th>
-                <th>OC Move P75</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vol_rows}
-            </tbody>
-          </table>
-          <div class="vol-note">Ranges from daily open at 00:00 &bull; (buy top) (sell bottom)</div>
+          <div class="vol-body">{vol_rows}</div>
         </div>"""
 
     # Economic Events
@@ -656,7 +643,7 @@ def run():
   :root {{
     --bg: #0a0c10; --surface: #12151c; --border: #1e232d;
     --text: #c8cdd8; --muted: #525866;
-    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff; --gold: #e5b13a;
+    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff; --gold: #e5b13a; --line: #1e232d; --gold2: #e5b13a; --red: #ff4d6d; --green: #00c896; --amber: #f0b429; --blue: #4a8fff;
   }}
   body {{ background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }}
   .container {{ max-width: 960px; margin: 0 auto; padding: 1.5rem; }}
@@ -741,11 +728,12 @@ def run():
   .vol-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
   .vol-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }}
   .vol-session {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--accent); }}
-  .vol-table {{ width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }}
-  .vol-table th {{ text-align: left; color: var(--muted); font-weight: 400; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); }}
-  .vol-table td {{ padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); color: var(--text); }}
-  .vol-table tr:last-child td {{ border-bottom: none; }}
-  .vol-note {{ font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }}
+  .vol-body {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }}
+  .vol-block {{ margin-bottom: 0.6rem; }}
+  .vol-block:last-child {{ margin-bottom: 0; }}
+  .vol-block-head {{ color: var(--accent); font-weight: 600; margin-bottom: 0.1rem; }}
+  .vol-block-line {{ color: var(--text); line-height: 1.6; }}
+  .vol-block-line strong {{ color: white; }}
   .events-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
   .events-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }}
   .events-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }}

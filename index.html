@@ -11,7 +11,7 @@
   :root {
     --bg: #0a0c10; --surface: #12151c; --border: #1e232d;
     --text: #c8cdd8; --muted: #525866;
-    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff; --gold: #e5b13a;
+    --long: #00c896; --short: #ff4d6d; --accent: #4a8fff; --gold: #e5b13a; --line: #1e232d; --gold2: #e5b13a; --red: #ff4d6d; --green: #00c896; --amber: #f0b429; --blue: #4a8fff;
   }
   body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; min-height: 100vh; }
   .container { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
@@ -96,11 +96,12 @@
   .vol-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
   .vol-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
   .vol-session { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--accent); }
-  .vol-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
-  .vol-table th { text-align: left; color: var(--muted); font-weight: 400; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); }
-  .vol-table td { padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  .vol-table tr:last-child td { border-bottom: none; }
-  .vol-note { font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }
+  .vol-body { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }
+  .vol-block { margin-bottom: 0.6rem; }
+  .vol-block:last-child { margin-bottom: 0; }
+  .vol-block-head { color: var(--accent); font-weight: 600; margin-bottom: 0.1rem; }
+  .vol-block-line { color: var(--text); line-height: 1.6; }
+  .vol-block-line strong { color: white; }
   .events-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }
   .events-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
   .events-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
@@ -592,48 +593,24 @@
         <div class="vol-card">
           <div class="vol-header">
             <span class="vol-label">Vol &amp; Range Forecast</span>
-            <span class="vol-session">WEDNESDAY, July 29, 2026</span>
+            <span class="vol-session">For session: THURSDAY, July 30, 2026</span>
           </div>
-          <table class="vol-table">
-            <thead>
-              <tr>
-                <th>Instrument</th>
-                <th>Vol (ann.)</th>
-                <th>HL Range Median</th>
-                <th>HL Range P75</th>
-                <th>OC Move Median</th>
-                <th>OC Move P75</th>
-              </tr>
-            </thead>
-            <tbody>
-              
-        <tr>
-          <td><strong>Gold</strong></td>
-          <td>21.9%</td>
-          <td>1.51%</td>
-          <td>1.95%</td>
-          <td>1.02%</td>
-          <td>1.43%</td>
-        </tr>
-        <tr>
-          <td><strong>NAS100</strong></td>
-          <td>19.89%</td>
-          <td>2.21%</td>
-          <td>2.45%</td>
-          <td>1.39%</td>
-          <td>1.67%</td>
-        </tr>
-        <tr>
-          <td><strong>EURUSD</strong></td>
-          <td>3.45%</td>
-          <td>0.39%</td>
-          <td>0.48%</td>
-          <td>0.18%</td>
-          <td>0.27%</td>
-        </tr>
-            </tbody>
-          </table>
-          <div class="vol-note">Ranges from daily open at 00:00 &bull; (buy top) (sell bottom)</div>
+          <div class="vol-body"><div class="vol-block">
+          <div class="vol-block-head">&mdash;&mdash;&mdash;&mdash; Gold &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
+          <div class="vol-block-line">Volatility (annualized) : <strong>21.49%</strong></div>
+          <div class="vol-block-line">High to Low range       : <strong>1.45%</strong> median &middot; <strong>1.82%</strong> 75th Percentile</div>
+          <div class="vol-block-line">Open to Close move      : <strong>1.02%</strong> median &middot; <strong>1.43%</strong> 75th Percentile</div>
+        </div><div class="vol-block">
+          <div class="vol-block-head">&mdash;&mdash;&mdash;&mdash; NAS100 &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
+          <div class="vol-block-line">Volatility (annualized) : <strong>20.48%</strong></div>
+          <div class="vol-block-line">High to Low range       : <strong>2.21%</strong> median &middot; <strong>2.61%</strong> 75th Percentile</div>
+          <div class="vol-block-line">Open to Close move      : <strong>1.39%</strong> median &middot; <strong>1.68%</strong> 75th Percentile</div>
+        </div><div class="vol-block">
+          <div class="vol-block-head">&mdash;&mdash;&mdash;&mdash; EURUSD &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
+          <div class="vol-block-line">Volatility (annualized) : <strong>3.77%</strong></div>
+          <div class="vol-block-line">High to Low range       : <strong>0.39%</strong> median &middot; <strong>0.54%</strong> 75th Percentile</div>
+          <div class="vol-block-line">Open to Close move      : <strong>0.2%</strong> median &middot; <strong>0.3%</strong> 75th Percentile</div>
+        </div></div>
         </div>
 
   
