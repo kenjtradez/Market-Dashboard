@@ -860,16 +860,10 @@ def run():
 
 </div>
 
-<script id="inlineData" type="application/json">{json.dumps(all_oi_data) if all_oi_data else "{}"}</script>
-<script id="gfData" type="application/json">{json.dumps(gf_detail) if gf_detail else "{}"}</script>
 <script>
 (() => {{
-  const ALLOI = (() => {{
-    try {{ return JSON.parse(document.getElementById('inlineData').textContent); }} catch(e) {{ return {{}}; }}
-  }})();
-  const GF = (() => {{
-    try {{ return JSON.parse(document.getElementById('gfData').textContent); }} catch(e) {{ return null; }}
-  }})();
+  const ALLOI = {json.dumps(all_oi_data or {})};
+  const GF = {json.dumps(gf_detail) if gf_detail else "null"};
   const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
   console.log('DBG ChartJS:',typeof Chart!=='undefined','OI keys:',Object.keys(ALLOI).join(','),'GF:',!!GF);
