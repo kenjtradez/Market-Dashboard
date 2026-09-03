@@ -129,10 +129,41 @@ def generate_narrative(instr, d, ome_raw, macro_score, cot=None):
     if cot is not None and "error" not in cot:
         p3 += f"COT: specs {cot.get('noncomm_net_pct')}% net, commercials {cot.get('comm_net_pct')}% net (score {cot_score:+d}). "
     p3 += f"Net score: {ts} ({sig})."
-    p3 += f"Net score: {ts} ({sig})."
     paragraphs.append(p3)
 
     return paragraphs
+
+def generate_bottom_line(instr, d, ome_raw=None):
+    """One-sentence, plain-English takeaway. This is what gets shown up front
+    (dashboard) or as the whole message (Telegram) — the multi-paragraph
+    narrative is detail for people who want to dig, not the headline read.
+    Explicitly checks whether Positioning/Macro/COT AGREE, not just whether
+    the total score is high, since a high total can hide real disagreement
+    between components (e.g. bullish options positioning but bearish COT)."""
+    ts = d.get("total_score")
+    sig = d.get("signal", "N/A")
+    if ts is None:
+        return f"{instr}: no data available."
+
+    components = {
+        "Positioning": d.get("positioning_score", 0),
+        "Macro": d.get("macro_score", 0),
+        "COT": d.get("cot_score", 0),
+    }
+    nonzero = {k: v for k, v in components.items() if v}
+
+    if len(nonzero) >= 2 and (all(v > 0 for v in nonzero.values()) or all(v < 0 for v in nonzero.values())):
+        agree_str = ", ".join(nonzero.keys())
+        return f"{sig} (net {ts:+d}) — {agree_str} all agree. Higher-conviction setup."
+
+    if nonzero:
+        pos_side = [k for k, v in nonzero.items() if v > 0]
+        neg_side = [k for k, v in nonzero.items() if v < 0]
+        pos_str = "/".join(pos_side) if pos_side else "nothing"
+        neg_str = "/".join(neg_side) if neg_side else "nothing"
+        return f"{sig} lean (net {ts:+d}), but mixed — {pos_str} bullish vs {neg_str} bearish. Lower conviction, size accordingly."
+
+    return f"{sig} (net {ts:+d}) — components are flat or missing data. Low conviction."
 
 def generate_trade_idea(instr, d, ome_raw):
     """Generate a specific trade idea based on positioning."""
@@ -556,6 +587,7 @@ def run():
                 pass
 
         paragraphs = generate_narrative(instr, d, ome_raw, instr_macro_score, cot_data.get(instr, {}))
+        bottom_line = generate_bottom_line(instr, d, ome_raw)
         trade_idea = generate_trade_idea(instr, d, ome_raw)
         stars_html = "\u2605" * conv_stars + "\u2606" * (10 - conv_stars)
 
@@ -600,6 +632,11 @@ def run():
 
           <div class="analysis-body">
 
+            <div class="bottom-line-banner" style="border-left-color:{sig_color}">
+              <span class="bl-label">Bottom Line</span>
+              <span class="bl-text">{bottom_line}</span>
+            </div>
+
             <div class="analysis-signal-section">
               <div class="signal-detail-header">
                 <span class="sd-title">signal detail</span>
@@ -622,8 +659,10 @@ def run():
                   <p>"{trade_idea}"</p>
                 </div>
                 <div class="an-block positioning-narrative">
-                  <div class="an-label">Positioning Analysis</div>
-                  {"".join(f"<p>{p}</p>" for p in paragraphs)}
+                  <details class="pos-analysis-details">
+                    <summary class="an-label" style="cursor:pointer">Positioning Analysis (click to expand)</summary>
+                    {"".join(f"<p>{p}</p>" for p in paragraphs)}
+                  </details>
                 </div>
                 <p class="an-footer">Generated {gen_display}. AI opinion, not a backtested signal.{' | ' + oanda_note if oanda_note else ''}</p>
               </div>
@@ -752,6 +791,13 @@ def run():
   .analysis-narrative-section {{ margin-bottom: 1rem; }}
   .analysis-narrative-block {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem 1rem; }}
   .an-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem; }}
+  .bottom-line-banner {{ background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 0.7rem 0.9rem; margin: 0.75rem 1rem 0; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }}
+  .bottom-line-banner .bl-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }}
+  .bottom-line-banner .bl-text {{ font-size: 0.85rem; font-weight: 500; color: var(--text); line-height: 1.4; }}
+  .pos-analysis-details summary {{ list-style: none; }}
+  .pos-analysis-details summary::-webkit-details-marker {{ display: none; }}
+  .pos-analysis-details summary:hover {{ color: var(--accent); }}
+  .pos-analysis-details[open] summary {{ margin-bottom: 0.35rem; }}
   .an-block {{ margin-bottom: 0.75rem; }}
   .an-block p {{ font-size: 0.78rem; line-height: 1.65; color: var(--text); }}
   .trade-idea p {{ color: var(--text); font-style: italic; }}

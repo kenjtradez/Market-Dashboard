@@ -6,7 +6,11 @@ multi-part messages via the Telegram Bot API.
 import os, sys, json, urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone, timedelta
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+from build_dashboard import generate_bottom_line  # shared logic with the dashboard
+
+DATA_DIR = os.path.join(SCRIPT_DIR, "..", "data")
 INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 MAX_LEN = 4000  # leave headroom under 4096 Telegram limit
 
@@ -88,89 +92,17 @@ def _add_general(msgs, scores, events_data, vol_range):
 def _add_instrument(msgs, instr, scores, ome, vol_range, cot_data, geo):
     s = scores.get("instruments", {}).get(instr, {})
     oi = ome.get(instr, {})
-    vr = vol_range.get("instruments", {}).get(instr, {})
-    cot = cot_data.get(instr, {})
-    igeo = geo.get("instrument_risk", {}).get(instr, {})
-    grs = geo.get("global_risk_score", 0)
 
     sig = s.get("signal", "?")
     ts = s.get("total_score", 0)
-    pos_s = s.get("positioning_score", 0)
-    macro_s = s.get("macro_score", 0)
-    cot_s = s.get("cot_score", 0)
     sp = oi.get("underlying_price")
-    pcr = oi.get("put_call_ratio")
-    mp = oi.get("max_pain")
-    cw = oi.get("call_wall")
-    pw = oi.get("put_wall")
-    mg = oi.get("magnet_strike")
-    sk = oi.get("skew_percent")
-    exp = oi.get("expiry", "")
-    proxy = oi.get("proxy_for", "")
 
-    # Fair value estimate based on walls midpoint
-    fair = None
-    fair_str = ""
-    if cw and pw and sp:
-        mid = (cw + pw) / 2
-        if mid > 0:
-            fair = (sp - mid) / mid * 100
-            if fair > 0:
-                fair_str = f"{fair:+.1f}% above fair value"
-            else:
-                fair_str = f"{fair:+.1f}% below fair value"
-
-    vol_a = vr.get("volatility_annualized")
-    hl_m = vr.get("high_low_range_median")
-    hl_75 = vr.get("high_low_range_p75")
-    oc_m = vr.get("open_close_median")
-    oc_75 = vr.get("open_close_p75")
-
-    risk_lvl = igeo.get("risk_level", "LOW")
+    bottom_line = generate_bottom_line(instr, s, oi)
 
     lines = [
         f"\n<b>{emoji(ts)} {instr} \u2014 {sig} ({ts:+d})</b> | Price: {fmt(sp)}",
-        f"\n<b>OI Levels</b>"
+        esc(bottom_line),
     ]
-
-    # OI walls / PCR / max pain line
-    oi_line = f"Put wall: {fmt(pw)}  |  Call wall: {fmt(cw)}  |  Magnet: {fmt(mg)}"
-    if pcr is not None:
-        oi_line += f"  |  PCR: {pcr:.2f}"
-    if mp and sp:
-        mp_diff = (mp - sp) / sp * 100
-        oi_line += f"  |  Max pain: {fmt(mp)} ({mp_diff:+.1f}%)"
-    lines.append(oi_line)
-
-    if fair_str:
-        lines.append(f"{fair_str}")
-    if sk is not None:
-        lines.append(f"Skew: {sk:+.1f}% (calls {'>' if sk>0 else '<'} puts)")
-
-    # Score breakdown
-    lines.append(f"\n<b>Scores:</b> POS {pos_s:+d} | Macro {macro_s:+d} | COT {cot_s:+d}")
-
-    # COT detail
-    if cot:
-        lines.append(
-            f"COT: specs {fmt(cot.get('noncomm_net_pct'))}% net "
-            f"({cot.get('spec_signal','?')}), "
-            f"comm {fmt(cot.get('comm_net_pct'))}% net "
-            f"({cot.get('comm_signal','?')})"
-        )
-
-    # Vol / Range
-    lines.append(
-        f"\n<b>Vol/Range:</b> {pct(vol_a)} ann  |  "
-        f"HL {pct(hl_m)} med / {pct(hl_75)} p75  |  "
-        f"OC {pct(oc_m)} med / {pct(oc_75)} p75"
-    )
-
-    # Risk level
-    lines.append(f"\nGeo risk: <b>{risk_lvl}</b> | Global: {grs:.1f}/10")
-    if exp:
-        lines.append(f"Opt expiry: {exp} ({proxy})")
-
     msgs.append("\n".join(lines))
 
 def _add_events(msgs, events_data):
