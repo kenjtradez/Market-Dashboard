@@ -870,20 +870,6 @@ def run():
     <span class="date">{gen_display}</span>
   </div>
 
-  <div class="overall-card">
-    <div class="oc-arrow">{overall_arrow}</div>
-    <div class="oc-text">
-      <div class="oc-label">Overall Market Signal</div>
-      <div class="oc-value">{overall_signal}</div>
-      <div class="oc-sub">Composite: {overall_score if overall_score is not None else DASH} (avg of 3 instruments) &bull; OME + Macro</div>
-    </div>
-    <div class="oc-macro">
-      <div class="oc-m-label">Macro</div>
-      <div class="oc-m-value">{macro_score}</div>
-      <div style="font-size:0.58rem;color:var(--muted);margin-top:0.05rem">/3</div>
-    </div>
-  </div>
-
   <div class="snap-grid">{snapshot_rows}</div>
 
   {instr_sections}
