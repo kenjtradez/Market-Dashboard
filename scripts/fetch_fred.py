@@ -4,6 +4,12 @@ Core series: DGS10, DGS2, T5YIE, VIXCLS, DTWEXBGS, FEDFUNDS
 CBOE volatility: VXNCLS (Nasdaq), GVZCLS (Gold), EVZCLS (Euro), SKEW (tail risk)
 Inflation: T10YIE (10Y breakeven)
 When FRED_API_KEY is missing, falls back to yfinance tickers.
+
+NOTE on EVZ: CBOE discontinued the EuroCurrency ETF Volatility Index (EVZ) in
+2025. FRED's EVZCLS series will keep returning its last-ever observation
+forever — this is not a fetch bug, the source has gone dark. A staleness flag
+is added below (max_age_days) so this shows clearly as dead rather than being
+silently treated as a live macro input.
 """
 import os
 import json
@@ -67,6 +73,28 @@ def fetch_series(series_id, api_key):
         "value": float(latest["value"]),
     }
 
+def _flag_staleness(results, max_age_days=10):
+    """Mark any series whose latest observation is older than max_age_days.
+    Prevents dead/discontinued FRED series (e.g. EVZ) or silent fetch
+    failures (e.g. SKEW) from being displayed as current without any signal
+    that they're not."""
+    today = datetime.now().date()
+    for label, entry in results.items():
+        date_str = entry.get("date")
+        if not date_str:
+            entry["stale"] = True
+            entry["age_days"] = None
+            continue
+        try:
+            d = datetime.strptime(date_str, "%Y-%m-%d").date()
+            age = (today - d).days
+            entry["age_days"] = age
+            entry["stale"] = age > max_age_days
+        except ValueError:
+            entry["stale"] = True
+            entry["age_days"] = None
+    return results
+
 def fetch_yfinance(label, ticker):
     import yfinance as yf
     try:
@@ -114,6 +142,12 @@ def run():
         except Exception as e:
             results[label] = {"date": None, "value": None}
             print(f"  {label}: ERROR {e}")
+
+    results = _flag_staleness(results)
+    for label, entry in results.items():
+        if entry.get("stale"):
+            age = entry.get("age_days")
+            print(f"  WARNING: {label} is stale ({age if age is not None else 'unknown'} days old, or fetch failed)")
 
     out_path = os.path.join(OUTPUT_DIR, "fred_macro.json")
     os.makedirs(OUTPUT_DIR, exist_ok=True)

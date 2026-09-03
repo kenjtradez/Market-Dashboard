@@ -13,11 +13,23 @@ SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPTS_DIR)
 
 STEPS = [
-    ("FRED macro fetch",   "fetch_fred",     True),
-    ("OME vision extract", "extract_ome",    False),
-    ("Score computation",  "compute_scores",  True),
-    ("Dashboard builder",  "build_dashboard", True),
+    ("FRED macro fetch",       "fetch_fred",        True),
+    ("Options data (Yahoo)",   "fetch_options_yf",  False),
+    ("OME vision extract",     "extract_ome",       False),
+    ("Score computation",      "compute_scores",    True),
+    ("Vol & range forecast",   "calc_vol_range",    False),
+    ("Economic calendar",      "fetch_events",      False),
+    ("CFTC COT positioning",   "fetch_cot",         False),
+    ("Live prices (Yahoo)",    "fetch_oanda",       False),
+    ("Geopolitical risk news", "fetch_geopolitical", False),
+    ("News sentiment (GDELT)", "fetch_sentiment",   False),
+    ("Dashboard builder",      "build_dashboard",   True),
 ]
+# Previously this list only had 4 of the 10 steps the live GitHub Actions
+# workflow (.github/workflows/build.yml) actually runs, so `python
+# scripts/run_all.py` locally produced a materially different (more broken)
+# dashboard than what gets deployed — missing options OI, vol/range forecast,
+# COT, live prices, geopolitical risk, and sentiment. Now mirrors the workflow.
 
 def main():
     print("=" * 60)

@@ -3,7 +3,7 @@ Compute news sentiment from GDELT geopolitical articles.
 Scores headlines per instrument using bullish/bearish keyword lists.
 No API key required.
 """
-import os, json
+import os, json, re
 from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -21,11 +21,20 @@ BEARISH_WORDS = ["plunge", "crash", "drop", "slump", "decline", "bearish", "down
                  "cut", "warning", "recession", "fall", "tumble", "crisis", "sanction", "war"]
 
 
+def _contains_term(text, term):
+    """Word-boundary match, not plain substring. Short terms like NAS100's
+    "ai" previously matched as a substring inside ordinary words — "again",
+    "certain", "remain", "explain", "said", "rain", "gain", "claim" all
+    contain "ai" — which meant NAS100's relevant-article set (and therefore
+    its sentiment score) was mostly noise rather than actual AI/tech news."""
+    return re.search(r"\b" + re.escape(term) + r"\b", text) is not None
+
+
 def score_headlines(articles, instrument_terms):
     relevant = []
     for art in articles:
         txt = (art.get("title", "") + " " + art.get("seentext", "")).lower()
-        if any(t in txt for t in instrument_terms):
+        if any(_contains_term(txt, t) for t in instrument_terms):
             relevant.append(art.get("title", ""))
 
     if not relevant:
@@ -35,8 +44,8 @@ def score_headlines(articles, instrument_terms):
     bearish = 0
     for h in relevant:
         h_lower = h.lower()
-        b = sum(1 for w in BULLISH_WORDS if w in h_lower)
-        be = sum(1 for w in BEARISH_WORDS if w in h_lower)
+        b = sum(1 for w in BULLISH_WORDS if _contains_term(h_lower, w))
+        be = sum(1 for w in BEARISH_WORDS if _contains_term(h_lower, w))
         if b > be:
             bullish += 1
         elif be > b:

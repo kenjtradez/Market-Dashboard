@@ -2,7 +2,7 @@
 Fetch geopolitical risk news from RSS feeds.
 No API key required. Falls back gracefully if a feed is unavailable.
 """
-import os, json, time
+import os, json, time, re
 from datetime import datetime
 
 import requests
@@ -120,7 +120,12 @@ def run():
         total_rel = 0
         for art in top:
             txt = (art["title"] + " " + art["seentext"]).lower()
-            if any(t in txt for t in terms):
+            # Word-boundary match, not substring — NAS100's "ai" term previously
+            # matched inside ordinary words ("said", "again", "remain", "explain"),
+            # so NAS100 risk was being scored off articles with no actual
+            # tech/Nasdaq relevance (visible live as "NAS100: MODERATE" risk on
+            # a day where every listed article was about Iran/Ukraine/tariffs).
+            if any(re.search(r"\b" + re.escape(t) + r"\b", txt) for t in terms):
                 count += 1
                 total_rel += art["relevance"]
         instr_risk[instr] = {

@@ -1,6 +1,13 @@
 """
 Fetch spot prices via Yahoo Finance.
 No API key required. Serves as drop-in replacement for Oanda pricing.
+
+NOTE: these are proxy ETF prices (GLD/QQQ/FXE), NOT the actual XAUUSD/NAS100/
+EURUSD levels shown elsewhere on the dashboard — they're a different
+instrument on a different price scale (e.g. GLD ~$400 vs spot gold ~$4,400).
+The dashboard label has been changed from "Oanda: X" to "Proxy quote
+(TICKER): X" to make that explicit, since the old label implied a same-scale
+cross-check price for the instrument itself.
 """
 import os, json
 from datetime import datetime
@@ -22,7 +29,7 @@ def fetch_price(ticker):
         info = t.info
         price = info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
         if price:
-            return {"mid": round(price, 5), "source": "yfinance"}, None
+            return {"mid": round(price, 5), "source": "yfinance", "ticker": ticker}, None
         return None, "no price found"
     except Exception as e:
         return None, str(e)
