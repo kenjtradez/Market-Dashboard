@@ -73,13 +73,15 @@ def fetch_series(series_id, api_key):
         "value": float(latest["value"]),
     }
 
-def _flag_staleness(results, max_age_days=10):
-    """Mark any series whose latest observation is older than max_age_days.
-    Prevents dead/discontinued FRED series (e.g. EVZ) or silent fetch
-    failures (e.g. SKEW) from being displayed as current without any signal
-    that they're not."""
+def _flag_staleness(results):
+    """Mark any series whose latest observation is older than its expected
+    threshold. Prevents dead/discontinued FRED series (e.g. EVZ) or silent
+    fetch failures from being displayed as current without any signal that
+    they're not — while respecting series that are legitimately low-frequency
+    (e.g. Fed Funds is monthly, so 30+ days old is normal, not stale)."""
     today = datetime.now().date()
     for label, entry in results.items():
+        max_age = MAX_AGE_DAYS.get(label, MAX_AGE_DAYS["default"])
         date_str = entry.get("date")
         if not date_str:
             entry["stale"] = True
@@ -89,7 +91,7 @@ def _flag_staleness(results, max_age_days=10):
             d = datetime.strptime(date_str, "%Y-%m-%d").date()
             age = (today - d).days
             entry["age_days"] = age
-            entry["stale"] = age > max_age_days
+            entry["stale"] = age > max_age
         except ValueError:
             entry["stale"] = True
             entry["age_days"] = None
@@ -109,39 +111,55 @@ def fetch_yfinance(label, ticker):
         print(f"    yfinance error for {ticker}: {e}")
         return None
 
+MAX_AGE_DAYS = {
+    # Most CBOE/market series are daily — 10 days catches genuine staleness
+    # without false alarms over a normal weekend/holiday gap.
+    "default": 10,
+    # Fed Funds (FEDFUNDS) is a MONTHLY series — 25-35 days old is completely
+    # normal for it, not stale. A flat 10-day threshold was flagging it as
+    # stale on every single run regardless of whether the fetch was healthy.
+    "Fed Funds": 45,
+}
+
 def run():
     api_key = os.environ.get("FRED_API_KEY")
-    use_yfinance = not api_key
-    if use_yfinance:
-        print("FRED_API_KEY not set — using yfinance fallback")
+    if not api_key:
+        print("FRED_API_KEY not set — using yfinance for all series")
 
     results = {}
     for label, sid in SERIES.items():
-        if use_yfinance:
+        result = None
+        used_source = None
+
+        if api_key:
+            try:
+                result = fetch_series(sid, api_key)
+                if result:
+                    used_source = "FRED"
+                else:
+                    print(f"  {label}: no data from FRED")
+            except Exception as e:
+                print(f"  {label}: FRED ERROR {e}")
+
+        # Fall back to yfinance for THIS series if FRED didn't return
+        # anything — previously this fallback only ever fired when the API
+        # key was missing entirely, so a single dead/renamed FRED series
+        # (e.g. SKEW, which FRED now rejects with "series does not exist")
+        # had no way to recover even though a working yfinance ticker (^SKEW)
+        # was defined for exactly this case and simply never got tried.
+        if not result:
             yf_ticker = YF_FALLBACK.get(label)
             if yf_ticker:
                 result = fetch_yfinance(label, yf_ticker)
                 if result:
-                    results[label] = result
-                    print(f"  {label}: {result['value']} (yfinance)")
-                    continue
+                    used_source = "yfinance"
+
+        if result:
+            results[label] = result
+            print(f"  {label}: {result['value']} ({result['date']}) via {used_source}")
+        else:
             results[label] = {"date": None, "value": None}
-            if label in YF_FALLBACK:
-                print(f"  {label}: no yfinance data")
-            else:
-                print(f"  {label}: no fallback available")
-            continue
-        try:
-            result = fetch_series(sid, api_key)
-            if result:
-                results[label] = result
-                print(f"  {label}: {result['value']} ({result['date']})")
-            else:
-                results[label] = {"date": None, "value": None}
-                print(f"  {label}: no data")
-        except Exception as e:
-            results[label] = {"date": None, "value": None}
-            print(f"  {label}: ERROR {e}")
+            print(f"  {label}: no data from any source")
 
     results = _flag_staleness(results)
     for label, entry in results.items():
