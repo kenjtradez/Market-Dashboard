@@ -196,27 +196,54 @@ def load_gold_forecast_detail():
         return None
 
 def load_gold_forecast():
+    """Prefer gold-forecast.html's richer HAR-IV output, but that file is a
+    static artifact nothing in the pipeline regenerates (confirmed: no script
+    or workflow step writes to it), so it can silently freeze indefinitely.
+    Fall back to vol_range.json — which calc_vol_range.py DOES regenerate
+    every run — whenever the HAR-IV file is missing, unparseable, or stale."""
     path = os.path.join(OUTPUT_DIR, "gold-forecast.html")
-    if not os.path.exists(path):
-        return {}
-    import re
-    with open(path, encoding="utf-8") as f:
-        content = f.read()
-    m = re.search(r'const DATA\s*=\s*({.*?});', content, re.DOTALL)
-    if not m:
-        return {}
-    try:
-        data = json.loads(m.group(1))
-    except json.JSONDecodeError:
-        return {}
-    base = data.get("base", data)
-    return {
-        "daily_vol": base.get("forecast_daily_pct"),
-        "annual_vol": base.get("forecast_annual_pct"),
-        "hl_median": base.get("hl", {}).get("median"),
-        "oc_median": base.get("oc", {}).get("median"),
-        "generated": data.get("generated", ""),
-    }
+    result = {}
+    if os.path.exists(path):
+        import re
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+        m = re.search(r'const DATA\s*=\s*({.*?});', content, re.DOTALL)
+        if m:
+            try:
+                data = json.loads(m.group(1))
+                base = data.get("base", data)
+                result = {
+                    "daily_vol": base.get("forecast_daily_pct"),
+                    "annual_vol": base.get("forecast_annual_pct"),
+                    "hl_median": base.get("hl", {}).get("median"),
+                    "oc_median": base.get("oc", {}).get("median"),
+                    "generated": data.get("generated", ""),
+                    "source": "har-iv",
+                }
+            except json.JSONDecodeError:
+                pass
+
+    is_stale = True
+    if result.get("generated"):
+        try:
+            age_days = (datetime.now() - datetime.fromisoformat(result["generated"])).total_seconds() / 86400
+            is_stale = age_days > 1.5
+        except (ValueError, TypeError):
+            pass
+
+    if not result or is_stale:
+        vr = load_json(os.path.join(DATA_DIR, "vol_range.json"))
+        gold_vr = vr.get("instruments", {}).get("Gold")
+        if gold_vr and gold_vr.get("volatility_annualized") is not None:
+            result = {
+                "daily_vol": gold_vr.get("volatility_annualized", 0) / (252 ** 0.5) if gold_vr.get("volatility_annualized") is not None else None,
+                "annual_vol": gold_vr.get("volatility_annualized"),
+                "hl_median": gold_vr.get("high_low_range_median"),
+                "oc_median": gold_vr.get("open_close_median"),
+                "generated": vr.get("date", "") + "T00:00:00" if vr.get("date") else "",
+                "source": "vol_range",
+            }
+    return result
 
 def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
@@ -339,11 +366,12 @@ def run():
     gold_forecast_section = ""
     if gf.get("daily_vol") is not None:
         stale_txt, stale_color = staleness_badge(gf.get("generated"))
+        model_label = "HAR-IV model" if gf.get("source") == "har-iv" else "20-day realized vol (fallback — HAR-IV file is stale)"
         gold_forecast_section = f"""
         <div class="gold-forecast-card">
           <div class="gold-fc-header">
             <span class="gold-fc-label">Gold Next-Day Vol Forecast</span>
-            <span class="gold-fc-source">HAR-IV model</span>
+            <span class="gold-fc-source">{model_label}</span>
             <span class="gold-fc-source" style="color:{stale_color}">{stale_txt}</span>
           </div>
           <div class="gold-fc-body">
