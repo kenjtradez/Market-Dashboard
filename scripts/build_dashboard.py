@@ -540,6 +540,9 @@ def run():
         _components = [ps, instr_macro_score, d.get("cot_score", 0)]
         _nonzero = [c for c in _components if c]
         is_confluence = len(_nonzero) >= 2 and (all(c > 0 for c in _nonzero) or all(c < 0 for c in _nonzero))
+        hp_lightning = "\u26a1"
+        hp_snap_tag = f'<div class="snap-hp-tag">{hp_lightning} HIGH PROB</div>' if is_confluence else ''
+        hp_badge = f'<div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">{hp_lightning} High-Probability Setup</div>' if is_confluence else ''
 
         # Compute dynamic fair value distance
         fair_str = DASH
@@ -569,7 +572,7 @@ def run():
         snap_highlight_style = f"border:1.5px solid {sig_color};box-shadow:0 0 0 1px {sig_color}30" if is_confluence else ""
         snapshot_rows += f"""
         <div class="snap-card" style="{snap_highlight_style}" onclick="document.getElementById('{instr.lower()}').scrollIntoView({{behavior:'smooth'}})">
-          {'<div class="snap-hp-tag">\u26a1 HIGH PROB</div>' if is_confluence else ''}
+          {hp_snap_tag}
           <div class="snap-name">{instr}</div>
           <div class="snap-signal" style="color:{sig_color}">{arr} {sig}</div>
           <div class="snap-score">{ts if ts is not None else DASH}</div>
@@ -590,7 +593,7 @@ def run():
             <div class="analysis-title-row">
               <h2 class="analysis-name">{instr}</h2>
               <div class="analysis-badge" style="background:{sig_color}15;color:{sig_color};border:1px solid {sig_color}40">{arr} {sig}</div>
-              {'<div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">\u26a1 High-Probability Setup</div>' if is_confluence else ''}
+              {hp_badge}
               <div class="analysis-range">{rng_str} RANGE</div>
               <div class="analysis-fair">{fair_str}</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
