@@ -180,21 +180,6 @@ def staleness_badge(generated_str, max_age_days=1.5):
     except (ValueError, TypeError):
         return "\u26a0 unknown age", "var(--red)"
 
-def load_gold_forecast_detail():
-    path = os.path.join(OUTPUT_DIR, "gold-forecast.html")
-    if not os.path.exists(path):
-        return None
-    import re
-    with open(path, encoding="utf-8") as f:
-        content = f.read()
-    m = re.search(r'const DATA\s*=\s*({.*?});', content, re.DOTALL)
-    if not m:
-        return None
-    try:
-        return json.loads(m.group(1))
-    except json.JSONDecodeError:
-        return None
-
 def load_gold_forecast():
     """Prefer gold-forecast.html's richer HAR-IV output, but that file is a
     static artifact nothing in the pipeline regenerates (confirmed: no script
@@ -304,35 +289,15 @@ def run():
           </div>
         </div>"""
 
-    # Gold Forecast detail inline section
-    gold_detail_section = ""
-    gf_detail = load_gold_forecast_detail()
-    if gf_detail:
-        stale_txt, stale_color = staleness_badge(gf_detail.get("generated"))
-        gold_detail_section = f"""
-        <div class="analysis-section" id="gold-fc-detail">
-          <div class="analysis-header">
-            <div class="analysis-title-row">
-              <h2 class="analysis-name">Gold Vol Forecast Detail</h2>
-              <div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">HAR-IV</div>
-              <div class="analysis-badge" style="background:{stale_color}15;color:{stale_color};border:1px solid {stale_color}40">{stale_txt}</div>
-              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
-            </div>
-            <div class="analysis-sub">
-              <span class="analysis-ai">Interactive gauge &amp; levels</span>
-            </div>
-          </div>
-          <div class="analysis-body">
-            <div id="gfCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px"></div>
-            <div id="gfRangeStrip" style="font-size:12px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;line-height:1.8"></div>
-            <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;margin-bottom:12px">
-              <div id="gfGauge" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px"></div>
-              <div id="gfLevels" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;overflow-x:auto"></div>
-            </div>
-            <div class="extra-card" style="margin-bottom:12px"><div class="chart-wrap-oi" style="height:250px"><canvas id="gfDistChart"></canvas></div></div>
-            <div class="an-footer">Forecast for trading day after {gf_detail.get("data_through","")} &middot; model HAR-IV &middot; generated {gf_detail.get("generated","")}</div>
-          </div>
-        </div>"""
+    # Gold Vol Forecast Detail (HAR-IV interactive gauge) removed — it depended
+    # entirely on gold-forecast.html's embedded DATA blob, which is produced by
+    # a separate, more sophisticated standalone tool (HAR-IV model + intraday
+    # revision grid matched against historical comparable days + ATM IV/GVZ
+    # comparison) that lives outside this repo and has no generator script
+    # here to wire into the pipeline. Rather than keep shipping a panel that
+    # can only ever show a frozen snapshot, it's gone. The "Gold Next-Day Vol
+    # Forecast" summary card above still works — it now sources from the live,
+    # daily-regenerated vol_range.json instead.
 
     # Geopolitical Risk card
     geo_section = ""
@@ -812,10 +777,6 @@ def run():
   .corr-driven {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); line-height: 1.4; }}
   .corr-footer {{ font-size: 0.55rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; grid-column: 1 / -1; padding-top: 0.3rem; border-top: 1px solid var(--border); }}
   .chart-wrap-oi {{ position: relative; width: 100%; height: 240px; }}
-  .chart-wrap-gf {{ position: relative; width: 100%; height: 320px; }}
-  #gfCards .gf-card {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.6rem; text-align: center; }}
-  #gfCards .gf-card-k {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.48rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }}
-  #gfCards .gf-card-v {{ font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--gold); margin-top: 0.15rem; }}
 
   /* Macro bottom */
   .vol-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; }}
@@ -924,8 +885,6 @@ def run():
 
   {oi_section}
 
-  {gold_detail_section}
-
   {vol_section}
 
   {events_section}
@@ -945,10 +904,9 @@ def run():
 <script>
 (() => {{
   const ALLOI = {json.dumps(all_oi_data or {})};
-  const GF = {json.dumps(gf_detail) if gf_detail else "null"};
   const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';
-  console.log('DBG ChartJS:',typeof Chart!=='undefined','OI keys:',Object.keys(ALLOI).join(','),'GF:',!!GF);
+  console.log('DBG ChartJS:',typeof Chart!=='undefined','OI keys:',Object.keys(ALLOI).join(','));
 
   // OI Charts — one set per instrument
   const INSTR_TAGS = {{Gold:'gold',NAS100:'nas100',EURUSD:'eurusd'}};
@@ -1002,105 +960,8 @@ def run():
     }});
   }});
 
-  // Gold Forecast detail
-  if (GF && GF.base) {{
-    const A = GF.base;
-    const cards = [
-      {{k:'Forecast daily vol', v:A.forecast_daily_pct.toFixed(3)+'%'}},
-      {{k:'Annualised', v:A.forecast_annual_pct.toFixed(1)+'%'}},
-      {{k:'HL range (median)', v:A.hl.median.toFixed(2)+'%'}},
-      {{k:'OC move (median)', v:A.oc.median.toFixed(2)+'%'}},
-    ];
-    document.getElementById('gfCards').innerHTML = cards.map(c => '<div class="gf-card"><span class="gf-card-k">'+c.k+'</span><span class="gf-card-v">'+c.v+'</span></div>').join('');
-
-    const ref = GF.day_open || GF.anchor_price || 0;
-    const hl = A.hl;
-    const items=[['normal (median)','var(--green)',hl.median],['busy (75th)','var(--amber)',hl.p75],['big (90th)','var(--red)',hl.p90]];
-    document.getElementById('gfRangeStrip').innerHTML =
-      '<span style="color:var(--muted)">Typical full-day range (high-to-low width):</span> ' +
-      items.map(([lab,c,v]) => '<span style="display:inline-block;margin-right:12px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+c+';margin-right:6px;vertical-align:middle"></span><b>'+v.toFixed(2)+'%</b> $'+fmt(ref*v/100)+' <span style="color:var(--muted)">'+lab+'</span></span>').join('');
-
-    // Gauge SVG
-    const up=A.oh, dn=A.ol, oc=A.oc;
-    const levels=[
-      {{lab:'High big (90th)',col:'var(--red)',v:ref*(1+up.p90/100), p:up.p90}},
-      {{lab:'High busy (75th)',col:'var(--amber)',v:ref*(1+up.p75/100), p:up.p75}},
-      {{lab:'High normal (med)',col:'var(--green)',v:ref*(1+up.median/100), p:up.median}},
-      {{lab:'Open',col:'var(--text)',v:ref, p:0}},
-      {{lab:'Low normal (med)',col:'var(--green)',v:ref*(1-dn.median/100), p:-dn.median}},
-      {{lab:'Low busy (75th)',col:'var(--amber)',v:ref*(1-dn.p75/100), p:-dn.p75}},
-      {{lab:'Low big (90th)',col:'var(--red)',v:ref*(1-dn.p90/100), p:-dn.p90}},
-    ];
-    const closeLv = [
-      {{lab:'Close up 90th',v:ref*(1+Math.min(oc.p90,up.p90)/100)}},
-      {{lab:'Close up 75th',v:ref*(1+Math.min(oc.p75,up.p75)/100)}},
-      {{lab:'Close up med',v:ref*(1+Math.min(oc.median,up.median)/100)}},
-      {{lab:'Close down med',v:ref*(1-Math.min(oc.median,dn.median)/100)}},
-      {{lab:'Close down 75th',v:ref*(1-Math.min(oc.p75,dn.p75)/100)}},
-      {{lab:'Close down 90th',v:ref*(1-Math.min(oc.p90,dn.p90)/100)}},
-    ];
-    const allPrices = levels.map(l=>l.v).concat(closeLv.map(l=>l.v));
-    let pmin = Math.min(...allPrices), pmax = Math.max(...allPrices);
-    const pad = (pmax-pmin)*0.08||1; pmin-=pad; pmax+=pad;
-    const H=380, W=210, top=12, bot=H-12, ax0=90, ax1=114;
-    const y = p => top + (pmax-p)/(pmax-pmin)*(bot-top);
-    let svg = '<svg width="'+W+'" height="'+H+'">';
-    const zU=[[ref,ref*(1+A.oh.median/100),'rgba(46,160,67,.15)'],
-      [ref*(1+A.oh.median/100),ref*(1+A.oh.p75/100),'rgba(210,153,34,.15)'],
-      [ref*(1+A.oh.p75/100),ref*(1+A.oh.p90/100),'rgba(218,54,51,.16)']];
-    const zD=[[ref*(1-A.ol.median/100),ref,'rgba(46,160,67,.15)'],
-      [ref*(1-A.ol.p75/100),ref*(1-A.ol.median/100),'rgba(210,153,34,.15)'],
-      [ref*(1-A.ol.p90/100),ref*(1-A.ol.p75/100),'rgba(218,54,51,.16)']];
-    for(const [a,b,col] of zU.concat(zD)){{ const ya=y(Math.max(a,b)), yb=y(Math.min(a,b));
-      svg += '<rect x="'+ax0+'" y="'+ya+'" width="'+(ax1-ax0)+'" height="'+(yb-ya)+'" fill="'+col+'"/>'; }}
-    for(const l of levels){{ const yy=y(l.v);
-      svg += '<line x1="'+ax0+'" y1="'+yy+'" x2="'+(ax1+13)+'" y2="'+yy+'" stroke="'+l.col+'" stroke-width="2" stroke-dasharray="'+(l.p===0?'4,3':'0')+'"/>';
-      svg += '<text x="'+(ax1+17)+'" y="'+(yy+3.5)+'" fill="'+l.col+'" font-size="10">'+fmt(l.v)+'</text>'; }}
-    for(const l of closeLv){{ const yy=y(l.v);
-      svg += '<line x1="'+(ax0-13)+'" y1="'+yy+'" x2="'+ax0+'" y2="'+yy+'" stroke="var(--blue)" stroke-width="1.6" stroke-dasharray="3,2"/>';
-      svg += '<text x="'+(ax0-17)+'" y="'+(yy+3.5)+'" fill="var(--blue)" font-size="9.5" text-anchor="end">'+fmt(l.v)+'</text>'; }}
-    svg += '</svg>';
-    document.getElementById('gfGauge').innerHTML = svg;
-
-    // Levels table
-    let rows = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-    const grps = [['Intraday high / low',levels],['Open to close',closeLv]];
-    for(const [title,arr] of grps){{
-      rows += '<tr><th class="lab" colspan="3" style="padding-top:10px;color:var(--gold2);border-bottom:none;text-align:left;font-size:11px;text-transform:uppercase">'+title+'</th></tr>';
-      rows += '<tr><th style="text-align:left;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">Level</th><th style="text-align:right;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">Price</th><th style="text-align:right;color:var(--muted);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--line)">%</th></tr>';
-      for(const l of arr){{
-        const dp = (l.v/ref-1)*100;
-        rows += '<tr><td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;color:var(--text)"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:'+(l.col||'var(--blue)')+';margin-right:5px;vertical-align:middle"></span>'+l.lab+'</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:var(--text)">'+fmt(l.v)+'</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:'+(dp>=0?'var(--green)':'var(--red)')+'">'+pct(dp)+'</td></tr>';
-      }}
-    }}
-    rows += '</table>';
-    document.getElementById('gfLevels').innerHTML = rows;
-
-    // Distribution chart
-    const distLabels = ['median','p75','p90'];
-    const distDatasets = [
-      {{label:'HL Range', data:[A.hl.median,A.hl.p75,A.hl.p90], backgroundColor:'rgba(229,177,58,0.7)', borderColor:'#e5b13a'}},
-      {{label:'OC Move', data:[A.oc.median,A.oc.p75,A.oc.p90], backgroundColor:'rgba(88,166,255,0.7)', borderColor:'#58a6ff'}},
-      {{label:'Up Swing', data:[A.oh.median,A.oh.p75,A.oh.p90], backgroundColor:'rgba(46,160,67,0.7)', borderColor:'#2ea043'}},
-      {{label:'Down Swing', data:[A.ol.median,A.ol.p75,A.ol.p90], backgroundColor:'rgba(218,54,51,0.7)', borderColor:'#da3633'}},
-    ];
-    new Chart(document.getElementById('gfDistChart'), {{
-      type:'bar', data:{{labels:distLabels,datasets:distDatasets}},
-      options:{{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{{
-          legend:{{position:'bottom',labels:{{color:'#525866',font:{{size:10}},boxWidth:12,padding:8}}}},
-          title:{{display:true,text:'Volatility Profile — % move by percentile',color:'#525866',font:{{size:11}}}}
-        }},
-        scales:{{
-          x:{{ticks:{{color:'#525866',font:{{size:9}}}},grid:{{color:'#1e232d'}}}},
-          y:{{ticks:{{color:'#525866',font:{{size:9}}}},grid:{{color:'#1e232d'}},title:{{display:true,text:'%',color:'#525866',font:{{size:10}}}}}}
-        }}
-      }}
-    }});
-  }}
+  // Gold Forecast detail panel removed (relied on an externally-generated
+  // file this pipeline can't regenerate) — see build_dashboard.py comments.
 
   // Collapse toggle
   document.querySelectorAll('.analysis-header').forEach(h => {{
