@@ -165,6 +165,91 @@ def generate_bottom_line(instr, d, ome_raw=None):
 
     return f"{sig} (net {ts:+d}) — components are flat or missing data. Low conviction."
 
+def generate_forecast_trade_table(ome_raw, vr):
+    """The dashboard equivalent of the Pine script's 'Trade Idea' table —
+    both a long path (toward the asymmetric UP excursion percentiles) and a
+    short path (toward the asymmetric DOWN excursion percentiles) at once,
+    rather than picking one direction from the signal. Same underlying math
+    as generate_forecast_trade_idea() but shown as a 4-row table so both
+    sides are visible together, matching what's now on the TradingView
+    indicator. Uses the genuinely asymmetric up_median/up_p75/down_median/
+    down_p75 fields (added to calc_vol_range.py alongside this feature) —
+    NOT the symmetric high_low_range_median, which would incorrectly show
+    identical distances for both directions.
+    Returns None if there isn't enough data to build it."""
+    sp = ome_raw.get("underlying_price")
+    up_med = vr.get("up_median")
+    up_75 = vr.get("up_p75")
+    down_med = vr.get("down_median")
+    down_75 = vr.get("down_p75")
+    atr_pct = vr.get("atr14_pct")
+
+    if not sp or up_med is None or down_med is None or atr_pct is None:
+        return None
+
+    stop_dist = sp * (atr_pct / 100) * 1.5
+    long_sl = sp - stop_dist
+    short_sl = sp + stop_dist
+
+    rows = [("Long \u2192 Med", sp * (1 + up_med / 100), long_sl, "var(--long)")]
+    if up_75 is not None:
+        rows.append(("Long \u2192 75p", sp * (1 + up_75 / 100), long_sl, "var(--long)"))
+    rows.append(("Short \u2192 Med", sp * (1 - down_med / 100), short_sl, "var(--short)"))
+    if down_75 is not None:
+        rows.append(("Short \u2192 75p", sp * (1 - down_75 / 100), short_sl, "var(--short)"))
+
+    return {"stop_dist": stop_dist, "rows": rows}
+
+def generate_forecast_trade_idea(instr, d, ome_raw, vr):
+    """A second, independent trade idea derived from the Vol & Range
+    Forecast tool (calc_vol_range.py's median/75th percentile daily move
+    projections) rather than options positioning — a genuinely different
+    methodology, not just a rephrasing of generate_trade_idea(). Stop-loss
+    is sized at 1.5x ATR(14), not a fixed percentage, so it actually adapts
+    to how volatile the instrument currently is.
+
+    Uses atr14_pct (ATR expressed as % of price) rather than the raw
+    ATR14 dollar figure to size the stop, since ATR is computed from
+    futures OHLC (calc_vol_range.py's TICKERS) while `sp` here is the
+    instrument's spot price — day-to-day $ range is nearly identical
+    between spot and futures (basis is roughly constant), but converting
+    through % sidesteps any scale mismatch entirely rather than relying on
+    that being true.
+    """
+    sig = d.get("signal", "N/A")
+    sp = ome_raw.get("underlying_price")
+    hl_med = vr.get("high_low_range_median")
+    hl_75 = vr.get("high_low_range_p75")
+    atr_pct = vr.get("atr14_pct")
+
+    if not sp or hl_med is None or atr_pct is None:
+        return None  # not enough forecast data to build this idea
+
+    stop_dist = sp * (atr_pct / 100) * 1.5
+
+    if sig == "LONG":
+        target_med = sp * (1 + hl_med / 100)
+        stop = sp - stop_dist
+        line = f"Long from {fmt(sp)}, targeting {fmt(target_med)} (median forecast move, {hl_med:.2f}%)"
+        if hl_75 is not None:
+            target_stretch = sp * (1 + hl_75 / 100)
+            line += f", stretch target {fmt(target_stretch)} (75th pct, {hl_75:.2f}%)"
+        line += f", stop {fmt(stop)} (1.5x ATR14 = {stop_dist:.2f})."
+        return line
+    elif sig == "SHORT":
+        target_med = sp * (1 - hl_med / 100)
+        stop = sp + stop_dist
+        line = f"Short from {fmt(sp)}, targeting {fmt(target_med)} (median forecast move, {hl_med:.2f}%)"
+        if hl_75 is not None:
+            target_stretch = sp * (1 - hl_75 / 100)
+            line += f", stretch target {fmt(target_stretch)} (75th pct, {hl_75:.2f}%)"
+        line += f", stop {fmt(stop)} (1.5x ATR14 = {stop_dist:.2f})."
+        return line
+    else:
+        upper = sp * (1 + hl_med / 100)
+        lower = sp * (1 - hl_med / 100)
+        return f"No directional edge — forecast puts the typical range between {fmt(lower)} and {fmt(upper)} ({hl_med:.2f}% median move each way). Range-trade only, stop {stop_dist:.2f} (1.5x ATR14) beyond either edge."
+
 def generate_trade_idea(instr, d, ome_raw):
     """Generate a specific trade idea based on positioning."""
     ts = d.get("total_score")
@@ -589,6 +674,23 @@ def run():
         paragraphs = generate_narrative(instr, d, ome_raw, instr_macro_score, cot_data.get(instr, {}))
         bottom_line = generate_bottom_line(instr, d, ome_raw)
         trade_idea = generate_trade_idea(instr, d, ome_raw)
+        forecast_trade_idea = generate_forecast_trade_idea(instr, d, ome_raw, vol_range.get("instruments", {}).get(instr, {}))
+        forecast_table = generate_forecast_trade_table(ome_raw, vol_range.get("instruments", {}).get(instr, {}))
+        forecast_table_html = ""
+        if forecast_table:
+            rows_html = "".join(
+                f'<tr><td style="color:{color}">{label}</td>'
+                f'<td>{fmt(tp)}</td>'
+                f'<td>{fmt(sl)}</td></tr>'
+                for label, tp, sl, color in forecast_table["rows"]
+            )
+            forecast_table_html = f'''<div class="an-block trade-idea forecast-idea">
+                  <div class="an-label" style="color:var(--gold)">Trade Ideas (Vol/Range Forecast Table, 1.5x ATR14 = {forecast_table["stop_dist"]:.2f})</div>
+                  <table class="forecast-idea-table">
+                    <tr><th></th><th>Target</th><th>Stop</th></tr>
+                    {rows_html}
+                  </table>
+                </div>'''
         stars_html = "\u2605" * conv_stars + "\u2606" * (10 - conv_stars)
 
         # Snapshot card
@@ -655,9 +757,14 @@ def run():
             <div class="analysis-narrative-section">
               <div class="analysis-narrative-block">
                 <div class="an-block trade-idea">
-                  <div class="an-label">Trade Idea</div>
+                  <div class="an-label">Trade Idea (Options Positioning)</div>
                   <p>"{trade_idea}"</p>
                 </div>
+                {f'''<div class="an-block trade-idea forecast-idea">
+                  <div class="an-label" style="color:var(--gold)">Trade Idea (Vol/Range Forecast, 1.5x ATR14 stop)</div>
+                  <p>"{forecast_trade_idea}"</p>
+                </div>''' if forecast_trade_idea else ''}
+                {forecast_table_html}
                 <div class="an-block positioning-narrative">
                   <details class="pos-analysis-details">
                     <summary class="an-label" style="cursor:pointer">Positioning Analysis (click to expand)</summary>
@@ -799,6 +906,12 @@ def run():
   .pos-analysis-details summary:hover {{ color: var(--accent); }}
   .pos-analysis-details[open] summary {{ margin-bottom: 0.35rem; }}
   .an-block {{ margin-bottom: 0.75rem; }}
+  .an-block.trade-idea {{ border-left: 3px solid var(--accent); padding-left: 0.6rem; }}
+  .an-block.trade-idea.forecast-idea {{ border-left-color: var(--gold); }}
+  .forecast-idea-table {{ width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.3rem; }}
+  .forecast-idea-table th {{ text-align: left; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.5rem; border-bottom: 1px solid var(--border); }}
+  .forecast-idea-table td {{ padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; }}
+  .forecast-idea-table tr:last-child td {{ border-bottom: none; }}
   .an-block p {{ font-size: 0.78rem; line-height: 1.65; color: var(--text); }}
   .trade-idea p {{ color: var(--text); font-style: italic; }}
   .an-footer {{ font-size: 0.62rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }}

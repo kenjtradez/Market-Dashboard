@@ -41,6 +41,9 @@ def parse_csv(csv_path):
                     "high_low_range_p75": float(row.get("high_to_low_75th", 0)),
                     "open_close_median": float(row.get("open_to_close_median", 0)),
                     "open_close_p75": float(row.get("open_to_close_75th", 0)),
+                    "up_median": None, "up_p75": None, "down_median": None, "down_p75": None,  # not available from the CSV format
+                    "atr14": None,      # not available from the CSV format — ATR only computed via yfinance path
+                    "atr14_pct": None,
                 }
                 if asset not in results:
                     results[asset] = entry
@@ -76,6 +79,9 @@ def calc_from_yfinance():
             continue
 
         hl_ranges, oc_moves, daily_returns = [], [], []
+        up_excursions, down_excursions = [], []  # (High-Open)/Open and (Open-Low)/Open — same asymmetric split the Pine script uses (upHistory/downHistory), NOT a symmetric HL split
+        true_ranges = []  # for ATR(14) — needs prior close, computed alongside the rest
+        prev_close = None
         for i in range(len(df)):
             row = df.iloc[i]
             if isinstance(df.columns, pd.MultiIndex):
@@ -89,6 +95,8 @@ def calc_from_yfinance():
                 continue
             hl_ranges.append((h - l) / o * 100)
             oc_moves.append(abs(c - o) / o * 100)
+            up_excursions.append((h - o) / o * 100)
+            down_excursions.append((o - l) / o * 100)
             if i > 0:
                 prev_row = df.iloc[i-1]
                 if isinstance(df.columns, pd.MultiIndex):
@@ -98,11 +106,38 @@ def calc_from_yfinance():
                 if prev_c != 0:
                     daily_returns.append((c - prev_c) / prev_c)
 
+            # True Range needs the PRIOR day's close, which requires the
+            # un-truncated 60-day frame — df here is already .tail(20)'d, so
+            # for the very first row in this slice we won't have a prior
+            # close from within this loop. That's fine: TR on day 1 just
+            # falls back to the simple H-L range for that one row, which has
+            # negligible effect on a 14-period average built from ~20 rows.
+            tr = (h - l) if prev_close is None else max(h - l, abs(h - prev_close), abs(l - prev_close))
+            true_ranges.append(tr)
+            prev_close = c
+
         hl_median = float(np.median(hl_ranges)) if hl_ranges else None
         hl_p75 = float(np.percentile(hl_ranges, 75)) if hl_ranges else None
         oc_median = float(np.median(oc_moves)) if oc_moves else None
         oc_p75 = float(np.percentile(oc_moves, 75)) if oc_moves else None
         vol = float(np.std(daily_returns, ddof=1) * np.sqrt(252) * 100) if len(daily_returns) > 1 else None
+
+        # Asymmetric up/down excursion percentiles — mirrors the Pine
+        # script's upHistory/downHistory logic exactly. Upside and downside
+        # moves are separate distributions, not a symmetric split of the
+        # combined H-L range, so these should NOT be assumed equal.
+        up_median = float(np.median(up_excursions)) if up_excursions else None
+        up_p75 = float(np.percentile(up_excursions, 75)) if up_excursions else None
+        down_median = float(np.median(down_excursions)) if down_excursions else None
+        down_p75 = float(np.percentile(down_excursions, 75)) if down_excursions else None
+
+        # ATR(14) — simple (SMA-based) average of True Range over the most
+        # recent 14 sessions, in the instrument's own price units (not %).
+        atr14 = float(np.mean(true_ranges[-14:])) if len(true_ranges) >= 14 else (
+            float(np.mean(true_ranges)) if true_ranges else None
+        )
+        last_close = float(df.iloc[-1][("Close", ticker)]) if isinstance(df.columns, pd.MultiIndex) else float(df.iloc[-1]["Close"])
+        atr14_pct = (atr14 / last_close * 100) if (atr14 and last_close) else None
 
         instruments[instr] = {
             "volatility_annualized": round(vol, 2) if vol else None,
@@ -110,6 +145,12 @@ def calc_from_yfinance():
             "high_low_range_p75": round(hl_p75, 2) if hl_p75 else None,
             "open_close_median": round(oc_median, 2) if oc_median else None,
             "open_close_p75": round(oc_p75, 2) if oc_p75 else None,
+            "up_median": round(up_median, 2) if up_median else None,
+            "up_p75": round(up_p75, 2) if up_p75 else None,
+            "down_median": round(down_median, 2) if down_median else None,
+            "down_p75": round(down_p75, 2) if down_p75 else None,
+            "atr14": round(atr14, 4) if atr14 else None,
+            "atr14_pct": round(atr14_pct, 3) if atr14_pct else None,
         }
     return instruments
 
