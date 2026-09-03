@@ -8,11 +8,23 @@ The options CHAIN itself has to come from these ETFs — there's no free
 retail-accessible spot-gold or spot-index options chain. But the price used
 to scale strikes/walls/spot up to "real" terms previously targeted GC=F
 (COMEX gold FUTURES) and NQ=F (Nasdaq-100 FUTURES), not the actual spot
-price — futures carry a basis (a few points to tens of points depending on
-conditions) that's a different number from spot XAU/USD or the cash NDX
-index. Now scaling targets genuine spot tickers instead: XAUUSD=X for gold,
-^NDX for Nasdaq-100. EURUSD was already scaling against EURUSD=X, a real
-spot FX rate, so no change needed there.
+price — futures carry a basis that's a different number from true spot.
+
+Gold price sourcing tries multiple candidates in order, since a single
+untested ticker guess already failed once (yfinance's "XAUUSD=X" returns a
+clean 404 — confirmed via a real workflow run, not just theory):
+  1. gold-api.com — a dedicated free spot-gold API, no key required. This is
+     the SAME source the abandoned gold-forecast.html tool used successfully
+     for its live price, so it's proven to work, just never wired into this
+     pipeline before now.
+  2. yfinance "XAU=X" — a plausible alternate Yahoo spot-gold ticker format,
+     unverified but worth trying since it costs nothing to attempt.
+  3. yfinance "GC=F" (COMEX futures) — the original, CONFIRMED-working
+     fallback. Not true spot (carries a small futures basis) but far better
+     than nothing if both spot sources fail.
+Each candidate is tried in order; first one that returns a price wins.
+NAS100 and EURUSD keep a simpler two-candidate chain (spot ticker, then the
+original futures/FX fallback).
 
 Selects the expiry with highest total open interest.
 Computes PCR, max pain, put/call walls, magnet.
@@ -20,15 +32,32 @@ Computes PCR, max pain, put/call walls, magnet.
 import os, json, sys
 from datetime import datetime
 
+import requests
 import yfinance as yf
 
+# Each instrument's price candidates, tried in order. ("yf", ticker) uses
+# yfinance; ("http_json", url, json_key) does a plain GET and reads a key
+# from the JSON response — used for gold-api.com, which isn't a yfinance
+# ticker at all.
+PRICE_CANDIDATES = {
+    "Gold": [
+        ("http_json", "https://api.gold-api.com/price/XAU", "price"),
+        ("yf", "XAU=X"),
+        ("yf", "GC=F"),
+    ],
+    "NAS100": [
+        ("yf", "^NDX"),
+        ("yf", "NQ=F"),
+    ],
+    "EURUSD": [
+        ("yf", "EURUSD=X"),
+    ],
+}
+
 INSTRUMENTS = {
-    "Gold":   {"ticker": "GLD",  "real_ticker": "XAUUSD=X", "real_ticker_fallback": "GC=F",
-               "note": "ETF proxy for Gold, scaled to spot XAU/USD"},
-    "NAS100": {"ticker": "QQQ",  "real_ticker": "^NDX",     "real_ticker_fallback": "NQ=F",
-               "note": "ETF proxy for NAS100, scaled to spot NDX index"},
-    "EURUSD": {"ticker": "FXE",  "real_ticker": "EURUSD=X", "real_ticker_fallback": None,
-               "note": "ETF proxy for EURUSD, scaled to spot EUR/USD"},
+    "Gold":   {"ticker": "GLD", "note": "ETF proxy for Gold, scaled to spot XAU/USD"},
+    "NAS100": {"ticker": "QQQ", "note": "ETF proxy for NAS100, scaled to spot NDX index"},
+    "EURUSD": {"ticker": "FXE", "note": "ETF proxy for EURUSD, scaled to spot EUR/USD"},
 }
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -156,31 +185,54 @@ def compute_metrics(ticker, expiry, chain):
     }
 
 
-def _fetch_price(ticker):
+def _fetch_price_yf(ticker):
     try:
         info = yf.Ticker(ticker).info
         return info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
-    except Exception:
+    except Exception as e:
+        print(f"    yfinance {ticker} failed: {e}")
         return None
 
 
-def scale_to_futures(data, etf_ticker, real_ticker, fallback_ticker=None):
-    """Scale ETF strikes/prices to real-instrument levels using yfinance prices.
-    Tries real_ticker (spot) first; if that returns nothing, falls back to
-    fallback_ticker (the old futures-based ticker) rather than leaving the
-    data unscaled — spot is preferred but a futures-based scale is still far
-    better than none at all."""
+def _fetch_price_http_json(url, json_key, timeout=10):
+    try:
+        r = requests.get(url, timeout=timeout)
+        r.raise_for_status()
+        val = r.json().get(json_key)
+        return float(val) if val is not None else None
+    except Exception as e:
+        print(f"    HTTP {url} failed: {e}")
+        return None
+
+
+def _fetch_price_candidates(candidates):
+    """Try each (type, ...) candidate in order, return (price, source_label)
+    for the first one that succeeds, or (None, None) if all fail."""
+    for cand in candidates:
+        kind = cand[0]
+        if kind == "yf":
+            price = _fetch_price_yf(cand[1])
+            if price:
+                return price, cand[1]
+        elif kind == "http_json":
+            price = _fetch_price_http_json(cand[1], cand[2])
+            if price:
+                return price, cand[1]
+    return None, None
+
+
+def scale_to_futures(data, etf_ticker, candidates):
+    """Scale ETF strikes/prices to real-instrument levels, trying each price
+    candidate in order (see PRICE_CANDIDATES) until one succeeds. Spot
+    sources are preferred but a futures-based scale is still far better than
+    leaving the data unscaled entirely."""
     if "error" in data:
         return data
     etf_price = data.get("underlying_price")
     if not etf_price:
         return data
 
-    real_price = _fetch_price(real_ticker)
-    used_ticker = real_ticker
-    if not real_price and fallback_ticker:
-        real_price = _fetch_price(fallback_ticker)
-        used_ticker = fallback_ticker
+    real_price, used_source = _fetch_price_candidates(candidates)
     if not real_price:
         return data
     ratio = real_price / etf_price
@@ -188,9 +240,9 @@ def scale_to_futures(data, etf_ticker, real_ticker, fallback_ticker=None):
     scaled = dict(data)
     scaled["underlying_price"] = round(real_price, 2)
     scaled["proxy_for"] = etf_ticker
-    scaled["proxy_note"] = f"ETF proxy for {used_ticker}, scaled by {ratio:.2f}x"
+    scaled["proxy_note"] = f"ETF proxy for {used_source}, scaled by {ratio:.2f}x"
     scaled["scale_ratio"] = round(ratio, 4)
-    scaled["scale_source"] = used_ticker
+    scaled["scale_source"] = used_source
 
     for field in ["max_pain", "call_wall", "put_wall", "magnet_strike"]:
         val = data.get(field)
@@ -224,9 +276,10 @@ def run():
         data = compute_metrics(ticker, expiry, chain)
         data["proxy_for"] = ticker
         data["proxy_note"] = cfg["note"]
-        # Scale ETF strikes to real-instrument levels (spot preferred, futures fallback)
+        # Scale ETF strikes to real-instrument levels, trying each price
+        # candidate in order (spot sources preferred, futures as last resort)
         if "error" not in data:
-            data = scale_to_futures(data, ticker, cfg["real_ticker"], cfg.get("real_ticker_fallback"))
+            data = scale_to_futures(data, ticker, PRICE_CANDIDATES[instr])
         results[instr] = data
         sp = data.get("underlying_price", "?")
         src = data.get("scale_source", "unscaled")
