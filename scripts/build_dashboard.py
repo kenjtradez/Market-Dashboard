@@ -532,6 +532,15 @@ def run():
         rng = range_pct(sp, cw, pw)
         rng_str = f"{rng:.0f}%" if rng is not None else DASH
 
+        # High-probability confluence: all three sub-signals (positioning, macro,
+        # COT) agreeing in direction is a stronger signal than a high total score
+        # alone, since a high total can come from one extreme component while the
+        # others disagree or sit neutral. Require at least 2 of the 3 components
+        # to be non-zero and none of the non-zero ones to conflict in sign.
+        _components = [ps, instr_macro_score, d.get("cot_score", 0)]
+        _nonzero = [c for c in _components if c]
+        is_confluence = len(_nonzero) >= 2 and (all(c > 0 for c in _nonzero) or all(c < 0 for c in _nonzero))
+
         # Compute dynamic fair value distance
         fair_str = DASH
         if cw not in (None, DASH) and pw not in (None, DASH) and sp not in (None, DASH):
@@ -557,8 +566,10 @@ def run():
         # Snapshot card
         score_bar_pct = min(abs(ts) / 12 * 100, 100) if ts is not None else 0  # true max score is 12, not 8
         bar_color = "var(--long)" if (ts or 0) > 0 else "var(--short)"
+        snap_highlight_style = f"border:1.5px solid {sig_color};box-shadow:0 0 0 1px {sig_color}30" if is_confluence else ""
         snapshot_rows += f"""
-        <div class="snap-card" onclick="document.getElementById('{instr.lower()}').scrollIntoView({{behavior:'smooth'}})">
+        <div class="snap-card" style="{snap_highlight_style}" onclick="document.getElementById('{instr.lower()}').scrollIntoView({{behavior:'smooth'}})">
+          {'<div class="snap-hp-tag">\u26a1 HIGH PROB</div>' if is_confluence else ''}
           <div class="snap-name">{instr}</div>
           <div class="snap-signal" style="color:{sig_color}">{arr} {sig}</div>
           <div class="snap-score">{ts if ts is not None else DASH}</div>
@@ -574,11 +585,12 @@ def run():
             <div class="news-row"><span class="news-time">{ev[1]}</span><span class="news-name">{ev[0]}</span><span class="news-forecast">{ev[2]}</span><span class="news-day">{ev[3]}</span></div>"""
 
         instr_sections += f"""
-        <div class="analysis-section" id="{instr.lower()}">
+        <div class="analysis-section{' hp-confluence' if is_confluence else ''}" id="{instr.lower()}">
           <div class="analysis-header">
             <div class="analysis-title-row">
               <h2 class="analysis-name">{instr}</h2>
               <div class="analysis-badge" style="background:{sig_color}15;color:{sig_color};border:1px solid {sig_color}40">{arr} {sig}</div>
+              {'<div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">\u26a1 High-Probability Setup</div>' if is_confluence else ''}
               <div class="analysis-range">{rng_str} RANGE</div>
               <div class="analysis-fair">{fair_str}</div>
               <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
@@ -586,6 +598,7 @@ def run():
             <div class="analysis-sub">
               <span class="analysis-ai">AI \u2014 NOT BACKTESTED</span>
               <span class="analysis-analysts">{conv_label}</span>
+              {'<span class="analysis-analysts" style="color:var(--gold)">Positioning + Macro + COT all agree</span>' if is_confluence else ''}
             </div>
           </div>
 
@@ -816,7 +829,9 @@ def run():
   .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
   .gold-fc-note {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
   .snap-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }}
-  .snap-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.15s; }}
+  .snap-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.15s; position: relative; }}
+  .snap-hp-tag {{ position: absolute; top: -0.5rem; right: 0.5rem; background: var(--gold); color: #000; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.12rem 0.4rem; border-radius: 3px; }}
+  .analysis-section.hp-confluence {{ border: 1.5px solid var(--gold); box-shadow: 0 0 0 1px var(--gold)25; }}
   .snap-card:hover {{ border-color: var(--accent); }}
   .snap-name {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }}
   .snap-signal {{ font-size: 0.85rem; font-weight: 600; margin: 0.1rem 0; }}
