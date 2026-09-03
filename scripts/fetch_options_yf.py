@@ -4,6 +4,16 @@ Fetch options chains from Yahoo Finance using ETF proxies:
   NAS100 -> QQQ  (Invesco QQQ Trust)
   EURUSD -> FXE  (Invesco CurrencyShares Euro Trust)
 
+The options CHAIN itself has to come from these ETFs — there's no free
+retail-accessible spot-gold or spot-index options chain. But the price used
+to scale strikes/walls/spot up to "real" terms previously targeted GC=F
+(COMEX gold FUTURES) and NQ=F (Nasdaq-100 FUTURES), not the actual spot
+price — futures carry a basis (a few points to tens of points depending on
+conditions) that's a different number from spot XAU/USD or the cash NDX
+index. Now scaling targets genuine spot tickers instead: XAUUSD=X for gold,
+^NDX for Nasdaq-100. EURUSD was already scaling against EURUSD=X, a real
+spot FX rate, so no change needed there.
+
 Selects the expiry with highest total open interest.
 Computes PCR, max pain, put/call walls, magnet.
 """
@@ -13,9 +23,12 @@ from datetime import datetime
 import yfinance as yf
 
 INSTRUMENTS = {
-    "Gold":   {"ticker": "GLD",  "real_ticker": "GC=F",     "note": "ETF proxy for Gold"},
-    "NAS100": {"ticker": "QQQ",  "real_ticker": "NQ=F",     "note": "ETF proxy for NAS100"},
-    "EURUSD": {"ticker": "FXE",  "real_ticker": "EURUSD=X", "note": "ETF proxy for EURUSD"},
+    "Gold":   {"ticker": "GLD",  "real_ticker": "XAUUSD=X", "real_ticker_fallback": "GC=F",
+               "note": "ETF proxy for Gold, scaled to spot XAU/USD"},
+    "NAS100": {"ticker": "QQQ",  "real_ticker": "^NDX",     "real_ticker_fallback": "NQ=F",
+               "note": "ETF proxy for NAS100, scaled to spot NDX index"},
+    "EURUSD": {"ticker": "FXE",  "real_ticker": "EURUSD=X", "real_ticker_fallback": None,
+               "note": "ETF proxy for EURUSD, scaled to spot EUR/USD"},
 }
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -143,19 +156,31 @@ def compute_metrics(ticker, expiry, chain):
     }
 
 
-def scale_to_futures(data, etf_ticker, real_ticker):
-    """Scale ETF strikes/prices to futures-equivalent levels using yfinance prices."""
+def _fetch_price(ticker):
+    try:
+        info = yf.Ticker(ticker).info
+        return info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
+    except Exception:
+        return None
+
+
+def scale_to_futures(data, etf_ticker, real_ticker, fallback_ticker=None):
+    """Scale ETF strikes/prices to real-instrument levels using yfinance prices.
+    Tries real_ticker (spot) first; if that returns nothing, falls back to
+    fallback_ticker (the old futures-based ticker) rather than leaving the
+    data unscaled — spot is preferred but a futures-based scale is still far
+    better than none at all."""
     if "error" in data:
         return data
     etf_price = data.get("underlying_price")
     if not etf_price:
         return data
-    try:
-        t = yf.Ticker(real_ticker)
-        info = t.info
-        real_price = info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
-    except Exception:
-        return data
+
+    real_price = _fetch_price(real_ticker)
+    used_ticker = real_ticker
+    if not real_price and fallback_ticker:
+        real_price = _fetch_price(fallback_ticker)
+        used_ticker = fallback_ticker
     if not real_price:
         return data
     ratio = real_price / etf_price
@@ -163,8 +188,9 @@ def scale_to_futures(data, etf_ticker, real_ticker):
     scaled = dict(data)
     scaled["underlying_price"] = round(real_price, 2)
     scaled["proxy_for"] = etf_ticker
-    scaled["proxy_note"] = f"ETF proxy for {real_ticker}, scaled by {ratio:.2f}x"
+    scaled["proxy_note"] = f"ETF proxy for {used_ticker}, scaled by {ratio:.2f}x"
     scaled["scale_ratio"] = round(ratio, 4)
+    scaled["scale_source"] = used_ticker
 
     for field in ["max_pain", "call_wall", "put_wall", "magnet_strike"]:
         val = data.get(field)
@@ -198,12 +224,13 @@ def run():
         data = compute_metrics(ticker, expiry, chain)
         data["proxy_for"] = ticker
         data["proxy_note"] = cfg["note"]
-        # Scale ETF strikes to futures-equivalent levels
+        # Scale ETF strikes to real-instrument levels (spot preferred, futures fallback)
         if "error" not in data:
-            data = scale_to_futures(data, ticker, cfg["real_ticker"])
+            data = scale_to_futures(data, ticker, cfg["real_ticker"], cfg.get("real_ticker_fallback"))
         results[instr] = data
         sp = data.get("underlying_price", "?")
-        print(f"OK — expiry={expiry}, OI={data['total_oi_used']}, PCR={data['put_call_ratio']}, spot={sp}")
+        src = data.get("scale_source", "unscaled")
+        print(f"OK — expiry={expiry}, OI={data['total_oi_used']}, PCR={data['put_call_ratio']}, spot={sp} (via {src})")
 
     out_path = os.path.join(DATA_DIR, "ome_data.json")
     if not all_ok and os.path.exists(out_path):
