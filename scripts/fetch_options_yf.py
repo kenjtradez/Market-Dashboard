@@ -221,7 +221,7 @@ def run():
             ok = False
             print(f"  {instr} ({etf}): ERROR {e}")
             prev = previous.get(instr, {})
-            if "error" not in prev and prev.get("as_of"):
+            if "error" not in prev and prev.get("as_of") and prev.get("total_oi_used", 0) >= MIN_TOTAL_OI.get(etf, 100_000):
                 results[instr] = dict(prev, carried_over=True)
                 print(f"    kept previous snapshot from {prev['as_of']}")
             else:
