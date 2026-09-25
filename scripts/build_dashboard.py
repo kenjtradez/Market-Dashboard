@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..")
-INSTRUMENTS = ["Gold", "NAS100", "EURUSD", "USDJPY"]
+INSTRUMENTS = ["Gold", "NAS100", "SPX500", "US2000", "EURUSD", "USDJPY"]
 DASH = "\u2014"
 UK = ZoneInfo("Europe/London")
 
@@ -22,6 +22,12 @@ CORRELATIONS = {
     "EURUSD":  {"moves_with": {"GBP/USD": 0.85, "Gold": 0.61, "AUD/USD": 0.78},
                 "hedges":     {"USD/CHF": -0.90, "USD/JPY": -0.65, "DXY": -0.95},
                 "driven_by":  "ECB/Fed differential, risk sentiment, USD"},
+    "SPX500":  {"moves_with": {"NAS100": 0.95, "Dow": 0.93, "Russell 2000": 0.85},
+                "hedges":     {"VIX": -0.75, "US 10Y bond": -0.30, "Gold": -0.10},
+                "driven_by":  "Earnings, rates, risk appetite"},
+    "US2000":  {"moves_with": {"S&P 500": 0.85, "Regional banks": 0.80, "NAS100": 0.75},
+                "hedges":     {"RVX": -0.75, "US 10Y yield": -0.35, "USD": -0.25},
+                "driven_by":  "Domestic growth, rate cuts, credit conditions"},
     "USDJPY":  {"moves_with": {"US 10Y yield": 0.70, "EUR/JPY": 0.75, "NAS100": 0.40},
                 "hedges":     {"Gold": -0.35, "EUR/USD": -0.45, "VIX": -0.40},
                 "driven_by":  "US-Japan rate gap, BoJ policy, risk appetite (carry)"},
@@ -313,7 +319,7 @@ def generate_trade_idea(instr, d, ome_raw):
             return f"Neutral: fade pushes toward {fmt(cw)} (sell) and treat {fmt(pw)} as a floor (buy). Low conviction \u2014 small size only."
         return f"Neutral bias \u2014 no strong directional edge. Wait for a clear break of the range."
 
-BAND_DECIMALS = {"Gold": 2, "NAS100": 1, "EURUSD": 5, "USDJPY": 3}
+BAND_DECIMALS = {"Gold": 2, "NAS100": 1, "SPX500": 1, "US2000": 1, "EURUSD": 5, "USDJPY": 3}
 
 
 def band_read_html(instr, br):
@@ -555,6 +561,8 @@ def run():
         "NAS100": {"USD"},
         "EURUSD": {"USD", "EUR"},
         "USDJPY": {"USD", "JPY"},
+        "SPX500": {"USD"},
+        "US2000": {"USD"},
     }
 
     def upcoming_events(events_data, currencies=None):
@@ -833,7 +841,7 @@ def run():
     if broad: macro_line_parts.append(f"Broad USD: {broad}")
     if y10 and y2: macro_line_parts.append(f"2-10: {float(y10)-float(y2):.2f}%")
     # CBOE volatility indices
-    for label, key in [("VXN", "VXN"), ("GVZ", "GVZ"), ("SKEW", "SKEW")]:
+    for label, key in [("VXN", "VXN"), ("GVZ", "GVZ"), ("RVX", "RVX"), ("SKEW", "SKEW")]:
         v = fred.get(key, {}).get("value")
         if v: macro_line_parts.append(f"{label}: {v}")
     # Breakeven inflation
@@ -842,7 +850,7 @@ def run():
     macro_line = " &bull; ".join(macro_line_parts)
 
     macro_items = ""
-    for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "10Y Breakeven", "VIX", "VXN", "GVZ", "SKEW", "Dollar Index", "Broad USD", "Fed Funds"]:
+    for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "10Y Breakeven", "VIX", "VXN", "GVZ", "RVX", "SKEW", "Dollar Index", "Broad USD", "Fed Funds"]:
         d_fred = fred.get(label, {})
         val = d_fred.get("value", DASH)
         dt = d_fred.get("date", "")
@@ -1024,7 +1032,7 @@ def run():
   .gold-fc-link:hover {{ text-decoration: underline; }}
   .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
   .gold-fc-note {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
-  .snap-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }}
+  .snap-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }}
   .snap-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.15s; position: relative; }}
   .snap-hp-tag {{ position: absolute; top: -0.5rem; right: 0.5rem; background: var(--gold); color: #000; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.12rem 0.4rem; border-radius: 3px; }}
   .analysis-section.hp-confluence {{ border: 1.5px solid var(--gold); box-shadow: 0 0 0 1px var(--gold)25; }}
@@ -1152,7 +1160,7 @@ def run():
     // Max Pain
     const pain = []; let mpStrike=null, mpVal=Infinity;
     const idxMap = new Map(s.map((v,i)=>[v,i]));
-    for(const k of s){{ let t=0; for(const st of s){{ const ci=co[idxMap.get(st)]||0, pi=po[idxMap.get(st)]||0; if(st>k) t+=(st-k)*ci; else if(st<k) t+=(k-st)*pi; }} if(t<mpVal){{ mpVal=t; mpStrike=k; }} pain.push({{x:k,y:t}}); }}
+    for(const k of s){{ let t=0; for(const st of s){{ const ci=co[idxMap.get(st)]||0, pi=po[idxMap.get(st)]||0; if(k>st) t+=(k-st)*ci; else if(k<st) t+=(st-k)*pi; }} if(t<mpVal){{ mpVal=t; mpStrike=k; }} pain.push({{x:k,y:t}}); }}
     new Chart(painC, {{type:'line', data:{{datasets:[{{label:'Seller P&L at expiry',data:pain,borderColor:'#e5b13a',
       backgroundColor:'rgba(229,177,58,0.08)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#e5b13a'}}]}},
       options:{{...commonChart,plugins:{{...commonChart.plugins,title:{{display:true,text:'Max Pain Profile — min at $'+fmt(mpStrike),color:'#525866',font:{{size:11}}}}}},

@@ -6,6 +6,8 @@ Speculator group per market:
   - Gold:          Legacy report, Non-Commercial (088691, COMEX gold)
   - EURUSD:        Traders in Financial Futures, Leveraged Funds (099741, CME Euro FX)
   - NAS100:        Traders in Financial Futures, Leveraged Funds (209742, CME E-mini Nasdaq-100)
+  - SPX500:        Traders in Financial Futures, Leveraged Funds (13874A, CME E-mini S&P 500)
+  - US2000:        Traders in Financial Futures, Leveraged Funds (239742, CME Russell 2000 E-mini)
   - USDJPY:        Traders in Financial Futures, Leveraged Funds (097741, CME Japanese Yen).
                    The contract is JPY/USD, so the score is inverted: crowded
                    long yen is a contrarian case for USD/JPY going UP.
@@ -41,6 +43,16 @@ MARKETS = {
     },
     "NAS100": {
         "dataset": "gpe5-46if", "code": "209742",
+        "long": "lev_money_positions_long", "short": "lev_money_positions_short",
+        "group": "Leveraged Funds (speculators)",
+    },
+    "SPX500": {
+        "dataset": "gpe5-46if", "code": "13874A",
+        "long": "lev_money_positions_long", "short": "lev_money_positions_short",
+        "group": "Leveraged Funds (speculators)",
+    },
+    "US2000": {
+        "dataset": "gpe5-46if", "code": "239742",
         "long": "lev_money_positions_long", "short": "lev_money_positions_short",
         "group": "Leveraged Funds (speculators)",
     },

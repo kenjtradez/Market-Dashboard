@@ -26,8 +26,8 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 DATA_DIR = os.path.join(ROOT, "data")
 TABLES = os.path.join(ROOT, "calibration", "band_tables.json")
 NY, UK = ZoneInfo("America/New_York"), ZoneInfo("Europe/London")
-FEEDS = {"Gold": "GC=F", "NAS100": "NQ=F", "EURUSD": "EURUSD=X", "USDJPY": "JPY=X"}
-DECIMALS = {"Gold": 2, "NAS100": 1, "EURUSD": 5, "USDJPY": 3}
+FEEDS = {"Gold": "GC=F", "NAS100": "NQ=F", "SPX500": "ES=F", "US2000": "RTY=F", "EURUSD": "EURUSD=X", "USDJPY": "JPY=X"}
+DECIMALS = {"Gold": 2, "NAS100": 1, "SPX500": 1, "US2000": 1, "EURUSD": 5, "USDJPY": 3}
 RESCALE_TO_SPOT = {"Gold"}
 MIN_N = 30          # below this many historical cases a figure is not shown
 Z = 1.96

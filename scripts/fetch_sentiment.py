@@ -10,7 +10,7 @@ import os, json, re
 from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-INSTRUMENTS = ["Gold", "NAS100", "EURUSD", "USDJPY"]
+INSTRUMENTS = ["Gold", "NAS100", "SPX500", "US2000", "EURUSD", "USDJPY"]
 MIN_HEADLINES = 3
 
 BULLISH_WORDS = ["surge", "surges", "rally", "rallies", "jump", "jumps", "soar", "soars", "gain", "gains",

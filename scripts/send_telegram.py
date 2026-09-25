@@ -14,7 +14,8 @@ from build_dashboard import generate_bottom_line  # shared wording with the dash
 
 DATA_DIR = os.path.join(SCRIPT_DIR, "..", "data")
 UK = ZoneInfo("Europe/London")
-INSTRUMENTS = [("Gold", "XAU/USD", 2), ("NAS100", "NAS100", 1), ("EURUSD", "EUR/USD", 5), ("USDJPY", "USD/JPY", 3)]
+INSTRUMENTS = [("Gold", "XAU/USD", 2), ("NAS100", "NAS100", 1), ("SPX500", "S&amp;P 500", 1), ("US2000", "Russell 2000", 1),
+               ("EURUSD", "EUR/USD", 5), ("USDJPY", "USD/JPY", 3)]
 MAX_LEN = 4000  # Telegram limit is 4096
 ARROW = {"LONG": "▲", "SHORT": "▼", "NEUTRAL": "◆"}
 

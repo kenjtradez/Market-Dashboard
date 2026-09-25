@@ -1,6 +1,6 @@
 # Market Dashboard
 
-Daily market dashboard, options levels tracker, and Telegram brief for **Gold, NAS100, EUR/USD and USD/JPY**.
+Daily market dashboard, options levels tracker, and Telegram brief for **Gold, NAS100, S&P 500, Russell 2000, EUR/USD and USD/JPY**.
 One pipeline, one scoring model, and every output reads the same data files.
 
 - Dashboard: https://kenjtradez.github.io/Market-Dashboard/
@@ -40,8 +40,8 @@ GitHub cron is UTC-only. Each brief has a BST cron and a GMT cron, and the first
 
 | Component | Range | Rule |
 |---|---|---|
-| Positioning | ±4 | PCR < 0.7 → +2, > 1.3 → −2 · ATM IV skew ±5% → ±1 · magnet above/below spot → ±1. Scores 0 without a usable snapshot (≤ 96 h old) |
-| Macro | ±5 | Instrument vol index (GVZ / VXN; EUR has none since EVZ was discontinued) · DXY < 100 / > 107 · 2s10s ±0.5% · SKEW > 145 / < 120 · 5Y breakeven > 3% / < 1.5%. Stale series are skipped |
+| Positioning | ±4 | PCR vs that ETF's own daily history: bottom 20% → +2, top 20% → −2, scored once 20 days are logged (`data/pcr_history.json`) · ATM IV skew ±5% → ±1 · magnet above/below spot → ±1. Scores 0 without a usable snapshot (≤ 96 h old) |
+| Macro | ±5 | Instrument vol index (GVZ / VXN / VIX / RVX; EUR/USD and USD/JPY have none) · DXY < 100 / > 107 · 2s10s ±0.5% · SKEW > 145 / < 120 · 5Y breakeven > 3% / < 1.5%. Stale series are skipped |
 | COT | ±2 | Extremes only, contrarian: speculator net % of OI ranked against 3 years. ≥ 90th pct → −1, ≥ 97th → −2, mirrored at the low end |
 
 **Signal:** LONG or SHORT only when |total| ≥ 2 (out of ±11), otherwise NEUTRAL. "High-probability" needs components that agree *and* |total| ≥ 4.
@@ -64,6 +64,14 @@ The tables come from local minute data that isn't in this repo. To refresh them:
 python scripts/build_band_calibration.py "C:/Users/KIMMETIS/Desktop/vshub/data/raw data"
 git add calibration/band_tables.json && git commit -m "Refresh Band Read tables"
 ```
+
+## S&P 500 and Russell 2000
+
+- **Options:** SPY and IWM, the deepest options chains of all six instruments.
+- **COT:** Leveraged Funds in the CME E-mini S&P 500 (13874A) and Russell E-mini (239742).
+- **Vol index:** VIX, and RVX from FRED. RVX runs higher, so its fear levels are 18/32.
+- **Walls and magnet** only consider strikes within 10% of spot, because index ETFs carry huge deep hedge puts.
+- **Vol range and Band Read** use ES=F / RTY=F. They aren't calibrated to the Pine script yet.
 
 ## USD/JPY
 

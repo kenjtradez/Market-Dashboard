@@ -45,6 +45,8 @@ N_BUCKETS = len(EDGES) + 1
 FILES = {
     "Gold": "xauusd_m1.parquet",
     "NAS100": "nas100_usd_m1.parquet",
+    "SPX500": "spx500_m1.parquet",
+    "US2000": "us2000_m1.parquet",
     "EURUSD": "eurusd_m1.parquet",
     "USDJPY": "usdjpy_m1.parquet",
 }

@@ -49,7 +49,7 @@ html, body { background:#080b14; margin:0; padding:0; }
 </div>
 <div style="color:var(--olt-faint);font-size:11.5px;margin-bottom:14px;">Live candles from Twelve Data (your key, sent only to Twelve Data). Options levels, COT, macro and the model score come from the dashboard pipeline &mdash; the same data the Dashboard tab and the Telegram brief use.</div>
 
-<div class="olt-matrix" id="olt-matrix" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;"></div>
+<div class="olt-matrix" id="olt-matrix" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;"></div>
 
 <div style="color:#f04141;font-size:11px;line-height:1.6;border:1px solid rgba(240,65,65,.35);background:rgba(240,65,65,.06);border-radius:8px;padding:8px 12px;margin-bottom:16px;">
   <b>What "Bullish/Bearish lean" means:</b> a simple 3-point check against your entered/computed levels, not a signal or prediction &mdash;
@@ -105,6 +105,8 @@ const INSTRUMENTS = [
     cot:{report:'tff', datasetId:'gpe5-46if', marketLike:'EURO FX - CHICAGO MERCANTILE EXCHANGE', longField:'lev_money_positions_long', shortField:'lev_money_positions_short', label:'Leveraged Money (speculators)'}},
   {id:'NAS100', label:'NAS100', full:'NAS100 \u00b7 Nasdaq 100', symbol:'QQQ', decimals:1, multiplier:41, optsSymbol:'QQQ', volProfile:'NQ', fixedRiskPct:0.45, newsQuery:'Nasdaq 100 NQ futures stocks',
     cot:{report:'tff', datasetId:'gpe5-46if', marketLike:'NASDAQ-100 STOCK INDEX (MINI) - CHICAGO MERCANTILE EXCHANGE', longField:'lev_money_positions_long', shortField:'lev_money_positions_short', label:'Leveraged Money (speculators)'}},
+  {id:'SPX500', label:'S&P 500', full:'S&P 500 \u00b7 via SPY', symbol:'SPY', decimals:1, multiplier:10, optsSymbol:'SPY', volProfile:'ES', atrMultiple:1.5, scaleFromOptions:true},
+  {id:'US2000', label:'Russell 2000', full:'Russell 2000 \u00b7 via IWM', symbol:'IWM', decimals:1, multiplier:10, optsSymbol:'IWM', volProfile:'RTY', atrMultiple:1.5, scaleFromOptions:true},
   {id:'USDJPY', label:'USD/JPY', full:'USD/JPY \u00b7 Dollar Yen', symbol:'USD/JPY', decimals:3, multiplier:1, optsSymbol:'none', volProfile:'JPY', atrMultiple:1.5, noOptions:true},
 ];
 
@@ -115,9 +117,11 @@ const VOL_PROFILE_CORRECTIONS = {
   'EUR-USD': {vol:1.00, hlMed:0.9806, hl75:1.0077, ocMed:0.9904, oc75:1.0111},
   'NQ':      {vol:1.00, hlMed:0.9911, hl75:1.0127, ocMed:0.9917, oc75:1.0336},
   'JPY':     {vol:1.00, hlMed:1.0, hl75:1.0, ocMed:1.0, oc75:1.0},  // not calibrated to the Pine script yet
+  'ES':      {vol:1.00, hlMed:1.0, hl75:1.0, ocMed:1.0, oc75:1.0},  // not calibrated to the Pine script yet
+  'RTY':     {vol:1.00, hlMed:1.0, hl75:1.0, ocMed:1.0, oc75:1.0},  // not calibrated to the Pine script yet
 };
 const VOL_FORECAST_LOOKBACK = 105;
-const PIPELINE_KEY = {XAUUSD:'Gold', EURUSD:'EURUSD', NAS100:'NAS100', USDJPY:'USDJPY'};
+const PIPELINE_KEY = {XAUUSD:'Gold', EURUSD:'EURUSD', NAS100:'NAS100', SPX500:'SPX500', US2000:'US2000', USDJPY:'USDJPY'};
 const DATA_BASE = '../data/';
 const OPTIONS_MAX_AGE_HOURS = 96;
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -360,19 +364,24 @@ function renderMatrix(){
     card.className = 'olt-card';
     card.style.cursor = 'pointer';
     card.style.borderColor = state.active===inst.id ? 'var(--olt-blue)' : 'var(--olt-border)';
-    let badge = '<span class="olt-badge neu">No levels set</span>';
+    const hasOptions = lv.callWall!=null || lv.putWall!=null;
+    const bands = ((state.pipeline.band && state.pipeline.band.instruments) || {})[PIPELINE_KEY[inst.id]];
+    let badge = '<span class="olt-badge neu">'+(hasOptions ? 'Waiting for live price' : (inst.noOptions || inst.id==='EURUSD' ? 'No options market · showing bands' : 'No options snapshot'))+'</span>';
     if(lean) badge = '<span class="olt-badge '+(lean.bull?'bull':'bear')+'">'+(lean.bull?'Bullish':'Bearish')+' lean ('+lean.count+'/'+lean.total+')</span>';
+    const row = (label, v, color) => '<div class="olt-lvl-row"><span>'+label+'</span><b'+(color?' style="color:'+color+'"':'')+'>'+(v!=null?fmt(v,inst.decimals):'\u2014')+'</b></div>';
+    // Without options levels, show today's vol bands (Band Read) instead of empty rows.
+    const levelRows = hasOptions || !bands || bands.error
+      ? row('CALL WALL', lv.callWall, 'var(--olt-green)')+row('PUT WALL', lv.putWall, 'var(--olt-orange)')+row('MAX PAIN', lv.maxPain)+
+        '<div class="olt-lvl-row"><span>NET GEX</span><b>'+(lv.netGex!=null?fmtCompact(lv.netGex):'\u2014')+'</b></div>'
+      : row('UPPER 75TH BAND', bands.bands.up_p75, 'var(--olt-green)')+row('UPPER MED BAND', bands.bands.up_med, 'var(--olt-green)')+
+        row('LOWER MED BAND', bands.bands.dn_med, 'var(--olt-orange)')+row('LOWER 75TH BAND', bands.bands.dn_p75, 'var(--olt-orange)');
     card.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'+
         '<div style="font-weight:600;">'+inst.label+'</div>'+
         '<div style="color:var(--olt-faint);font-size:10.5px;">'+(state.lastUpdate[inst.id]||'no data')+'</div>'+
       '</div>'+
       '<div style="font-size:20px;font-weight:600;margin-bottom:4px;">'+(spot!=null?fmt(spot,inst.decimals):'\u2014')+'</div>'+
-      badge+
-      '<div class="olt-lvl-row"><span>CALL WALL</span><b style="color:var(--olt-green)">'+(lv.callWall!=null?fmt(lv.callWall,inst.decimals):'\u2014')+'</b></div>'+
-      '<div class="olt-lvl-row"><span>PUT WALL</span><b style="color:var(--olt-orange)">'+(lv.putWall!=null?fmt(lv.putWall,inst.decimals):'\u2014')+'</b></div>'+
-      '<div class="olt-lvl-row"><span>MAX PAIN</span><b>'+(lv.maxPain!=null?fmt(lv.maxPain,inst.decimals):'\u2014')+'</b></div>'+
-      '<div class="olt-lvl-row"><span>NET GEX</span><b>'+(lv.netGex!=null?fmtCompact(lv.netGex):'\u2014')+'</b></div>';
+      badge+levelRows;
     card.addEventListener('click', ()=>{ state.active = inst.id; renderAll(); });
     el.appendChild(card);
   });
@@ -881,7 +890,7 @@ function applyOptions(inst, ome){
   lv.oiTopCalls = lv.oiTable.filter(r=>r.callOI>0).sort((a,b)=>b.callOI-a.callOI).slice(0,8);
   lv.oiTopPuts = lv.oiTable.filter(r=>r.putOI>0).sort((a,b)=>b.putOI-a.putOI).slice(0,8);
   // Keep the QQQ candle feed on the same NDX scale the levels were computed on.
-  if(inst.id==='NAS100' && ome.scale_ratio && !inst.userSymbol) inst.multiplier = ome.scale_ratio;
+  if((inst.id==='NAS100' || inst.scaleFromOptions) && ome.scale_ratio && !inst.userSymbol) inst.multiplier = ome.scale_ratio;
   state.tradierMsg[inst.id] = 'From '+esc(ome.proxy_for)+' options exp '+esc(ome.expiry)+' ('+ome.dte+'d), snapshot '+esc(ome.as_of)+' UTC'+(ome.carried_over?' (carried over: no fresh US-hours data on the latest run)':'')+'.';
 }
 
@@ -1284,7 +1293,7 @@ function renderNewsPanel(){
   const m = P.scores.model || {};
   const headlines = (P.geo && P.geo.headlines) || [];
   let html = '<div style="font-size:11px;color:var(--olt-faint);margin-bottom:10px;">Model run '+esc(String(P.scores.generated||'').slice(0,16).replace('T',' '))+' UTC \u00b7 signal needs |score| \u2265 '+(m.signal_threshold||2)+' of \u00b1'+(m.max_score||11)+'</div>';
-  html += '<div class="olt-brief-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">';
+  html += '<div class="olt-brief-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">';
   INSTRUMENTS.forEach(inst=>{
     const key = PIPELINE_KEY[inst.id], d = P.scores.instruments[key];
     if(!d) return;
