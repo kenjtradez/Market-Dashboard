@@ -149,7 +149,27 @@ def read_instrument(instr, ticker, vr, spot, cal, edges, ext_p):
 
     return {"session_start": start.isoformat(), "as_of": now_uk.isoformat(timespec="minutes"), "slot": label,
             "open": o, "price": px, "high": hi, "low": lo, "bands": bands, "feed": ticker,
-            "checkpoint": checkpoint, "sides": sides, "verdict": verdict(instr, checkpoint, sides, now_uk, bands, px, o)}
+            "checkpoint": checkpoint, "sides": sides, "verdict": verdict(instr, checkpoint, sides, now_uk, bands, px, o),
+            "projection": projection(cal, label, o, px, hi, lo, b)}
+
+
+def projection(cal, label, o, px, hi, lo, b):
+    """Projected range to the session close (17:00 New York), from how
+    similar days moved from this time on. A range, not a direction: the
+    middle of the close range is normally within a whisker of the price now.
+    Distances are scaled by today's typical move (mean of the median up and
+    down bands), so they adapt to the current volatility."""
+    p = cal.get("projection", {}).get(label)
+    if not p:
+        return None
+    m = (b["up_median"] + b["down_median"]) / 2 / 100 * o
+    q = dict(zip((10, 25, 50, 75, 90), zip(p["mv_close"], p["mv_high"], p["mv_low"])))
+    return {
+        "n": p["n"],
+        "close": {str(k): px + v[0] * m for k, v in q.items()},
+        "high": {str(k): hi + v[1] * m for k, v in q.items()},   # session high: the high so far, plus any further stretch
+        "low": {str(k): lo - v[2] * m for k, v in q.items()},
+    }
 
 
 def verdict(instr, cp, sides, now_uk, bands, px, o):

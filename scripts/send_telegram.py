@@ -70,6 +70,9 @@ def instrument_block(instr, label, dec, s, vr, model, band):
         elif sd.get("next_band") is None:
             line += f" \u00b7 already through the {'upper' if v['side'] == 'up' else 'lower'} 75th"
         lines.append(line)
+        pj = br.get("projection")
+        if pj:
+            lines.append(f"Projected close {num(pj['close']['50'], dec)} (half of days {num(pj['close']['25'], dec)}\u2013{num(pj['close']['75'], dec)})")
     return "\n".join(lines)
 
 

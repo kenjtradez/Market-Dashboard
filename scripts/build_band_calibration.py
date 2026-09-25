@@ -42,6 +42,7 @@ SLOT_MIN = 30
 # bucket (p >= 1) only occurs in extreme_in.
 EDGES = [0.0, 0.25, 0.5, 0.75, 1.0]
 N_BUCKETS = len(EDGES) + 1
+PROJ_Q = [10, 25, 50, 75, 90]
 FILES = {
     "Gold": "xauusd_m1.parquet",
     "NAS100": "nas100_usd_m1.parquet",
@@ -84,7 +85,7 @@ def build(path):
     counts = s.groupby("sess").k.nunique()
     s = s[s.sess.isin(counts[counts >= 40].index)].copy()   # drop holiday / partial sessions
 
-    sess = s.groupby("sess").agg(o=("open", "first"), H=("high", "max"), L=("low", "min"))
+    sess = s.groupby("sess").agg(o=("open", "first"), H=("high", "max"), L=("low", "min"), C=("close", "last"))
     sess["up"] = (sess.H - sess.o) / sess.o
     sess["dn"] = (sess.o - sess.L) / sess.o
     for side in ("up", "dn"):
@@ -137,14 +138,29 @@ def build(path):
             t["extreme_in"][bx][0] += 1
             t["extreme_in"][bx][1] += int(final[i] <= run[i] + 1e-12)
         tables[side] = side_t
-    return {"sessions": int(len(sess)), "first": str(sess.index.min().date()), "last": str(sess.index.max().date()),
+
+    # Projected range: from each slot, where the session closed and how far
+    # beyond the high/low so far it stretched,
+    # in units of that day's typical move m = mean(up median, down median).
+    # Quantiles only; no direction is implied (the median close move is ~0).
+    m = (s["up_med"] + s["dn_med"]) / 2 * s["o"]
+    s["mv_close"] = (s["C"] - s["close"]) / m
+    # Extra distance beyond the high / low made so far (0 if never exceeded)
+    s["mv_high"] = (s["H"] - s["cumH"]).clip(lower=0) / m
+    s["mv_low"] = (s["cumL"] - s["L"]).clip(lower=0) / m
+    proj = {}
+    for lab, g in s.groupby("label"):
+        proj[lab] = {"n": int(len(g))}
+        for col in ("mv_close", "mv_high", "mv_low"):
+            proj[lab][col] = [round(float(v), 4) for v in np.percentile(g[col], PROJ_Q)]
+    return {"projection": proj, "sessions": int(len(sess)), "first": str(sess.index.min().date()), "last": str(sess.index.max().date()),
             "extended_at_10": {"up": len(ext["up"]), "dn": len(ext["dn"])}, "tables": tables}
 
 
 def main():
     src = sys.argv[1] if len(sys.argv) > 1 else "."
     out = {"built": datetime.now().isoformat(timespec="minutes"), "lookback": LOOKBACK, "slot_minutes": SLOT_MIN,
-           "extended_p": EXTENDED_P, "edges": EDGES, "instruments": {}}
+           "extended_p": EXTENDED_P, "edges": EDGES, "proj_quantiles": PROJ_Q, "instruments": {}}
     for instr, fname in FILES.items():
         res = build(os.path.join(src, fname))
         out["instruments"][instr] = res
