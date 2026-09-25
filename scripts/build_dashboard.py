@@ -369,7 +369,7 @@ def band_read_html(instr, br):
               <div class="band-ladder">{marks}{ticks}</div>
               <div class="band-legend"><span><i class="lg-range"></i>today's range</span><span><i class="lg-chk"></i>10:00 London</span><span><i class="lg-now"></i>now</span></div>
               {f'<div class="band-chk-line">{escape(chk_txt)}</div>' if chk_txt else ''}
-              <div class="band-foot">Odds from {hist.get("sessions", "?")} sessions ({escape(str(hist.get("first", "")))} to {escape(str(hist.get("last", "")))}) of minute data, 95% range in brackets. Bands = session open ± median / 75th-percentile move of the last 105 sessions. Not a signal and not part of the score.</div>
+              <div class="band-foot">Odds from {hist.get("sessions", "?")} sessions ({escape(str(hist.get("first", "")))} to {escape(str(hist.get("last", "")))}) of minute data, 95% range in brackets. Bands = session open ± median / 75th-percentile move of the last 75 sessions. Not a signal and not part of the score.</div>
             </div>"""
 
 
@@ -494,7 +494,7 @@ def run():
         <div class="gold-forecast-card">
           <div class="gold-fc-header">
             <span class="gold-fc-label">Gold Next-Day Vol Forecast</span>
-            <span class="gold-fc-source">105-day realised vol, calibrated to the Vol &amp; Range Pine script</span>
+            <span class="gold-fc-source">75-day realised vol, same lookback as the KenJTradez indicator</span>
           </div>
           <div class="gold-fc-body">
             <div class="gold-fc-metric">
