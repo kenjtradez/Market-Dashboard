@@ -30,6 +30,7 @@ SERIES = {
     "VIX":           [("fred", "VIXCLS"), ("yf", "^VIX")],
     "VXN":           [("fred", "VXNCLS"), ("yf", "^VXN")],
     "GVZ":           [("fred", "GVZCLS"), ("yf", "^GVZ")],
+    "RVX":           [("fred", "RVXCLS")],   # Russell 2000 vol; not on Yahoo
     "SKEW":          [("yf", "^SKEW")],
     "Dollar Index":  [("yf", "DX-Y.NYB")],
     "Broad USD":     [("fred", "DTWEXBGS")],

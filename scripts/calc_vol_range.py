@@ -14,6 +14,8 @@ SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 TICKERS = {
     "Gold":   {"ticker": "GC=F",     "name": "Gold Futures"},
     "NAS100": {"ticker": "NQ=F",     "name": "Nasdaq 100 Futures"},
+    "SPX500": {"ticker": "ES=F",     "name": "E-mini S&P 500 Futures"},
+    "US2000": {"ticker": "RTY=F",    "name": "E-mini Russell 2000 Futures"},
     "EURUSD": {"ticker": "6E=F",     "name": "Euro FX Futures"},
     "USDJPY": {"ticker": "6J=F",     "name": "Japanese Yen Futures (inverted)", "invert": True},
 }
@@ -31,6 +33,8 @@ CORRECTIONS = {
     "EURUSD": {"vol": 1.00, "hlMed": 0.9806, "hl75": 1.0077, "ocMed": 0.9904, "oc75": 1.0111},
     "NAS100": {"vol": 1.00, "hlMed": 0.9911, "hl75": 1.0127, "ocMed": 0.9917, "oc75": 1.0336},
     "USDJPY": {"vol": 1.00, "hlMed": 1.0, "hl75": 1.0, "ocMed": 1.0, "oc75": 1.0},  # not calibrated to the Pine script yet
+    "SPX500": {"vol": 1.00, "hlMed": 1.0, "hl75": 1.0, "ocMed": 1.0, "oc75": 1.0},  # not calibrated to the Pine script yet
+    "US2000": {"vol": 1.00, "hlMed": 1.0, "hl75": 1.0, "ocMed": 1.0, "oc75": 1.0},  # not calibrated to the Pine script yet
 }
 
 ASSET_ALIASES = {

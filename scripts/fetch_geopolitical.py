@@ -35,6 +35,8 @@ INSTRUMENT_TERMS = {
     "Gold":   ["gold", "xau", "xau/usd", "bullion", "precious metal", "precious metals"],
     "NAS100": ["nasdaq", "nasdaq 100", "tech stocks", "big tech", "semiconductor", "chip stocks", "qqq"],
     "EURUSD": ["euro", "eur/usd", "eurusd", "ecb", "eurozone", "lagarde"],
+    "SPX500": ["s&p 500", "s&p", "wall street", "spx", "spy"],
+    "US2000": ["russell 2000", "russell", "small caps", "small-cap", "small cap", "iwm"],
     "USDJPY": ["yen", "usd/jpy", "usdjpy", "boj", "bank of japan", "ueda"],
 }
 

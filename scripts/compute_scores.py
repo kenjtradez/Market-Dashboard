@@ -16,16 +16,23 @@ from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-INSTRUMENTS = ["Gold", "NAS100", "EURUSD", "USDJPY"]
+INSTRUMENTS = ["Gold", "NAS100", "SPX500", "US2000", "EURUSD", "USDJPY"]
 MAX_POSITIONING, MAX_MACRO, MAX_COT = 4, 5, 2
 MAX_SCORE = MAX_POSITIONING + MAX_MACRO + MAX_COT
 SIGNAL_THRESHOLD = 2
 # "High-probability" needs components to agree AND a total of at least this.
 CONFLUENCE_MIN = 4
-OPTIONS_MAX_AGE_HOURS = 96  # OI is published once a day; a weekend-old snapshot is still usable
+OPTIONS_MAX_AGE_HOURS = 96
+# PCR is judged against the ETF's own history: index ETFs are structurally
+# put-heavy (hedging) and GLD call-heavy, so fixed 0.7 / 1.3 levels scored
+# NAS100 -2 and gold +2 almost every day. Needs this many daily readings.
+PCR_MIN_HISTORY = 20
+PCR_EXTREME_PCT = 20  # OI is published once a day; a weekend-old snapshot is still usable
 
 # Instrument-specific implied-vol index. EURUSD has none since CBOE retired EVZ.
-VOL_INDEX = {"Gold": "GVZ", "NAS100": "VXN", "EURUSD": None, "USDJPY": None}
+VOL_INDEX = {"Gold": "GVZ", "NAS100": "VXN", "SPX500": "VIX", "US2000": "RVX", "EURUSD": None, "USDJPY": None}
+# (low-fear, high-fear) levels per vol index. RVX runs structurally higher.
+VOL_LEVELS = {"VIX": (15, 25), "VXN": (15, 30), "GVZ": (15, 30), "RVX": (18, 32)}
 # USD/JPY rises when the dollar is strong, so the DXY point flips sign for it.
 USD_BASE = {"USDJPY"}
 
@@ -60,7 +67,11 @@ def options_usable(ome):
     return bool(ome) and "error" not in ome and age is not None and age <= OPTIONS_MAX_AGE_HOURS
 
 
-def score_positioning(ome):
+def percentile_rank(values, x):
+    return sum(1 for v in values if v <= x) / len(values) * 100
+
+
+def score_positioning(ome, pcr_hist=None):
     if not options_usable(ome):
         why = (ome or {}).get("error") or f"no usable snapshot (last {(ome or {}).get('as_of', 'never')})"
         return 0, {"options": why}
@@ -68,12 +79,18 @@ def score_positioning(ome):
     score, details = 0, {}
     pcr = ome.get("put_call_ratio")
     if pcr is not None:
-        if pcr < 0.7:
-            score += 2; details["pcr"] = f"{pcr:.2f} (call-heavy, +2)"
-        elif pcr > 1.3:
-            score -= 2; details["pcr"] = f"{pcr:.2f} (put-heavy, -2)"
+        today = str(ome.get("as_of", ""))[:10]
+        past = [r["pcr"] for r in (pcr_hist or []) if r["date"] != today]
+        if len(past) < PCR_MIN_HISTORY:
+            details["pcr"] = f"{pcr:.2f} (building history {len(past)}/{PCR_MIN_HISTORY}, not scored)"
         else:
-            details["pcr"] = f"{pcr:.2f} (neutral)"
+            rank = percentile_rank(past, pcr)
+            if rank <= PCR_EXTREME_PCT:
+                score += 2; details["pcr"] = f"{pcr:.2f}, {rank:.0f}th pct of its {len(past)}d history (call-heavy, +2)"
+            elif rank >= 100 - PCR_EXTREME_PCT:
+                score -= 2; details["pcr"] = f"{pcr:.2f}, {rank:.0f}th pct of its {len(past)}d history (put-heavy, -2)"
+            else:
+                details["pcr"] = f"{pcr:.2f}, {rank:.0f}th pct of its {len(past)}d history (neutral)"
 
     skew = ome.get("skew_percent")
     if skew is not None:
@@ -129,9 +146,9 @@ def score_macro(macro, instr=None):
     vol_key = VOL_INDEX.get(instr) if instr else "VIX"
     if vol_key:
         vol = live(macro, vol_key)
-        hi = 25 if vol_key == "VIX" else 30
+        lo, hi = VOL_LEVELS[vol_key]
         if vol is not None:
-            if vol < 15:
+            if vol < lo:
                 score += 1; details[vol_key] = f"{vol} (low fear, +1)"
             elif vol > hi:
                 score -= 1; details[vol_key] = f"{vol} (high fear, -1)"
@@ -185,6 +202,7 @@ def run():
     macro_data = load("fred_macro.json").get("series", {})
     ome_all = load("ome_data.json").get("instruments", {})
     cot_all = load("cot_data.json").get("instruments", {})
+    pcr_hist = load("pcr_history.json")
 
     general_score, general_details = score_macro(macro_data)
     print(f"General macro: {general_score} {general_details}")
@@ -192,7 +210,7 @@ def run():
     per_instrument = {}
     for instr in INSTRUMENTS:
         ome = ome_all.get(instr, {})
-        pos, pos_d = score_positioning(ome)
+        pos, pos_d = score_positioning(ome, pcr_hist.get(instr))
         mac, mac_d = score_macro(macro_data, instr)
         cot, cot_d = score_cot(cot_all.get(instr))
         total = pos + mac + cot

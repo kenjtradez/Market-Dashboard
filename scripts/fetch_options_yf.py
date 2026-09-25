@@ -25,12 +25,15 @@ PRICE_CANDIDATES = {
     "Gold":   [("http_json", "https://api.gold-api.com/price/XAU", "price"), ("yf", "GC=F")],
     "NAS100": [("yf", "^NDX"), ("yf", "NQ=F")],
     "EURUSD": [("yf", "EURUSD=X")],
+    "SPX500": [("yf", "^GSPC"), ("yf", "ES=F")],
+    "US2000": [("yf", "^RUT"), ("yf", "RTY=F")],
 }
-INSTRUMENTS = {"Gold": "GLD", "NAS100": "QQQ", "EURUSD": "FXE"}
+INSTRUMENTS = {"Gold": "GLD", "NAS100": "QQQ", "EURUSD": "FXE", "SPX500": "SPY", "US2000": "IWM"}
 # Instruments with no usable options proxy (FXY is thinner than FXE): only a
 # spot price is recorded so price-based sections still work.
 PRICE_ONLY = {"USDJPY": [("yf", "JPY=X")]}
 MIN_DTE, MAX_DTE = 3, 45
+NEAR_MONEY = 0.10
 RISK_FREE = 0.05
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
@@ -42,7 +45,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 # effectively never passes. A PCR of 13 on 5.6k contracts once drove EUR/USD
 # to SHORT on noise.
 MIN_OI_COVERAGE = 0.25
-MIN_TOTAL_OI = {"GLD": 100_000, "QQQ": 200_000, "FXE": 50_000}
+MIN_TOTAL_OI = {"GLD": 100_000, "QQQ": 200_000, "FXE": 50_000, "SPY": 300_000, "IWM": 200_000}
 
 
 def pick_expiry(t):
@@ -103,11 +106,18 @@ def compute_metrics(chain, spot, dte):
     call_oi = sum(v["call"] for v in by_strike.values())
     put_oi = sum(v["put"] for v in by_strike.values())
 
+    # Max pain: the settlement price that minimises what option holders are
+    # paid. Calls pay when settlement k is ABOVE their strike, puts when it is
+    # BELOW. (The earlier version had these swapped.)
     max_pain = min(strikes, key=lambda k: sum(
-        (s - k) * v["call"] if s > k else (k - s) * v["put"] for s, v in by_strike.items()))
-    call_wall = max(strikes, key=lambda s: by_strike[s]["call"])
-    put_wall = max(strikes, key=lambda s: by_strike[s]["put"])
-    magnet = max(strikes, key=lambda s: by_strike[s]["call"] + by_strike[s]["put"])
+        (k - s) * v["call"] if k > s else (s - k) * v["put"] for s, v in by_strike.items()))
+    # Walls and magnet only from strikes within 10% of spot: index ETFs carry
+    # huge deep-OTM hedge puts (SPY 525 with the ETF at 767) that would
+    # otherwise become a "wall" nowhere near where price trades.
+    near = [s for s in strikes if abs(s / spot - 1) <= NEAR_MONEY] or strikes
+    call_wall = max(near, key=lambda s: by_strike[s]["call"])
+    put_wall = max(near, key=lambda s: by_strike[s]["put"])
+    magnet = max(near, key=lambda s: by_strike[s]["call"] + by_strike[s]["put"])
 
     def nearest_iv(kind, target, n=1):
         pool = sorted((c for c in contracts if c["type"] == kind and c["iv"]), key=lambda c: abs(c["strike"] - target))
@@ -128,11 +138,29 @@ def compute_metrics(chain, spot, dte):
             continue
         v = g * c["oi"] * 100 * spot * spot * 0.01
         gex[c["strike"]] = gex.get(c["strike"], 0) + (v if c["type"] == "call" else -v)
-    flip, cum = None, 0.0
-    for s in sorted(gex):
-        prev, cum = cum, cum + gex[s]
-        if flip is None and prev < 0 <= cum:
-            flip = s
+    # Gamma flip: the price at which total dealer gamma changes sign,
+    # re-pricing every contract's gamma at each hypothetical price within
+    # +/-10% of spot; the crossing nearest spot wins. None if it never flips.
+    # (Summing per-strike GEX from the lowest strike found spurious crossings
+    # far out in the tails.)
+    live = [c for c in contracts if c["oi"] and c["iv"]]
+
+    def total_gex(px):
+        tot = 0.0
+        for c in live:
+            g = bs_gamma(px, c["strike"], T, c["iv"])
+            if g:
+                tot += (g if c["type"] == "call" else -g) * c["oi"]
+        return tot
+
+    grid = [spot * (1 + i / 200) for i in range(-20, 21)]
+    vals = [total_gex(px) for px in grid]
+    flip = None
+    for (a, va), (b, vb) in zip(zip(grid, vals), zip(grid[1:], vals[1:])):
+        if va == 0 or va * vb < 0:
+            x = a + (b - a) * (abs(va) / (abs(va) + abs(vb))) if va != vb else a
+            if flip is None or abs(x - spot) < abs(flip - spot):
+                flip = round(x, 2)
 
     atm_iv = nearest_iv("call", spot) or nearest_iv("put", spot)
     move = spot * atm_iv * math.sqrt(1 / 365) if atm_iv else None
@@ -205,6 +233,30 @@ def fetch_instrument(instr, etf):
     return out
 
 
+PCR_HISTORY_MAX = 250
+
+
+def log_pcr(results):
+    """Keep one put/call reading per ETF per day in data/pcr_history.json, so
+    scoring can compare today's PCR with that ETF's own normal level. The
+    file is carried between runs by the Actions cache."""
+    path = os.path.join(DATA_DIR, "pcr_history.json")
+    hist = {}
+    if os.path.exists(path):
+        with open(path) as f:
+            hist = json.load(f)
+    today = date.today().isoformat()
+    for instr, d in results.items():
+        if "error" in d or d.get("carried_over") or d.get("put_call_ratio") is None:
+            continue
+        rows = [r for r in hist.get(instr, []) if r["date"] != today]
+        rows.append({"date": today, "pcr": d["put_call_ratio"], "expiry": d.get("expiry")})
+        hist[instr] = rows[-PCR_HISTORY_MAX:]
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(hist, f)
+
+
 def run():
     print("Fetching options data from Yahoo Finance...")
     out_path = os.path.join(DATA_DIR, "ome_data.json")
@@ -232,6 +284,8 @@ def run():
                 # sections (vol/range ideas) still work.
                 px, src = fetch_price(PRICE_CANDIDATES[instr])
                 results[instr] = {"error": str(e), "underlying_price": px, "scale_source": src}
+
+    log_pcr(results)
 
     for instr, candidates in PRICE_ONLY.items():
         px, src = fetch_price(candidates)
