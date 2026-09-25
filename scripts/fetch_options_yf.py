@@ -33,10 +33,13 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 # Yahoo zeroes most open interest outside US market hours, so a chain is
 # only trusted when enough strikes carry OI and the total is meaningful.
-# Otherwise the previous good snapshot is kept (see run()). FXE rarely
-# passes: its options are too thin to say anything about EUR/USD.
+# Otherwise the previous good snapshot is kept (see run()). Minimums are per
+# ETF, sized to each market: a normal front-month GLD chain carries ~500k OI
+# and QQQ ~900k. FXE's entire chain is a few thousand contracts, so it
+# effectively never passes. A PCR of 13 on 5.6k contracts once drove EUR/USD
+# to SHORT on noise.
 MIN_OI_COVERAGE = 0.25
-MIN_TOTAL_OI = 5000
+MIN_TOTAL_OI = {"GLD": 100_000, "QQQ": 200_000, "FXE": 50_000}
 
 
 def pick_expiry(t):
@@ -61,8 +64,9 @@ def pick_expiry(t):
             continue
         if best is None or oi > best[3]:
             best = (d, chain, (date.fromisoformat(d) - today).days, oi)
-    if best is None or best[3] < MIN_TOTAL_OI:
-        raise RuntimeError(f"open interest too thin or unpublished (max {best_seen} in {MIN_DTE}-{MAX_DTE}d window)")
+    min_oi = MIN_TOTAL_OI.get(t.ticker, 100_000)
+    if best is None or best[3] < min_oi:
+        raise RuntimeError(f"open interest too thin or unpublished (max {best_seen} in {MIN_DTE}-{MAX_DTE}d window, need {min_oi:,})")
     return best[0], best[1], max(best[2], 0.5)
 
 
@@ -217,7 +221,7 @@ def run():
             ok = False
             print(f"  {instr} ({etf}): ERROR {e}")
             prev = previous.get(instr, {})
-            if "error" not in prev and prev.get("as_of"):
+            if "error" not in prev and prev.get("as_of") and prev.get("total_oi_used", 0) >= MIN_TOTAL_OI.get(etf, 100_000):
                 results[instr] = dict(prev, carried_over=True)
                 print(f"    kept previous snapshot from {prev['as_of']}")
             else:
