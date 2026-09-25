@@ -15,9 +15,12 @@ TICKERS = {
     "Gold":   {"ticker": "GC=F",     "name": "Gold Futures"},
     "NAS100": {"ticker": "NQ=F",     "name": "Nasdaq 100 Futures"},
     "EURUSD": {"ticker": "6E=F",     "name": "Euro FX Futures"},
+    "USDJPY": {"ticker": "6J=F",     "name": "Japanese Yen Futures (inverted)", "invert": True},
 }
 # Futures rather than spot/cash tickers: their sessions are closest to the
-# ~23h CFD sessions, and Yahoo's EURUSD=X daily bars report Close ~= Open.
+# ~23h CFD sessions, and Yahoo's EURUSD=X / JPY=X daily bars report
+# Close ~= Open. Yen futures quote JPY/USD, so they are inverted to USD/JPY
+# (a yen low is a USD/JPY high).
 
 # Same lookback and calibration as the KenJTradez Vol & Range Forecast Pine
 # script (factors back-solved against it on 2026-09-17). The tracker tab uses
@@ -27,6 +30,7 @@ CORRECTIONS = {
     "Gold":   {"vol": 1.00, "hlMed": 1.0064, "hl75": 1.0096, "ocMed": 1.0124, "oc75": 0.9973},
     "EURUSD": {"vol": 1.00, "hlMed": 0.9806, "hl75": 1.0077, "ocMed": 0.9904, "oc75": 1.0111},
     "NAS100": {"vol": 1.00, "hlMed": 0.9911, "hl75": 1.0127, "ocMed": 0.9917, "oc75": 1.0336},
+    "USDJPY": {"vol": 1.00, "hlMed": 1.0, "hl75": 1.0, "ocMed": 1.0, "oc75": 1.0},  # not calibrated to the Pine script yet
 }
 
 ASSET_ALIASES = {
@@ -85,6 +89,11 @@ def calc_from_yfinance():
 
         if df.empty:
             continue
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        if info.get("invert"):
+            df = pd.DataFrame({"Open": 1 / df["Open"], "High": 1 / df["Low"],
+                               "Low": 1 / df["High"], "Close": 1 / df["Close"]}, index=df.index)
 
         df = df.tail(LOOKBACK)
         if len(df) < 20:

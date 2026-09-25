@@ -14,7 +14,7 @@ from build_dashboard import generate_bottom_line  # shared wording with the dash
 
 DATA_DIR = os.path.join(SCRIPT_DIR, "..", "data")
 UK = ZoneInfo("Europe/London")
-INSTRUMENTS = [("Gold", "XAU/USD", 2), ("NAS100", "NAS100", 1), ("EURUSD", "EUR/USD", 5)]
+INSTRUMENTS = [("Gold", "XAU/USD", 2), ("NAS100", "NAS100", 1), ("EURUSD", "EUR/USD", 5), ("USDJPY", "USD/JPY", 3)]
 MAX_LEN = 4000  # Telegram limit is 4096
 ARROW = {"LONG": "▲", "SHORT": "▼", "NEUTRAL": "◆"}
 
@@ -31,7 +31,7 @@ def num(v, d):
     return "—" if v is None else f"{v:,.{d}f}"
 
 
-def instrument_block(instr, label, dec, s, vr, model):
+def instrument_block(instr, label, dec, s, vr, model, band):
     ts = s.get("total_score")
     sig = s.get("signal", "N/A")
     ome = s.get("ome_data", {})
@@ -55,6 +55,20 @@ def instrument_block(instr, label, dec, s, vr, model):
     cot = s.get("cot_details", {}).get("cot")
     if cot:
         lines.append(f"COT: {escape(cot)}")
+    br = band.get(instr) or {}
+    if br.get("verdict"):
+        v = br["verdict"]
+        sd = br["sides"][v["side"]]
+        line = f"Bands {escape(br['as_of'][11:16])}: <b>{escape(v['status'])}</b>"
+        if sd.get("reach") and sd.get("base"):
+            name = "med" if sd["next_band"] == "med" else "75th"
+            line += (f" \u00b7 {'up' if v['side'] == 'up' else 'down'} {name} {num(sd['level'], dec)}: "
+                     f"{sd['reach']['p']}% [{sd['reach']['lo']}\u2013{sd['reach']['hi']}] vs {sd['base']['p']}% normal")
+        elif sd.get("next_band") is None:
+            line += f" \u00b7 {'upper' if v['side'] == 'up' else 'lower'} 75th already hit"
+        if sd.get("extreme_in"):
+            line += f" \u00b7 extreme in {sd['extreme_in']['p']}%"
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -64,12 +78,13 @@ def build_message(page_url):
         return None
     model = scores.get("model", {})
     vr = load("vol_range.json").get("instruments", {})
+    band = load("band_read.json").get("instruments", {})
     now = datetime.now(UK)
 
     parts = [f"<b>\U0001f4ca Market Brief</b> — {now:%a %d %b %H:%M} UK",
              f"Signal needs |score| ≥ {model.get('signal_threshold', 2)} of ±{model.get('max_score', 11)}", ""]
     for instr, label, dec in INSTRUMENTS:
-        parts.append(instrument_block(instr, label, dec, scores["instruments"].get(instr, {}), vr, model))
+        parts.append(instrument_block(instr, label, dec, scores["instruments"].get(instr, {}), vr, model, band))
         parts.append("")
 
     events = []

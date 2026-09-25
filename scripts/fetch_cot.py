@@ -6,6 +6,9 @@ Speculator group per market:
   - Gold:          Legacy report, Non-Commercial (088691, COMEX gold)
   - EURUSD:        Traders in Financial Futures, Leveraged Funds (099741, CME Euro FX)
   - NAS100:        Traders in Financial Futures, Leveraged Funds (209742, CME E-mini Nasdaq-100)
+  - USDJPY:        Traders in Financial Futures, Leveraged Funds (097741, CME Japanese Yen).
+                   The contract is JPY/USD, so the score is inverted: crowded
+                   long yen is a contrarian case for USD/JPY going UP.
 
 Markets are looked up by contract code, not name — CFTC renames markets
 (e.g. "NASDAQ-100 STOCK INDEX (MINI)" became "NASDAQ MINI" in 2022), and a
@@ -40,6 +43,11 @@ MARKETS = {
         "dataset": "gpe5-46if", "code": "209742",
         "long": "lev_money_positions_long", "short": "lev_money_positions_short",
         "group": "Leveraged Funds (speculators)",
+    },
+    "USDJPY": {
+        "dataset": "gpe5-46if", "code": "097741",
+        "long": "lev_money_positions_long", "short": "lev_money_positions_short",
+        "group": "Leveraged Funds in yen futures", "invert": True,
     },
 }
 
@@ -95,8 +103,11 @@ def analyse(cfg, rows):
     else:
         signal, score = "NEUTRAL", 0
 
+    if cfg.get("invert"):
+        score = -score
     return {
         "date": latest["date"],
+        "inverted": bool(cfg.get("invert")),
         "market": rows[0].get("market_and_exchange_names", ""),
         "group": cfg["group"],
         "open_interest": latest["oi"],
