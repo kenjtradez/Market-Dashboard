@@ -1182,7 +1182,7 @@ function renderBandRead(){
     return;
   }
   const d = inst.decimals, v = br.verdict, b = br.bands, cp = br.checkpoint;
-  const cls = v.status.indexOf('EXTENDED')===0 ? 'bull' : 'neu';
+  const cls = v.status.indexOf('STRETCHED')===0 ? 'bull' : 'neu';
   const cell = (label, value, color) => '<div><div style="font-size:9.5px;color:var(--olt-faint);letter-spacing:.03em;margin-bottom:2px;">'+label+'</div><div style="font-size:13px;font-weight:600;'+(color?('color:'+color+';'):'')+'">'+value+'</div></div>';
   const odds = side => {
     const sd = br.sides[side];

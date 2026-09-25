@@ -61,14 +61,14 @@ def instrument_block(instr, label, dec, s, vr, model, band):
         v = br["verdict"]
         sd = br["sides"][v["side"]]
         line = f"Bands {escape(br['as_of'][11:16])}: <b>{escape(v['status'])}</b>"
-        if sd.get("reach") and sd.get("base"):
-            name = "med" if sd["next_band"] == "med" else "75th"
-            line += (f" \u00b7 {'up' if v['side'] == 'up' else 'down'} {name} {num(sd['level'], dec)}: "
-                     f"{sd['reach']['p']}% [{sd['reach']['lo']}\u2013{sd['reach']['hi']}] vs {sd['base']['p']}% normal")
-        elif sd.get("next_band") is None:
-            line += f" \u00b7 {'upper' if v['side'] == 'up' else 'lower'} 75th already hit"
         if sd.get("extreme_in"):
-            line += f" \u00b7 extreme in {sd['extreme_in']['p']}%"
+            line += f" \u00b7 new {'high' if v['side'] == 'up' else 'low'} later on {100 - sd['extreme_in']['p']}% of similar days"
+        if sd.get("reach") and sd.get("base"):
+            name = "median" if sd["next_band"] == "med" else "75th"
+            line += (f" \u00b7 reach {'upper' if v['side'] == 'up' else 'lower'} {name} {num(sd['level'], dec)}: "
+                     f"{sd['reach']['p']}% (normal day {sd['base']['p']}%)")
+        elif sd.get("next_band") is None:
+            line += f" \u00b7 already through the {'upper' if v['side'] == 'up' else 'lower'} 75th"
         lines.append(line)
     return "\n".join(lines)
 
