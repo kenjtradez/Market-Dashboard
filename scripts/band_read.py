@@ -8,7 +8,7 @@ minute data. This script only looks today's position up in those tables.
 
   - Session: 17:00 New York to 17:00 New York.
   - Bands: session open +/- the median / 75th-percentile up and down moves
-    (from vol_range.json: the trailing 105 sessions).
+    (from vol_range.json: the trailing 75 sessions, as in the indicator).
   - Position: 0 = at the open, 1 = at the next band not reached yet.
   - Extended at 10:00: the 10:00 London price was >= 75% of the way to a
     median band, and further than toward the other side.

@@ -12,7 +12,7 @@ Definitions (shared with scripts/band_read.py):
   - Session: 17:00 New York to 17:00 New York (the FX/CFD trading day).
   - Bands: session open +/- the median and 75th percentile of the up
     excursion (High-Open)/Open and down excursion (Open-Low)/Open over the
-    previous 105 sessions. Walk-forward: a session never sees itself.
+    previous 75 sessions (the indicator default). Walk-forward: a session never sees itself.
   - Slots: 30-minute steps from the session start, labelled by the London
     clock time at the END of the slot ("10:00" = everything up to 10:00).
   - Next band: the first band on that side that the session's running
@@ -35,7 +35,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-LOOKBACK = 105
+LOOKBACK = 75   # same as the KenJTradez indicator default
 EXTENDED_P = 0.75
 SLOT_MIN = 30
 # Bucket upper edges. Bucket 0 = back through the open (p < 0); the last

@@ -24,10 +24,12 @@ TICKERS = {
 # Close ~= Open. Yen futures quote JPY/USD, so they are inverted to USD/JPY
 # (a yen low is a USD/JPY high).
 
-# Same lookback and calibration as the KenJTradez Vol & Range Forecast Pine
-# script (factors back-solved against it on 2026-09-17). The tracker tab uses
-# these same numbers so the two views agree.
-LOOKBACK = 105
+# Same lookback as the KenJTradez TradingView indicator (75 days). The small
+# correction factors were back-solved against the indicator on 2026-09-17,
+# when both used 105 days; they are within ~3% of 1 and should be re-checked
+# against a fresh indicator reading at 75 days. The tracker tab uses these
+# same numbers so the two views agree.
+LOOKBACK = 75   # same as the KenJTradez indicator default
 CORRECTIONS = {
     "Gold":   {"vol": 1.00, "hlMed": 1.0064, "hl75": 1.0096, "ocMed": 1.0124, "oc75": 0.9973},
     "EURUSD": {"vol": 1.00, "hlMed": 0.9806, "hl75": 1.0077, "ocMed": 0.9904, "oc75": 1.0111},
