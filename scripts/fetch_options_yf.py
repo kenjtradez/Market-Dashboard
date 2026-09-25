@@ -27,6 +27,9 @@ PRICE_CANDIDATES = {
     "EURUSD": [("yf", "EURUSD=X")],
 }
 INSTRUMENTS = {"Gold": "GLD", "NAS100": "QQQ", "EURUSD": "FXE"}
+# Instruments with no usable options proxy (FXY is thinner than FXE): only a
+# spot price is recorded so price-based sections still work.
+PRICE_ONLY = {"USDJPY": [("yf", "JPY=X")]}
 MIN_DTE, MAX_DTE = 3, 45
 RISK_FREE = 0.05
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -229,6 +232,10 @@ def run():
                 # sections (vol/range ideas) still work.
                 px, src = fetch_price(PRICE_CANDIDATES[instr])
                 results[instr] = {"error": str(e), "underlying_price": px, "scale_source": src}
+
+    for instr, candidates in PRICE_ONLY.items():
+        px, src = fetch_price(candidates)
+        results[instr] = {"error": "no liquid options proxy", "underlying_price": px, "scale_source": src}
 
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(out_path, "w") as f:

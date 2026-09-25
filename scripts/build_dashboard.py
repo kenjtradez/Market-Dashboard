@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..")
-INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
+INSTRUMENTS = ["Gold", "NAS100", "EURUSD", "USDJPY"]
 DASH = "\u2014"
 UK = ZoneInfo("Europe/London")
 
@@ -22,6 +22,9 @@ CORRELATIONS = {
     "EURUSD":  {"moves_with": {"GBP/USD": 0.85, "Gold": 0.61, "AUD/USD": 0.78},
                 "hedges":     {"USD/CHF": -0.90, "USD/JPY": -0.65, "DXY": -0.95},
                 "driven_by":  "ECB/Fed differential, risk sentiment, USD"},
+    "USDJPY":  {"moves_with": {"US 10Y yield": 0.70, "EUR/JPY": 0.75, "NAS100": 0.40},
+                "hedges":     {"Gold": -0.35, "EUR/USD": -0.45, "VIX": -0.40},
+                "driven_by":  "US-Japan rate gap, BoJ policy, risk appetite (carry)"},
 }
 
 
@@ -310,6 +313,60 @@ def generate_trade_idea(instr, d, ome_raw):
             return f"Neutral: fade pushes toward {fmt(cw)} (sell) and treat {fmt(pw)} as a floor (buy). Low conviction \u2014 small size only."
         return f"Neutral bias \u2014 no strong directional edge. Wait for a clear break of the range."
 
+BAND_DECIMALS = {"Gold": 2, "NAS100": 1, "EURUSD": 5, "USDJPY": 3}
+
+
+def band_read_html(instr, br):
+    """Band Read card: status, verdict, and a ladder of today's bands with
+    the open, the 10:00 London checkpoint and the current price marked."""
+    if not br or "error" in br:
+        why = escape((br or {}).get("error", "not available"))
+        return f'<div class="band-card"><div class="band-head"><span class="band-label">Band Read</span><span class="band-status">{why}</span></div></div>'
+    dec = BAND_DECIMALS.get(instr, 2)
+    b, v, cp = br["bands"], br["verdict"], br["checkpoint"]
+    lo_edge, hi_edge = b["dn_p75"], b["up_p75"]
+    span = (hi_edge - lo_edge) or 1
+
+    def pos(x):
+        return max(0.0, min(100.0, (x - lo_edge) / span * 100))
+
+    ticks = ""
+    for key, name in (("dn_p75", "75th"), ("dn_med", "med"), ("up_med", "med"), ("up_p75", "75th")):
+        ticks += (f'<div class="band-tick" style="left:{pos(b[key]):.1f}%"><span>{name}</span>'
+                  f'<b>{b[key]:,.{dec}f}</b></div>')
+    ticks += f'<div class="band-tick band-open" style="left:{pos(br["open"]):.1f}%"><span>open</span><b>{br["open"]:,.{dec}f}</b></div>'
+    marks = f'<div class="band-range" style="left:{pos(br["low"]):.1f}%;width:{max(0.5, pos(br["high"]) - pos(br["low"])):.1f}%"></div>'
+    if cp.get("available"):
+        marks += f'<div class="band-mark band-chk" style="left:{pos(cp["price"]):.1f}%" title="10:00 London {cp["price"]:,.{dec}f}"></div>'
+    marks += f'<div class="band-mark band-now" style="left:{pos(br["price"]):.1f}%" title="now {br["price"]:,.{dec}f}"></div>'
+
+    status_cls = "band-ext" if v["status"].startswith("EXTENDED") else ("band-faded" if "FADED" in v["status"] else "")
+    chk_txt = ""
+    if cp.get("available"):
+        side = cp.get("extended")
+        lean = "upper" if cp["p_up"] >= cp["p_dn"] else "lower"
+        far = max(cp["p_up"], cp["p_dn"], 0)
+        where = (f"already through the {lean} median band" if far >= 1
+                 else f"{round(far * 100)}% of the way to the {lean} median band")
+        chk_txt = (f'10:00 London: {cp["price"]:,.{dec}f} — {where}'
+                   + (f' — extended {"↑" if side == "up" else "↓"}' if side else " — not extended"))
+    hist = br.get("history", {})
+    return f"""
+            <div class="band-card">
+              <div class="band-head">
+                <span class="band-label">Band Read</span>
+                <span class="band-status {status_cls}">{escape(v["status"])}</span>
+                <span class="band-asof">as of {escape(br["as_of"][11:16])} London &middot; price {br["price"]:,.{dec}f}</span>
+              </div>
+              <div class="band-headline">{escape(v["headline"])}</div>
+              <p class="band-text">{escape(v["text"])}</p>
+              <div class="band-ladder">{marks}{ticks}</div>
+              <div class="band-legend"><span><i class="lg-range"></i>today's range</span><span><i class="lg-chk"></i>10:00 London</span><span><i class="lg-now"></i>now</span></div>
+              {f'<div class="band-chk-line">{escape(chk_txt)}</div>' if chk_txt else ''}
+              <div class="band-foot">Odds from {hist.get("sessions", "?")} sessions ({escape(str(hist.get("first", "")))} to {escape(str(hist.get("last", "")))}) of minute data, 95% range in brackets. Bands = session open ± median / 75th-percentile move of the last 105 sessions. Not a signal and not part of the score.</div>
+            </div>"""
+
+
 def load_gold_forecast():
     """Gold next-day vol summary from vol_range.json (regenerated every run)."""
     vr = load_json(os.path.join(DATA_DIR, "vol_range.json"))
@@ -331,6 +388,7 @@ def run():
     cot_data = load_json(os.path.join(DATA_DIR, "cot_data.json")).get("instruments", {})
     sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
     geopolitical = load_json(os.path.join(DATA_DIR, "geopolitical.json"))
+    band_reads = load_json(os.path.join(DATA_DIR, "band_read.json")).get("instruments", {})
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -496,6 +554,7 @@ def run():
         "Gold":   {"USD"},
         "NAS100": {"USD"},
         "EURUSD": {"USD", "EUR"},
+        "USDJPY": {"USD", "JPY"},
     }
 
     def upcoming_events(events_data, currencies=None):
@@ -692,6 +751,7 @@ def run():
               <span class="bl-label">Bottom Line</span>
               <span class="bl-text">{bottom_line}</span>
             </div>
+{band_read_html(instr, band_reads.get(instr))}
 
             <div class="analysis-signal-section">
               <div class="signal-detail-header">
@@ -856,6 +916,33 @@ def run():
   .analysis-narrative-section {{ margin-bottom: 1rem; }}
   .analysis-narrative-block {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem 1rem; }}
   .an-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem; }}
+  .band-card {{ background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.8rem 0.9rem; margin: 0.75rem 1rem 0; }}
+  .band-head {{ display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }}
+  .band-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }}
+  .band-status {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.05em; padding: 0.1rem 0.45rem; border-radius: 3px; border: 1px solid var(--border); color: var(--muted); }}
+  .band-status.band-ext {{ color: var(--gold); border-color: var(--gold); }}
+  .band-status.band-faded {{ color: var(--muted); border-color: var(--muted); }}
+  .band-asof {{ margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); }}
+  .band-headline {{ font-size: 0.9rem; font-weight: 600; color: var(--text); margin: 0.45rem 0 0.2rem; }}
+  .band-text {{ font-size: 0.78rem; line-height: 1.55; color: var(--text); }}
+  .band-ladder {{ position: relative; height: 3.2rem; margin: 0.9rem 0.5rem 0.2rem; border-top: 1px solid var(--border); }}
+  .band-range {{ position: absolute; top: -3px; height: 6px; background: var(--accent); opacity: 0.35; border-radius: 3px; }}
+  .band-mark {{ position: absolute; top: -6px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; }}
+  .band-now {{ background: var(--text); }}
+  .band-chk {{ background: var(--gold); }}
+  .band-tick {{ position: absolute; top: 8px; transform: translateX(-50%); text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); white-space: nowrap; }}
+  .band-tick::before {{ content: ""; position: absolute; top: -12px; left: 50%; height: 8px; border-left: 1px solid var(--muted); }}
+  .band-tick span {{ display: block; }}
+  .band-tick b {{ font-weight: 600; color: var(--text); }}
+  .band-open b {{ color: var(--accent); }}
+  .band-legend {{ display: flex; gap: 1rem; margin-top: 0.3rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
+  .band-legend i {{ display: inline-block; width: 10px; height: 6px; margin-right: 0.3rem; border-radius: 3px; vertical-align: middle; }}
+  .lg-range {{ background: var(--accent); opacity: 0.35; }}
+  .lg-chk {{ background: var(--gold); border-radius: 50% !important; width: 8px !important; height: 8px !important; }}
+  .lg-now {{ background: var(--text); border-radius: 50% !important; width: 8px !important; height: 8px !important; }}
+  .band-chk-line {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--muted); margin-top: 0.4rem; }}
+  .band-foot {{ font-size: 0.58rem; color: var(--muted); margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--border); line-height: 1.45; }}
+  @media (max-width: 700px) {{ .band-tick b {{ display: none; }} .band-asof {{ margin-left: 0; }} }}
   .bottom-line-banner {{ background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 0.7rem 0.9rem; margin: 0.75rem 1rem 0; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }}
   .bottom-line-banner .bl-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }}
   .bottom-line-banner .bl-text {{ font-size: 0.85rem; font-weight: 500; color: var(--text); line-height: 1.4; }}
@@ -937,7 +1024,7 @@ def run():
   .gold-fc-link:hover {{ text-decoration: underline; }}
   .gold-fc-date {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; color: var(--muted); }}
   .gold-fc-note {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
-  .snap-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }}
+  .snap-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }}
   .snap-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.15s; position: relative; }}
   .snap-hp-tag {{ position: absolute; top: -0.5rem; right: 0.5rem; background: var(--gold); color: #000; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.12rem 0.4rem; border-radius: 3px; }}
   .analysis-section.hp-confluence {{ border: 1.5px solid var(--gold); box-shadow: 0 0 0 1px var(--gold)25; }}

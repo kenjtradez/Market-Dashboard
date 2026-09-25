@@ -37,7 +37,8 @@ html, body { background:#080b14; margin:0; padding:0; }
 #olt-root ::placeholder{color:var(--olt-faint);}
 #olt-root .olt-macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 #olt-root .olt-macro-card{background:var(--olt-card);border:1px solid var(--olt-border);border-radius:10px;padding:12px 14px;}
-@media (max-width:640px){#olt-root .olt-matrix{grid-template-columns:1fr!important;}#olt-root .olt-edit-grid{grid-template-columns:1fr 1fr!important;}#olt-root .olt-macro-grid{grid-template-columns:1fr 1fr!important;}}
+@media (max-width:1100px){#olt-root .olt-matrix,#olt-root .olt-brief-grid{grid-template-columns:1fr 1fr!important;}}
+@media (max-width:640px){#olt-root .olt-matrix,#olt-root .olt-brief-grid{grid-template-columns:1fr!important;}#olt-root .olt-edit-grid{grid-template-columns:1fr 1fr!important;}#olt-root .olt-macro-grid{grid-template-columns:1fr 1fr!important;}}
 </style>
 
 <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">Spot options levels tracker for XAU/USD, EUR/USD and NAS100 with live candlestick chart and manually entered call wall, put wall, max pain and net GEX levels</h2>
@@ -48,7 +49,7 @@ html, body { background:#080b14; margin:0; padding:0; }
 </div>
 <div style="color:var(--olt-faint);font-size:11.5px;margin-bottom:14px;">Live candles from Twelve Data (your key, sent only to Twelve Data). Options levels, COT, macro and the model score come from the dashboard pipeline &mdash; the same data the Dashboard tab and the Telegram brief use.</div>
 
-<div class="olt-matrix" id="olt-matrix" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;"></div>
+<div class="olt-matrix" id="olt-matrix" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;"></div>
 
 <div style="color:#f04141;font-size:11px;line-height:1.6;border:1px solid rgba(240,65,65,.35);background:rgba(240,65,65,.06);border-radius:8px;padding:8px 12px;margin-bottom:16px;">
   <b>What "Bullish/Bearish lean" means:</b> a simple 3-point check against your entered/computed levels, not a signal or prediction &mdash;
@@ -84,6 +85,7 @@ html, body { background:#080b14; margin:0; padding:0; }
 </div>
 <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;" id="olt-toggles"></div>
 <div id="olt-volforecast-table" style="margin-top:14px;"></div>
+<div id="olt-bandread" style="margin-top:14px;"></div>
 <div id="olt-tradeidea" style="margin-top:14px;"></div>
 <div id="olt-oi-table" style="margin-top:14px;"></div>
 </div>
@@ -103,6 +105,7 @@ const INSTRUMENTS = [
     cot:{report:'tff', datasetId:'gpe5-46if', marketLike:'EURO FX - CHICAGO MERCANTILE EXCHANGE', longField:'lev_money_positions_long', shortField:'lev_money_positions_short', label:'Leveraged Money (speculators)'}},
   {id:'NAS100', label:'NAS100', full:'NAS100 \u00b7 Nasdaq 100', symbol:'QQQ', decimals:1, multiplier:41, optsSymbol:'QQQ', volProfile:'NQ', fixedRiskPct:0.45, newsQuery:'Nasdaq 100 NQ futures stocks',
     cot:{report:'tff', datasetId:'gpe5-46if', marketLike:'NASDAQ-100 STOCK INDEX (MINI) - CHICAGO MERCANTILE EXCHANGE', longField:'lev_money_positions_long', shortField:'lev_money_positions_short', label:'Leveraged Money (speculators)'}},
+  {id:'USDJPY', label:'USD/JPY', full:'USD/JPY \u00b7 Dollar Yen', symbol:'USD/JPY', decimals:3, multiplier:1, optsSymbol:'none', volProfile:'JPY', atrMultiple:1.5, noOptions:true},
 ];
 
 // Calibration factors back-solved against the KenJTradez Vol & Range Pine
@@ -111,9 +114,10 @@ const VOL_PROFILE_CORRECTIONS = {
   'Gold':    {vol:1.00, hlMed:1.0064, hl75:1.0096, ocMed:1.0124, oc75:0.9973},
   'EUR-USD': {vol:1.00, hlMed:0.9806, hl75:1.0077, ocMed:0.9904, oc75:1.0111},
   'NQ':      {vol:1.00, hlMed:0.9911, hl75:1.0127, ocMed:0.9917, oc75:1.0336},
+  'JPY':     {vol:1.00, hlMed:1.0, hl75:1.0, ocMed:1.0, oc75:1.0},  // not calibrated to the Pine script yet
 };
 const VOL_FORECAST_LOOKBACK = 105;
-const PIPELINE_KEY = {XAUUSD:'Gold', EURUSD:'EURUSD', NAS100:'NAS100'};
+const PIPELINE_KEY = {XAUUSD:'Gold', EURUSD:'EURUSD', NAS100:'NAS100', USDJPY:'USDJPY'};
 const DATA_BASE = '../data/';
 const OPTIONS_MAX_AGE_HOURS = 96;
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -539,7 +543,7 @@ function renderOiTable(){
   const lv = state.levels[inst.id];
 
   if(!lv.oiTable || !lv.oiTable.length){
-    el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Open interest by strike: not computed yet \u2014 use Edit levels \u2192 Recalculate now.</div>';
+    el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Open interest by strike: '+esc(state.tradierMsg[inst.id] || 'no usable options snapshot right now.')+'</div>';
     return;
   }
 
@@ -890,7 +894,7 @@ function applyCot(inst, c){
 }
 
 async function loadPipelineData(){
-  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json'};
+  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json', band:'band_read.json'};
   await Promise.all(Object.entries(files).map(async ([k,f])=>{
     try{ state.pipeline[k] = await getPipelineJson(f); }catch(e){ state.pipeline[k] = null; }
   }));
@@ -1158,6 +1162,47 @@ function drawChart(){
   });
 }
 
+function renderBandRead(){
+  const el = document.getElementById('olt-bandread');
+  if(!el) return;
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  const all = state.pipeline.band && state.pipeline.band.instruments;
+  const br = inst && all ? all[PIPELINE_KEY[inst.id]] : null;
+  if(!br || br.error){
+    el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Band Read: '+esc(br && br.error ? br.error : 'not available yet')+'</div>';
+    return;
+  }
+  const d = inst.decimals, v = br.verdict, b = br.bands, cp = br.checkpoint;
+  const cls = v.status.indexOf('EXTENDED')===0 ? 'bull' : 'neu';
+  const cell = (label, value, color) => '<div><div style="font-size:9.5px;color:var(--olt-faint);letter-spacing:.03em;margin-bottom:2px;">'+label+'</div><div style="font-size:13px;font-weight:600;'+(color?('color:'+color+';'):'')+'">'+value+'</div></div>';
+  const odds = side => {
+    const sd = br.sides[side];
+    if(!sd) return '\u2014';
+    if(sd.next_band==null) return '75th already hit';
+    if(!sd.reach) return 'too few cases';
+    return sd.reach.p+'% ['+sd.reach.lo+'\u2013'+sd.reach.hi+'] vs '+(sd.base?sd.base.p+'%':'?')+' normal';
+  };
+  el.innerHTML = '<div class="olt-card">'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'+
+      '<div style="font-size:12px;color:var(--olt-dim);">Band Read \u00b7 '+esc(inst.full)+' <span class="olt-badge '+cls+'">'+esc(v.status)+'</span></div>'+
+      '<div style="font-size:10.5px;color:var(--olt-faint);">as of '+esc(br.as_of.slice(11,16))+' London (pipeline snapshot)</div>'+
+    '</div>'+
+    '<div style="font-size:13px;font-weight:600;margin-bottom:4px;">'+esc(v.headline)+'</div>'+
+    '<div style="font-size:11.5px;color:var(--olt-dim);line-height:1.55;margin-bottom:12px;">'+esc(v.text)+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:10px;">'+
+      cell('LOWER 75TH', fmt(b.dn_p75,d), 'var(--olt-orange)')+cell('LOWER MED', fmt(b.dn_med,d), 'var(--olt-orange)')+
+      cell('OPEN (17:00 NY)', fmt(br.open,d))+cell('NOW', fmt(br.price,d), 'var(--olt-blue)')+
+      cell('UPPER MED', fmt(b.up_med,d), 'var(--olt-green)')+cell('UPPER 75TH', fmt(b.up_p75,d), 'var(--olt-green)')+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;color:var(--olt-dim);">'+
+      '<div>Up side, next band: <b style="color:var(--olt-text)">'+odds('up')+'</b></div>'+
+      '<div>Down side, next band: <b style="color:var(--olt-text)">'+odds('dn')+'</b></div>'+
+    '</div>'+
+    (cp && cp.available ? '<div style="font-size:10.5px;color:var(--olt-faint);margin-top:8px;">10:00 London: '+fmt(cp.price,d)+' \u2014 '+(Math.max(cp.p_up,cp.p_dn)>=1 ? 'already through the '+(cp.p_up>=cp.p_dn?'upper':'lower')+' median band' : Math.round(Math.max(cp.p_up,cp.p_dn,0)*100)+'% of the way to the '+(cp.p_up>=cp.p_dn?'upper':'lower')+' median band')+(cp.extended?' (extended '+(cp.extended==='up'?'\u2191':'\u2193')+')':' (not extended)')+'</div>' : '')+
+    '<div style="font-size:10px;color:var(--olt-faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--olt-border);">Odds from '+(br.history?br.history.sessions:'?')+' sessions of minute data ('+esc(br.history?br.history.first:'')+' to '+esc(br.history?br.history.last:'')+'), 95% range in brackets. Levels in '+esc(br.feed)+' terms'+(inst.id==='XAUUSD'?' rescaled to spot':'')+'. Context, not a signal.</div>'+
+  '</div>';
+}
+
 function renderAll(){
   renderMatrix();
   renderTabs();
@@ -1183,6 +1228,7 @@ function renderAll(){
     renderToggles();
     renderEditPanel();
     renderVolForecastTable();
+    renderBandRead();
     renderTradeIdea();
     renderOiTable();
     drawChart();
@@ -1238,7 +1284,7 @@ function renderNewsPanel(){
   const m = P.scores.model || {};
   const headlines = (P.geo && P.geo.headlines) || [];
   let html = '<div style="font-size:11px;color:var(--olt-faint);margin-bottom:10px;">Model run '+esc(String(P.scores.generated||'').slice(0,16).replace('T',' '))+' UTC \u00b7 signal needs |score| \u2265 '+(m.signal_threshold||2)+' of \u00b1'+(m.max_score||11)+'</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
+  html += '<div class="olt-brief-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">';
   INSTRUMENTS.forEach(inst=>{
     const key = PIPELINE_KEY[inst.id], d = P.scores.instruments[key];
     if(!d) return;

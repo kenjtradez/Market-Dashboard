@@ -16,7 +16,7 @@ from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
-INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
+INSTRUMENTS = ["Gold", "NAS100", "EURUSD", "USDJPY"]
 MAX_POSITIONING, MAX_MACRO, MAX_COT = 4, 5, 2
 MAX_SCORE = MAX_POSITIONING + MAX_MACRO + MAX_COT
 SIGNAL_THRESHOLD = 2
@@ -25,7 +25,9 @@ CONFLUENCE_MIN = 4
 OPTIONS_MAX_AGE_HOURS = 96  # OI is published once a day; a weekend-old snapshot is still usable
 
 # Instrument-specific implied-vol index. EURUSD has none since CBOE retired EVZ.
-VOL_INDEX = {"Gold": "GVZ", "NAS100": "VXN", "EURUSD": None}
+VOL_INDEX = {"Gold": "GVZ", "NAS100": "VXN", "EURUSD": None, "USDJPY": None}
+# USD/JPY rises when the dollar is strong, so the DXY point flips sign for it.
+USD_BASE = {"USDJPY"}
 
 
 def load(name):
@@ -99,6 +101,11 @@ def score_cot(cot):
         return 0, {"cot": (cot or {}).get("error", "no COT data")}
     s = cot.get("score", 0)
     rank, pct = cot.get("pct_rank_3y"), cot.get("spec_net_pct")
+    if cot.get("inverted"):
+        side = {"CROWDED_LONG": "crowded long yen", "CROWDED_SHORT": "crowded short yen"}.get(cot.get("signal"))
+        text = (f"yen specs {pct}% net, {rank}th pct of 3y ({side}, {s:+d} for USD/JPY)" if side
+                else f"yen specs {pct}% net, {rank}th pct of 3y (not extreme, 0)")
+        return s, {"cot": text}
     if cot.get("signal") == "CROWDED_LONG":
         text = f"specs {pct}% net long, {rank}th pct of 3y (crowded long, {s:+d})"
     elif cot.get("signal") == "CROWDED_SHORT":
@@ -131,14 +138,15 @@ def score_macro(macro, instr=None):
             else:
                 details[vol_key] = f"{vol} (neutral)"
     else:
-        details["vol"] = "no live EUR vol index (EVZ discontinued)"
+        details["vol"] = "no live vol index for this pair"
 
     dxy = live(macro, "Dollar Index")
     if dxy is not None:
+        sign = -1 if instr in USD_BASE else 1
         if dxy < 100:
-            score += 1; details["dxy"] = f"DXY {dxy} (weak USD, +1)"
+            score += sign; details["dxy"] = f"DXY {dxy} (weak USD, {sign:+d})"
         elif dxy > 107:
-            score -= 1; details["dxy"] = f"DXY {dxy} (strong USD, -1)"
+            score -= sign; details["dxy"] = f"DXY {dxy} (strong USD, {-sign:+d})"
         else:
             details["dxy"] = f"DXY {dxy} (neutral)"
 

@@ -10,6 +10,9 @@ on:
     - cron: '41 6 * * 1-5'   # 06:41 GMT
     - cron: '41 11 * * 1-5'  # 12:41 BST
     - cron: '41 12 * * 1-5'  # 12:41 GMT
+    # Silent build at 10:09 UK so the Band Read captures the 10:00 checkpoint.
+    - cron: '9 9 * * 1-5'    # 10:09 BST
+    - cron: '9 10 * * 1-5'   # 10:09 GMT
     # Silent data refresh during US hours: Yahoo only publishes option open
     # interest while the US market is open, so this snapshot feeds the briefs.
     - cron: '23 18 * * 1-5'
@@ -59,6 +62,10 @@ jobs:
                   run = send = bst
               elif hour in (6, 12):
                   run = send = not bst
+              elif hour == 9:
+                  run = bst
+              elif hour == 10:
+                  run = not bst
           elif event == "workflow_dispatch":
               send = os.environ.get("MANUAL_SEND") == "true"
           print(f"run={'true' if run else 'false'}")

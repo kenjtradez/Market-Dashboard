@@ -14,6 +14,7 @@ STEPS = [
     ("Options levels (Yahoo)", "fetch_options_yf",   False),
     ("CFTC COT positioning",   "fetch_cot",          False),
     ("Vol & range forecast",   "calc_vol_range",     False),
+    ("Band Read",              "band_read",          False),
     ("Economic calendar",      "fetch_events",       False),
     ("Headlines & risk",       "fetch_geopolitical", False),
     ("Headline sentiment",     "fetch_sentiment",    False),

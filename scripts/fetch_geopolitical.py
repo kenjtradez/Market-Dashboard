@@ -35,6 +35,7 @@ INSTRUMENT_TERMS = {
     "Gold":   ["gold", "xau", "xau/usd", "bullion", "precious metal", "precious metals"],
     "NAS100": ["nasdaq", "nasdaq 100", "tech stocks", "big tech", "semiconductor", "chip stocks", "qqq"],
     "EURUSD": ["euro", "eur/usd", "eurusd", "ecb", "eurozone", "lagarde"],
+    "USDJPY": ["yen", "usd/jpy", "usdjpy", "boj", "bank of japan", "ueda"],
 }
 
 

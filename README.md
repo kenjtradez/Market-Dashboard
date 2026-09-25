@@ -1,6 +1,6 @@
 # Market Dashboard
 
-Daily market dashboard, options levels tracker, and Telegram brief for **Gold, NAS100 and EUR/USD**.
+Daily market dashboard, options levels tracker, and Telegram brief for **Gold, NAS100, EUR/USD and USD/JPY**.
 One pipeline, one scoring model, and every output reads the same data files.
 
 - Dashboard: https://kenjtradez.github.io/Market-Dashboard/
@@ -11,6 +11,7 @@ One pipeline, one scoring model, and every output reads the same data files.
 | UK time | What runs |
 |---|---|
 | 06:41 | Full build + Telegram brief |
+| 10:09 | Full build, no Telegram. Captures the 10:00 London Band Read checkpoint |
 | 12:41 | Full build + Telegram brief |
 | 19:23 BST / 18:23 GMT | Full build, no Telegram. Captures option open interest, which Yahoo only publishes during US hours |
 
@@ -25,7 +26,8 @@ GitHub cron is UTC-only. Each brief has a BST cron and a GMT cron, and the first
 | Macro | `fetch_fred.py` | FRED (yields, breakevens, VIX/VXN/GVZ, Fed funds, broad USD) and Yahoo (DXY, SKEW). Also writes the 90-day history the tracker's Macro tab uses |
 | Options levels | `fetch_options_yf.py` | Yahoo option chains for GLD / QQQ / FXE: highest-OI expiry within 3–45 days, scaled to XAU/USD, NDX and EUR/USD. Thin or pre-market chains are rejected and the last good snapshot is kept. FXE is too thin to pass, so EUR/USD positioning scores 0 |
 | COT | `fetch_cot.py` | CFTC public API, queried by contract code, with 3 years of weekly history |
-| Vol & range | `calc_vol_range.py` | 105-day realised ranges from GC=F / NQ=F / 6E=F, calibrated to the Vol & Range Pine script |
+| Vol & range | `calc_vol_range.py` | 105-day realised ranges from GC=F / NQ=F / 6E=F / 6J=F (inverted to USD/JPY). Gold, NAS100 and EUR/USD are calibrated to the Vol & Range Pine script; USD/JPY isn't yet |
+| Band Read | `band_read.py` | Today's position against the vol bands, looked up in `calibration/band_tables.json` (see below) |
 | Calendar | `fetch_events.py` | ForexFactory weekly feed, shown in UK time |
 | Headlines | `fetch_geopolitical.py`, `fetch_sentiment.py` | BBC, CNBC and FXStreet RSS. Display only, not scored |
 | Score | `compute_scores.py` | See below |
@@ -45,6 +47,29 @@ GitHub cron is UTC-only. Each brief has a BST cron and a GMT cron, and the first
 **Signal:** LONG or SHORT only when |total| ≥ 2 (out of ±11), otherwise NEUTRAL. "High-probability" needs components that agree *and* |total| ≥ 4.
 
 This is a heuristic model. It is not backtested and not financial advice.
+
+## Band Read
+
+For each instrument it shows where price sits against today's bands and what 10 years of minute data say happens next. It's display only and isn't part of the score.
+
+- **Session:** 17:00 New York to 17:00 New York. **Bands:** the session open ± the median and 75th-percentile up/down move of the last 105 sessions.
+- **10:00 London checkpoint:** "extended" means price was at least 75% of the way to a median band at 10:00 London, and further than toward the other side.
+- **Odds:** P(reaching the next band before the session ends), given the time of day and where price is now, with a 95% range and the base rate for a normal day at the same time. There's also P(today's extreme on that side is already in).
+- **Finding from the history:** once you know where price is now, extended days behave almost exactly like any other day. The 10:00 extension adds context, not an edge.
+- **Intraday feed:** Yahoo 5-minute bars, about 15 minutes delayed for futures. Gold is rescaled to spot; NAS100 is shown in NQ futures terms.
+
+The tables come from local minute data that isn't in this repo. To refresh them:
+
+```bash
+python scripts/build_band_calibration.py "C:/Users/KIMMETIS/Desktop/vshub/data/raw data"
+git add calibration/band_tables.json && git commit -m "Refresh Band Read tables"
+```
+
+## USD/JPY
+
+- No options scoring: FXY options are too thin, so positioning is always 0.
+- COT uses CME yen futures, inverted: crowded long yen counts as bullish for USD/JPY.
+- The DXY point is inverted too, since a strong dollar is bullish for USD/JPY.
 
 ## Secrets
 
