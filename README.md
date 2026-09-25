@@ -23,7 +23,7 @@ GitHub cron is UTC-only. Each brief has a BST cron and a GMT cron, and the first
 | Step | Script | Source |
 |---|---|---|
 | Macro | `fetch_fred.py` | FRED (yields, breakevens, VIX/VXN/GVZ, Fed funds, broad USD) and Yahoo (DXY, SKEW). Also writes the 90-day history the tracker's Macro tab uses |
-| Options levels | `fetch_options_yf.py` | Yahoo option chains for GLD / QQQ / FXE: highest-OI expiry within 3–45 days, scaled to XAU/USD, NDX and EUR/USD. Thin or pre-market chains are rejected and the last good snapshot is kept |
+| Options levels | `fetch_options_yf.py` | Yahoo option chains for GLD / QQQ / FXE: highest-OI expiry within 3–45 days, scaled to XAU/USD, NDX and EUR/USD. Thin or pre-market chains are rejected and the last good snapshot is kept. FXE is too thin to pass, so EUR/USD positioning scores 0 |
 | COT | `fetch_cot.py` | CFTC public API, queried by contract code, with 3 years of weekly history |
 | Vol & range | `calc_vol_range.py` | 105-day realised ranges from GC=F / NQ=F / 6E=F, calibrated to the Vol & Range Pine script |
 | Calendar | `fetch_events.py` | ForexFactory weekly feed, shown in UK time |
