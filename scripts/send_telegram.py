@@ -87,6 +87,17 @@ def build_message(page_url):
 
     parts = [f"<b>\U0001f4ca Market Brief</b> — {now:%a %d %b %H:%M} UK",
              f"Signal needs |score| ≥ {model.get('signal_threshold', 2)} of ±{model.get('max_score', 11)}", ""]
+    db = load("daily_bias.json")
+    if db.get("instruments") and str(db.get("generated", ""))[:10] == now.strftime("%Y-%m-%d"):
+        labels = {i: l for i, l, _ in INSTRUMENTS}
+        parts.append("<b>\U0001f9ed Today's bias</b> (Claude)")
+        parts.append(escape(db.get("overall", "")))
+        for i in db["instruments"]:
+            parts.append(f"\u2022 <b>{labels.get(i['instrument'], escape(i['instrument']))}</b>: {escape(i['bias'])} "
+                         f"({escape(i['confidence'].lower())}) \u2014 {escape(i['reason'])}")
+        if db.get("events"):
+            parts.append(f"\U0001f4c5 {escape(db['events'])}")
+        parts.append("")
     for instr, label, dec in INSTRUMENTS:
         parts.append(instrument_block(instr, label, dec, scores["instruments"].get(instr, {}), vr, model, band))
         parts.append("")

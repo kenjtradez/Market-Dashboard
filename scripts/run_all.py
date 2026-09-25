@@ -19,6 +19,7 @@ STEPS = [
     ("Headlines & risk",       "fetch_geopolitical", False),
     ("Headline sentiment",     "fetch_sentiment",    False),
     ("Score computation",      "compute_scores",     True),
+    ("Daily bias (Claude)",    "daily_bias",         False),
     ("Dashboard builder",      "build_dashboard",    True),
 ]
 
