@@ -27,6 +27,7 @@ DATA_DIR = os.path.join(ROOT, "data")
 TABLES = os.path.join(ROOT, "calibration", "band_tables.json")
 NY, UK = ZoneInfo("America/New_York"), ZoneInfo("Europe/London")
 FEEDS = {"Gold": "GC=F", "NAS100": "NQ=F", "SPX500": "ES=F", "US2000": "RTY=F", "EURUSD": "EURUSD=X", "USDJPY": "JPY=X"}
+NAMES = {"Gold": "Gold", "NAS100": "NAS100", "SPX500": "S&P 500", "US2000": "Russell 2000", "EURUSD": "EUR/USD", "USDJPY": "USD/JPY"}
 DECIMALS = {"Gold": 2, "NAS100": 1, "SPX500": 1, "US2000": 1, "EURUSD": 5, "USDJPY": 3}
 RESCALE_TO_SPOT = {"Gold"}
 MIN_N = 30          # below this many historical cases a figure is not shown
@@ -152,40 +153,49 @@ def read_instrument(instr, ticker, vr, spot, cal, edges, ext_p):
 
 
 def verdict(instr, cp, sides, now_uk, bands, px, o):
+    """Plain-English read. Leads with what history says happens next, then
+    the band odds against a normal day. The status only describes the
+    morning; it is not a forecast."""
     arrow = {"up": "↑", "dn": "↓"}
     word = {"up": "upper", "dn": "lower"}
+    extreme = {"up": "high", "dn": "low"}
+    name = NAMES.get(instr, instr)
     focus = cp.get("extended") or max(("up", "dn"), key=lambda s: sides[s].get("position") or -9)
     s = sides[focus]
     if not cp.get("available"):
         status = "BEFORE 10:00 CHECKPOINT"
-        head = f"Before the 10:00 London checkpoint — no extension read yet."
+        head = "Before the 10:00 London checkpoint — no morning read yet."
     elif cp.get("extended"):
         held = (s.get("position") or 0) >= 0.5 or s.get("next_band") is None
-        status = f"EXTENDED {arrow[focus]}" if held else f"EXTENSION FADED {arrow[focus]}"
-        head = (f"Extended {arrow[focus]} at 10:00 London and still near it." if held
-                else f"The 10:00 London extension {arrow[focus]} has faded.")
+        status = f"STRETCHED {arrow[focus]} AT 10:00" if held else f"10:00 MOVE {arrow[focus]} PULLED BACK"
+        head = (f"{name} was stretched {arrow[focus]} at 10:00 London and is still near there." if held
+                else f"{name} was stretched {arrow[focus]} at 10:00 London and has since pulled back. "
+                     f"That describes the morning, not a forecast.")
     else:
-        status = "NO EXTENSION"
-        head = "No extension at 10:00 London — a normal-day read."
+        status = "NO 10:00 STRETCH"
+        head = f"No stretch at 10:00 London — a normal-day read for {name}."
 
-    if s.get("next_band") is None:
-        body = f"Price already went through the {word[focus]} 75th band today; the bands have nothing more to say on that side."
-    elif s.get("reach") and s.get("base"):
-        r, b = s["reach"], s["base"]
-        name = "median" if s["next_band"] == "med" else "75th"
-        rel = {"above": "ABOVE", "below": "BELOW", "in line": "in line with"}[s["vs_normal"]]
-        body = (f"From here, history gives {r['p']}% [{r['lo']}–{r['hi']}] that price reaches the {word[focus]} {name} band "
-                f"({s['level']:,.{DECIMALS[instr]}f}) before the session ends — {rel} a normal day at this time ({b['p']}%).")
-        if s.get("reach_ext"):
-            body += f" Days that were extended at 10:00: {s['reach_ext']['p']}% (n={s['reach_ext']['n']})."
-    else:
-        body = "Not enough history for this position and time."
+    parts = []
     xin = s.get("extreme_in")
     if xin:
-        body += (f" The {word[focus]} extreme for today may already be in: {xin['p']}% "
-                 f"[{xin['lo']}–{xin['hi']}] of similar days made no further {'high' if focus == 'up' else 'low'}.")
-    return {"status": status, "headline": head, "text": body, "side": focus}
-
+        # extreme_in is the share of similar days that made NO further high
+        # (or low); say it the other way round, as the share that did.
+        parts.append(f"On {100 - xin['p']}% [{100 - xin['hi']}–{100 - xin['lo']}] of similar days "
+                     f"{name} made a new {extreme[focus]} later in the session.")
+    if s.get("next_band") is None:
+        parts.append(f"It is already through the {word[focus]} 75th band today, so the bands give no further target on that side.")
+    elif s.get("reach") and s.get("base"):
+        r, b = s["reach"], s["base"]
+        band = "median" if s["next_band"] == "med" else "75th"
+        rel = {"above": "better than", "below": "worse than", "in line": "about the same as",
+               "unknown": "compared with"}[s["vs_normal"]]
+        parts.append(f"Reaching the {word[focus]} {band} band ({s['level']:,.{DECIMALS[instr]}f}): "
+                     f"{r['p']}% [{r['lo']}–{r['hi']}], {rel} a normal day at this time ({b['p']}%).")
+        if cp.get("extended") and s["vs_normal"] == "in line":
+            parts.append("No edge from the morning move.")
+    else:
+        parts.append("Not enough history for this position and time.")
+    return {"status": status, "headline": head, "text": " ".join(parts), "side": focus}
 
 def run():
     cal = load("band_tables.json", os.path.join(ROOT, "calibration"))

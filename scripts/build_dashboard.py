@@ -346,7 +346,7 @@ def band_read_html(instr, br):
         marks += f'<div class="band-mark band-chk" style="left:{pos(cp["price"]):.1f}%" title="10:00 London {cp["price"]:,.{dec}f}"></div>'
     marks += f'<div class="band-mark band-now" style="left:{pos(br["price"]):.1f}%" title="now {br["price"]:,.{dec}f}"></div>'
 
-    status_cls = "band-ext" if v["status"].startswith("EXTENDED") else ("band-faded" if "FADED" in v["status"] else "")
+    status_cls = "band-ext" if v["status"].startswith("STRETCHED") else ("band-faded" if "PULLED BACK" in v["status"] else "")
     chk_txt = ""
     if cp.get("available"):
         side = cp.get("extended")
