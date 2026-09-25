@@ -3,3 +3,4 @@ yfinance>=0.2.40
 numpy>=1.24.0
 pandas>=2.0
 tzdata
+anthropic>=1.8

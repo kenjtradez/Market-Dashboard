@@ -48,6 +48,16 @@ GitHub cron is UTC-only. Each brief has a BST cron and a GMT cron, and the first
 
 This is a heuristic model. It is not backtested and not financial advice.
 
+## Daily bias (Claude)
+
+On each brief run (06:41 and 12:41 UK), `scripts/daily_bias.py` sends everything the pipeline collected to Claude Opus 5: scores, Band Read, COT, macro, options levels, vol ranges, calendar and headlines. Claude writes a short bias per instrument (Up / Mild up / Neutral / Mild down / Down, with a confidence level, reasons and levels to watch). It's shown at the top of the dashboard, in the tracker's Brief tab and at the start of the Telegram brief.
+
+- The instructions tell Claude to use only the supplied data and to default to Neutral / Low confidence when the evidence is mixed, because none of the inputs is a backtested signal.
+- It uses server-side refusal fallbacks (`fallbacks: "default"`).
+- Cost: about $0.10 per run, roughly $4–5 a month on weekdays.
+- Without the `ANTHROPIC_API_KEY` secret, the step is skipped and nothing else changes.
+- To preview the data it sends without calling the API: `python scripts/daily_bias.py --dry-run`
+
 ## Band Read
 
 For each instrument it shows where price sits against today's bands and what 10 years of minute data say happens next. It's display only and isn't part of the score.
@@ -84,6 +94,7 @@ git add calibration/band_tables.json && git commit -m "Refresh Band Read tables"
 | Secret | Used by |
 |---|---|
 | `FRED_API_KEY` | Macro step |
+| `ANTHROPIC_API_KEY` | Daily bias (Claude), on brief runs only |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Telegram brief |
 
 The tracker's live candles use a Twelve Data key that you enter in the page. It's stored in your browser and sent only to Twelve Data.

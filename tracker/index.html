@@ -945,7 +945,7 @@ function applyCot(inst, c){
 }
 
 async function loadPipelineData(){
-  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json', band:'band_read.json', vol:'vol_range.json'};
+  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json', band:'band_read.json', vol:'vol_range.json', bias:'daily_bias.json'};
   await Promise.all(Object.entries(files).map(async ([k,f])=>{
     try{ state.pipeline[k] = await getPipelineJson(f); }catch(e){ state.pipeline[k] = null; }
   }));
@@ -1341,7 +1341,15 @@ function renderNewsPanel(){
   if(!P.scores || !P.scores.instruments){ el.innerHTML = '<div class="olt-card" style="font-size:11.5px;color:var(--olt-faint);">Model scores not available yet.</div>'; return; }
   const m = P.scores.model || {};
   const headlines = (P.geo && P.geo.headlines) || [];
-  let html = '<div style="font-size:11px;color:var(--olt-faint);margin-bottom:10px;">Model run '+esc(String(P.scores.generated||'').slice(0,16).replace('T',' '))+' UTC \u00b7 signal needs |score| \u2265 '+(m.signal_threshold||2)+' of \u00b1'+(m.max_score||11)+'</div>';
+  const db = P.bias;
+  let biasHtml = '';
+  if(db && db.instruments){
+    biasHtml = '<div class="olt-card" style="margin-bottom:12px;"><div style="font-size:12px;color:var(--olt-blue);font-weight:600;margin-bottom:6px;">Today\'s bias \u00b7 written by Claude \u00b7 '+esc(String(db.generated||'').slice(11,16))+' UK</div>'+
+      '<div style="font-size:12px;color:var(--olt-text);line-height:1.5;margin-bottom:8px;">'+esc(db.overall)+'</div>'+
+      db.instruments.map(i=>'<div style="display:flex;gap:10px;font-size:11.5px;padding:5px 0;border-top:1px solid var(--olt-border);"><b style="min-width:90px;">'+esc(i.instrument)+'</b><span style="min-width:120px;color:'+(i.bias.indexOf('up')>=0||i.bias==='Up'?'var(--olt-green)':(i.bias.indexOf('own')>=0?'var(--olt-orange)':'var(--olt-dim)'))+';">'+esc(i.bias)+' ('+esc(i.confidence)+')</span><span style="color:var(--olt-dim);">'+esc(i.reason)+'</span></div>').join('')+
+      '<div style="font-size:10.5px;color:var(--olt-faint);margin-top:6px;">'+esc(db.events||'')+'</div></div>';
+  }
+  let html = biasHtml + '<div style="font-size:11px;color:var(--olt-faint);margin-bottom:10px;">Model run '+esc(String(P.scores.generated||'').slice(0,16).replace('T',' '))+' UTC \u00b7 signal needs |score| \u2265 '+(m.signal_threshold||2)+' of \u00b1'+(m.max_score||11)+'</div>';
   html += '<div class="olt-brief-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">';
   INSTRUMENTS.forEach(inst=>{
     const key = PIPELINE_KEY[inst.id], d = P.scores.instruments[key];

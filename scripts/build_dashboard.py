@@ -397,6 +397,40 @@ def projection_html(br, dec):
               </div>"""
 
 
+BIAS_COLOR = {"Up": "var(--long)", "Mild up": "var(--long)", "Down": "var(--short)",
+              "Mild down": "var(--short)", "Neutral": "var(--muted)"}
+BIAS_ARROW = {"Up": "\u25b2", "Mild up": "\u25b3", "Down": "\u25bc", "Mild down": "\u25bd", "Neutral": "\u25c6"}
+BIAS_NAMES = {"Gold": "Gold", "NAS100": "NAS100", "SPX500": "S&amp;P 500", "US2000": "Russell 2000",
+              "EURUSD": "EUR/USD", "USDJPY": "USD/JPY"}
+
+
+def daily_bias_html(db):
+    """Claude's written bias for the day (scripts/daily_bias.py)."""
+    if not db or not db.get("instruments"):
+        return ""
+    rows = ""
+    for i in db["instruments"]:
+        col = BIAS_COLOR.get(i["bias"], "var(--muted)")
+        rows += (f'<div class="bias-row"><span class="bias-name">{BIAS_NAMES.get(i["instrument"], escape(i["instrument"]))}</span>'
+                 f'<span class="bias-call" style="color:{col}">{BIAS_ARROW.get(i["bias"], "")} {escape(i["bias"])}</span>'
+                 f'<span class="bias-conf">{escape(i["confidence"])} confidence</span>'
+                 f'<span class="bias-reason">{escape(i["reason"])}<br><span class="bias-levels">{escape(i["levels"])}</span></span></div>')
+    try:
+        age_h = (datetime.now(UK) - datetime.fromisoformat(db["generated"])).total_seconds() / 3600
+        age = f"{age_h:.0f}h ago" if age_h >= 1 else "just now"
+    except (KeyError, ValueError):
+        age = "unknown time"
+    return f"""
+  <div class="bias-card">
+    <div class="bias-head"><span class="bias-label">Today's bias</span>
+      <span class="bias-meta">written by Claude from all the data below &middot; {escape(str(db.get("generated", ""))[11:16])} UK ({age})</span></div>
+    <p class="bias-overall">{escape(db.get("overall", ""))}</p>
+    {rows}
+    <div class="bias-events">{escape(db.get("events", ""))}</div>
+    <div class="bias-foot">An analyst read of heuristic, non-backtested inputs &mdash; context for your own decisions, not a trade signal.</div>
+  </div>"""
+
+
 def load_gold_forecast():
     """Gold next-day vol summary from vol_range.json (regenerated every run)."""
     vr = load_json(os.path.join(DATA_DIR, "vol_range.json"))
@@ -419,6 +453,7 @@ def run():
     sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
     geopolitical = load_json(os.path.join(DATA_DIR, "geopolitical.json"))
     band_reads = load_json(os.path.join(DATA_DIR, "band_read.json")).get("instruments", {})
+    daily_bias = load_json(os.path.join(DATA_DIR, "daily_bias.json"))
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
@@ -948,6 +983,20 @@ def run():
   .analysis-narrative-section {{ margin-bottom: 1rem; }}
   .analysis-narrative-block {{ background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.85rem 1rem; }}
   .an-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem; }}
+  .bias-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 1rem; }}
+  .bias-head {{ display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; margin-bottom: 0.4rem; }}
+  .bias-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); font-weight: 600; }}
+  .bias-meta {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: var(--muted); }}
+  .bias-overall {{ font-size: 0.85rem; line-height: 1.5; color: var(--text); margin-bottom: 0.5rem; }}
+  .bias-row {{ display: grid; grid-template-columns: 7rem 7rem 7.5rem 1fr; gap: 0.6rem; align-items: baseline; padding: 0.4rem 0; border-top: 1px solid var(--border); }}
+  .bias-name {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 600; color: white; }}
+  .bias-call {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 600; }}
+  .bias-conf {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; color: var(--muted); }}
+  .bias-reason {{ font-size: 0.72rem; line-height: 1.45; color: var(--text); }}
+  .bias-levels {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--muted); }}
+  .bias-events {{ font-size: 0.7rem; color: var(--amber); margin-top: 0.5rem; }}
+  .bias-foot {{ font-size: 0.58rem; color: var(--muted); margin-top: 0.4rem; }}
+  @media (max-width: 700px) {{ .bias-row {{ grid-template-columns: 1fr 1fr; }} .bias-reason {{ grid-column: 1 / -1; }} }}
   .band-card {{ background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.8rem 0.9rem; margin: 0.75rem 1rem 0; }}
   .band-head {{ display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }}
   .band-label {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }}
@@ -1125,6 +1174,8 @@ def run():
     <h1>Market Analysis</h1>
     <span class="date">{gen_display}</span>
   </div>
+
+  {daily_bias_html(daily_bias)}
 
   <div class="snap-grid">{snapshot_rows}</div>
 
