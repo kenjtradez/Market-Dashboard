@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Options Levels Tracker</title>
+<style>
+html, body { background:#080b14; margin:0; padding:0; }
+.topnav{display:flex;gap:1rem;max-width:1600px;margin:0 auto;padding:14px 18px 0;font-family:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;font-size:12px;}
+.topnav a{color:#8592ab;text-decoration:none;padding-bottom:3px;border-bottom:2px solid transparent;}
+.topnav a.active,.topnav a:hover{color:#e7ecf7;border-bottom-color:#4f9dff;}
+</style>
+</head>
+<body>
+<nav class="topnav"><a href="../">Dashboard</a><a class="active" href="./">Options Tracker</a></nav>
+<div id="olt-root">
+<style>
+#olt-root{--olt-bg:#080b14;--olt-card:#0e1524;--olt-card2:#111a2d;--olt-border:#1c2740;--olt-border2:#26314c;--olt-text:#e7ecf7;--olt-dim:#8592ab;--olt-faint:#4c5872;--olt-blue:#4f9dff;--olt-green:#33d6a0;--olt-orange:#fb9152;--olt-purple:#9c9fe0;--olt-mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;background:var(--olt-bg);color:var(--olt-text);font-family:var(--olt-mono);padding:18px;border-radius:14px;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;max-width:1600px;margin:0 auto;}
+@media (max-width:900px){#olt-root{max-width:100vw;}}
+#olt-root *{box-sizing:border-box;}
+#olt-root input[type=text],#olt-root input[type=number],#olt-root input[type=password]{background:var(--olt-card2);border:1px solid var(--olt-border2);color:var(--olt-text);border-radius:6px;padding:6px 8px;font-family:var(--olt-mono);font-size:12px;}
+#olt-root input:focus{outline:none;border-color:var(--olt-blue);}
+#olt-root button{background:var(--olt-card2);border:1px solid var(--olt-border2);color:var(--olt-text);border-radius:6px;padding:6px 12px;font-family:var(--olt-mono);font-size:12px;cursor:pointer;}
+#olt-root button:hover{border-color:var(--olt-blue);color:var(--olt-blue);}
+#olt-root button.olt-primary{background:var(--olt-blue);border-color:var(--olt-blue);color:#04101f;font-weight:600;}
+#olt-root button.olt-primary:hover{opacity:.9;color:#04101f;}
+#olt-root label.olt-chk{display:flex;align-items:center;gap:6px;color:var(--olt-dim);font-size:12px;cursor:pointer;}
+#olt-root .olt-card{background:var(--olt-card);border:1px solid var(--olt-border);border-radius:10px;padding:14px 16px;}
+#olt-root .olt-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;}
+#olt-root .olt-badge.bull{background:rgba(51,214,160,.13);color:var(--olt-green);}
+#olt-root .olt-badge.bear{background:rgba(251,145,82,.13);color:var(--olt-orange);}
+#olt-root .olt-badge.neu{background:rgba(133,146,171,.13);color:var(--olt-dim);}
+#olt-root .olt-tab{padding:9px 14px;color:var(--olt-dim);border-bottom:2px solid transparent;cursor:pointer;font-size:13px;}
+#olt-root .olt-tab.active{color:var(--olt-blue);border-color:var(--olt-blue);}
+#olt-root .olt-lvl-row{display:flex;justify-content:space-between;font-size:11.5px;margin-top:6px;color:var(--olt-dim);}
+#olt-root .olt-lvl-row b{color:var(--olt-text);font-weight:600;}
+#olt-root ::placeholder{color:var(--olt-faint);}
+#olt-root .olt-macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+#olt-root .olt-macro-card{background:var(--olt-card);border:1px solid var(--olt-border);border-radius:10px;padding:12px 14px;}
+@media (max-width:640px){#olt-root .olt-matrix{grid-template-columns:1fr!important;}#olt-root .olt-edit-grid{grid-template-columns:1fr 1fr!important;}#olt-root .olt-macro-grid{grid-template-columns:1fr 1fr!important;}}
+</style>
+
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;">Spot options levels tracker for XAU/USD, EUR/USD and NAS100 with live candlestick chart and manually entered call wall, put wall, max pain and net GEX levels</h2>
+
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+  <div style="font-weight:600;font-size:15px;letter-spacing:.02em;">Spot &middot; Options Levels Tracker</div>
+  <div id="olt-ticker" style="font-size:22px;font-weight:600;color:var(--olt-blue);">&mdash;</div>
+</div>
+<div style="color:var(--olt-faint);font-size:11.5px;margin-bottom:14px;">Live candles from Twelve Data (your key, sent only to Twelve Data). Options levels, COT, macro and the model score come from the dashboard pipeline &mdash; the same data the Dashboard tab and the Telegram brief use.</div>
+
+<div class="olt-matrix" id="olt-matrix" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;"></div>
+
+<div style="color:#f04141;font-size:11px;line-height:1.6;border:1px solid rgba(240,65,65,.35);background:rgba(240,65,65,.06);border-radius:8px;padding:8px 12px;margin-bottom:16px;">
+  <b>What "Bullish/Bearish lean" means:</b> a simple 3-point check against your entered/computed levels, not a signal or prediction &mdash;
+  (1) spot vs gamma flip (only when dealer gamma actually flips sign): above = bullish point;
+  (2) spot vs max pain: above = bullish point;
+  (3) put/call ratio: under 1.0 = bullish point.
+  The badge just counts how many of the available checks lean bullish. The model signal (Brief tab) is the one the Dashboard and Telegram use.
+</div>
+
+<div style="display:flex;gap:2px;border-bottom:1px solid var(--olt-border);margin-bottom:14px;" id="olt-tabs"></div>
+
+<div id="olt-detail"></div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0;" id="olt-controls"></div>
+
+<div id="olt-editpanel" style="display:none;margin-bottom:14px;"></div>
+
+<div id="olt-chartwrap">
+<div style="border:1px solid var(--olt-border);border-radius:10px;background:var(--olt-card);padding:10px;position:relative;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+    <div id="olt-status" style="font-size:11px;color:var(--olt-faint);"></div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span id="olt-zoominfo" style="color:var(--olt-faint);font-size:10.5px;margin-right:4px;"></span>
+      <button id="olt-zoomout" style="padding:3px 9px;" title="Zoom out">&#x2212;</button>
+      <button id="olt-zoomreset" style="padding:3px 9px;" title="Reset zoom">Reset</button>
+      <button id="olt-zoomin" style="padding:3px 9px;" title="Zoom in">+</button>
+    </div>
+  </div>
+  <div style="position:relative;width:100%;height:340px;">
+    <canvas id="olt-canvas" style="width:100%;height:100%;display:block;cursor:grab;"></canvas>
+  </div>
+  <div style="color:var(--olt-faint);font-size:10px;margin-top:4px;">Scroll to zoom &#x00b7; drag to pan</div>
+</div>
+<div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;" id="olt-toggles"></div>
+<div id="olt-volforecast-table" style="margin-top:14px;"></div>
+<div id="olt-tradeidea" style="margin-top:14px;"></div>
+<div id="olt-oi-table" style="margin-top:14px;"></div>
+</div>
+
+<div id="olt-macropanel" style="display:none;"></div>
+<div id="olt-newspanel" style="display:none;"></div>
+</div>
+
+<script>
+(function(){
+const root = document.getElementById('olt-root');
+
+const INSTRUMENTS = [
+  {id:'XAUUSD', label:'XAU/USD', full:'XAU/USD \u00b7 Gold Spot', symbol:'XAU/USD', decimals:2, multiplier:1, optsSymbol:'GLD', volProfile:'Gold', atrMultiple:1.5, newsQuery:'gold price XAUUSD',
+    cot:{report:'legacy', datasetId:'6dca-aqww', marketLike:'GOLD - COMMODITY EXCHANGE', longField:'noncomm_positions_long_all', shortField:'noncomm_positions_short_all', label:'Non-Commercial (speculators)'}},
+  {id:'EURUSD', label:'EUR/USD', full:'EUR/USD \u00b7 Euro Spot', symbol:'EUR/USD', decimals:5, multiplier:1, optsSymbol:'FXE', volProfile:'EUR-USD', fixedRiskAbs:0.00075, fixedRiskLabel:'Fixed 7.5 pips', newsQuery:'EUR/USD euro dollar forex',
+    cot:{report:'tff', datasetId:'gpe5-46if', marketLike:'EURO FX - CHICAGO MERCANTILE EXCHANGE', longField:'lev_money_positions_long', shortField:'lev_money_positions_short', label:'Leveraged Money (speculators)'}},
+  {id:'NAS100', label:'NAS100', full:'NAS100 \u00b7 Nasdaq 100', symbol:'QQQ', decimals:1, multiplier:41, optsSymbol:'QQQ', volProfile:'NQ', fixedRiskPct:0.45, newsQuery:'Nasdaq 100 NQ futures stocks',
+    cot:{report:'tff', datasetId:'gpe5-46if', marketLike:'NASDAQ-100 STOCK INDEX (MINI) - CHICAGO MERCANTILE EXCHANGE', longField:'lev_money_positions_long', shortField:'lev_money_positions_short', label:'Leveraged Money (speculators)'}},
+];
+
+// Calibration factors back-solved against the KenJTradez Vol & Range Pine
+// script on 2026-09-17 — identical to scripts/calc_vol_range.py.
+const VOL_PROFILE_CORRECTIONS = {
+  'Gold':    {vol:1.00, hlMed:1.0064, hl75:1.0096, ocMed:1.0124, oc75:0.9973},
+  'EUR-USD': {vol:1.00, hlMed:0.9806, hl75:1.0077, ocMed:0.9904, oc75:1.0111},
+  'NQ':      {vol:1.00, hlMed:0.9911, hl75:1.0127, ocMed:0.9917, oc75:1.0336},
+};
+const VOL_FORECAST_LOOKBACK = 105;
+const PIPELINE_KEY = {XAUUSD:'Gold', EURUSD:'EURUSD', NAS100:'NAS100'};
+const DATA_BASE = '../data/';
+const OPTIONS_MAX_AGE_HOURS = 96;
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// window.storage only exists inside Claude.ai's own artifact panel. This file
+// is meant to also run standalone (downloaded, served locally), so persistence
+// here uses the browser's real localStorage instead, with the same async
+// {key, value} shaped interface so the rest of the code doesn't need to change.
+const storage = {
+  async get(key){
+    try{ const v = localStorage.getItem(key); return v==null ? null : {key, value:v}; }
+    catch(e){ return null; }
+  },
+  async set(key, value){
+    try{ localStorage.setItem(key, value); return {key, value}; }
+    catch(e){ return null; }
+  },
+  async delete(key){
+    try{ localStorage.removeItem(key); return {key, deleted:true}; }
+    catch(e){ return null; }
+  }
+};
+
+let MACRO_SERIES = [];  // filled from data/fred_history.json
+
+let state = {
+  active: 'XAUUSD',
+  apiKey: '',
+  autoRefresh: false,
+  showWalls: true,
+  showRange: true,
+  candles: {},
+  spot: {},
+  lastUpdate: {},
+  levels: {},
+  editing: false,
+  macroData: {},
+  pipeline: {},
+  macroMsg: '',
+  tradierMsg: {},
+  showVolForecast: true,
+  showOiLevels: false,
+  chartZoom: {},
+  volForecast: {},
+  dailyBars: {},
+  cotData: {},
+  cotMsg: {},
+  news: {},
+  newsMsg: {},
+  volForecastMsg: {},
+};
+INSTRUMENTS.forEach(i=>{ state.levels[i.id] = {callWall:null,putWall:null,maxPain:null,flip:null,pcRatio:null,netGex:null,expHigh:null,expLow:null,asOf:''}; state.candles[i.id]=null; });
+
+async function loadStorage(){
+  try{
+    const s = await storage.get('olt_settings');
+    if(s && s.value){ const v = JSON.parse(s.value); state.apiKey = v.apiKey||''; state.autoRefresh = !!v.autoRefresh; state.showWalls = v.showWalls!==false; state.showRange = v.showRange!==false; state.showVolForecast = v.showVolForecast!==false; state.showOiLevels = !!v.showOiLevels; if(v.macroApiKey!==undefined || v.macroBaseUrl!==undefined){ await saveSettings(); } }
+  }catch(e){}
+  for(const inst of INSTRUMENTS){
+    try{
+      // Only manual overrides are restored; auto levels always come fresh from the pipeline.
+      const l = await storage.get('olt_levels_'+inst.id);
+      if(l && l.value){ const lv = JSON.parse(l.value); if(lv.auto===false && lv.manualAt) state.levels[inst.id] = Object.assign(state.levels[inst.id], lv); }
+    }catch(e){}
+    try{
+      const c = await storage.get('olt_symcfg_'+inst.id);
+      if(c && c.value){ const cv = JSON.parse(c.value); if(cv.symbol) inst.symbol = cv.symbol; if(cv.multiplier!=null) inst.multiplier = cv.multiplier; inst.userSymbol = true; }
+    }catch(e){}
+  }
+}
+async function saveSettings(){
+  try{ await storage.set('olt_settings', JSON.stringify({apiKey:state.apiKey,autoRefresh:state.autoRefresh,showWalls:state.showWalls,showRange:state.showRange,showVolForecast:state.showVolForecast,showOiLevels:state.showOiLevels})); }catch(e){}
+}
+async function saveLevels(id){
+  try{ await storage.set('olt_levels_'+id, JSON.stringify(state.levels[id])); }catch(e){}
+}
+
+function fmt(n, d){ if(n===null||n===undefined||isNaN(n)) return '\u2014'; return Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtCompact(n){ if(n===null||n===undefined||isNaN(n)) return '\u2014'; const abs=Math.abs(n); if(abs>=1e6) return (n/1e6).toFixed(2)+'M'; if(abs>=1e3) return (n/1e3).toFixed(2)+'K'; return String(n); }
+
+function computeLean(id){
+  const lv = state.levels[id]; const spot = state.spot[id];
+  if(spot==null) return null;
+  const have = lv.flip!=null || lv.maxPain!=null || lv.pcRatio!=null;
+  if(!have) return null;
+  let bull=0, total=0;
+  if(lv.flip!=null){ total++; if(spot>lv.flip) bull++; }
+  if(lv.maxPain!=null){ total++; if(spot>lv.maxPain) bull++; }
+  if(lv.pcRatio!=null){ total++; if(lv.pcRatio<1) bull++; }
+  if(total===0) return null;
+  const isBull = bull/total >= 0.5;
+  return {bull:isBull, count: isBull?bull:(total-bull), total};
+}
+
+function computeMacroAggregate(instId){
+  let bull=0, bear=0, neutral=0, total=0;
+  MACRO_SERIES.forEach(s=>{
+    const rec = state.macroData[s.id];
+    if(!rec || !rec.obs || !rec.obs.length) return;
+    const vals = sparklinePoints(rec.obs);
+    const trend = calcTrend(vals);
+    const bias = s.bias ? s.bias[instId] : 0;
+    const effect = trend*bias;
+    total++;
+    if(effect>0) bull++; else if(effect<0) bear++; else neutral++;
+  });
+  return {bull, bear, neutral, total};
+}
+
+function computeTradeIdea(inst){
+  const lv = state.levels[inst.id];
+  const spot = state.spot[inst.id];
+  if(spot==null || lv.callWall==null || lv.putWall==null || lv.maxPain==null) return null;
+
+  const distToCall = Math.abs(lv.callWall-spot);
+  const distToPut = Math.abs(spot-lv.putWall);
+  const nearCall = distToCall <= distToPut;
+
+  // Stop buffer priority: fixed absolute distance (e.g. pips) > fixed % of spot >
+  // per-instrument ATR multiple (default 2x) > expected-range heuristic as last resort.
+  let buffer, bufferSource;
+  if(inst.fixedRiskAbs!=null){
+    buffer = inst.fixedRiskAbs;
+    bufferSource = inst.fixedRiskLabel || ('Fixed '+fmt(inst.fixedRiskAbs,inst.decimals));
+  } else if(inst.fixedRiskPct!=null){
+    buffer = spot*(inst.fixedRiskPct/100);
+    bufferSource = 'Fixed '+inst.fixedRiskPct+'% risk';
+  } else {
+    const atr = computeATR(state.dailyBars[inst.id], 14);
+    const atrMultiple = inst.atrMultiple || 2;
+    if(atr!=null){
+      buffer = atr*atrMultiple;
+      bufferSource = atrMultiple+'x ATR('+fmt(atr,inst.decimals)+')';
+    } else {
+      const rangeHalf = (lv.expHigh!=null && lv.expLow!=null) ? (lv.expHigh-lv.expLow)/2 : spot*0.006;
+      buffer = Math.max(rangeHalf*0.15, spot*0.0008);
+      bufferSource = 'range-based fallback (ATR unavailable)';
+    }
+  }
+
+  let direction, entry, stopLoss, tp1, tp2, wallUsed, otherWall;
+  if(nearCall){
+    direction='SELL'; entry=lv.callWall; stopLoss=lv.callWall+buffer; tp1=lv.maxPain; tp2=lv.putWall;
+    wallUsed='call wall'; otherWall='put wall';
+  } else {
+    direction='BUY'; entry=lv.putWall; stopLoss=lv.putWall-buffer; tp1=lv.maxPain; tp2=lv.callWall;
+    wallUsed='put wall'; otherWall='call wall';
+  }
+  // A target only counts if it is beyond the entry in the trade's direction
+  // (by more than 0.1%). Unchecked, max pain produced TP1 == entry (0R) and
+  // BUY ideas whose targets sat below the entry.
+  const sign = direction==='BUY' ? 1 : -1;
+  const beyond = t => t!=null && (t-entry)*sign > Math.abs(entry)*0.001;
+  if(!beyond(tp1)) tp1 = null;
+  if(!beyond(tp2)) tp2 = null;
+  if(tp1==null && tp2==null) return null;
+  if(tp1==null){ tp1 = tp2; tp2 = null; }
+  const riskDist = Math.abs(entry-stopLoss);
+  const tp1R = riskDist>0 ? Math.abs(tp1-entry)/riskDist : null;
+  const tp2R = (riskDist>0 && tp2!=null) ? Math.abs(tp2-entry)/riskDist : null;
+
+  const reasons = [];
+
+  // The single model signal (same one the Dashboard and Telegram brief show)
+  const model = ((state.pipeline.scores && state.pipeline.scores.instruments) || {})[PIPELINE_KEY[inst.id]];
+  if(model && model.total_score!=null){
+    const agrees = (direction==='BUY' && model.signal==='LONG') || (direction==='SELL' && model.signal==='SHORT');
+    const against = (direction==='BUY' && model.signal==='SHORT') || (direction==='SELL' && model.signal==='LONG');
+    reasons.push({tag:'MODEL', color:'var(--olt-blue)', text:'Dashboard model: '+esc(model.signal)+' ('+(model.total_score>0?'+':'')+model.total_score+'). '+
+      (agrees ? 'Agrees with this '+direction+' fade.' : against ? 'Runs AGAINST this '+direction+' fade \u2014 treat it as a counter-signal trade.' : 'No directional signal, so this is a pure range fade.')});
+  }
+
+  // OI confluence
+  const wallOI = (direction==='SELL')
+    ? (lv.oiTopCalls && lv.oiTopCalls[0] ? lv.oiTopCalls[0].callOI : null)
+    : (lv.oiTopPuts && lv.oiTopPuts[0] ? lv.oiTopPuts[0].putOI : null);
+  const secondOI = (direction==='SELL')
+    ? (lv.oiTopCalls && lv.oiTopCalls[1] ? lv.oiTopCalls[1].callOI : null)
+    : (lv.oiTopPuts && lv.oiTopPuts[1] ? lv.oiTopPuts[1].putOI : null);
+  let oiText = 'Entry at the '+wallUsed+' ('+fmt(entry,inst.decimals)+'), the single largest open-interest strike'+(wallOI!=null?' with '+wallOI+' contracts':'')+'.';
+  if(secondOI!=null && wallOI!=null){
+    oiText += secondOI > wallOI*0.7 ? ' A second strike close behind ('+secondOI+' OI) means this isn\'t an isolated wall \u2014 less clean than a single dominant strike.' : ' It clearly dominates the next-largest strike, a cleaner single-wall setup.';
+  }
+  reasons.push({tag:'OI', color:'var(--olt-orange)', text:oiText});
+
+  // VOL confluence
+  const vf = state.volForecast[inst.id];
+  if(vf){
+    reasons.push({tag:'VOL', color:'var(--olt-purple)', text:'Computed annualized volatility '+vf.annVol.toFixed(1)+'%, same-day H-L median move '+vf.hlMedian.toFixed(2)+'%. No historical percentile ranking stored here, so this is a snapshot, not a "cheap/expensive vol" call.'});
+  }
+
+  // RANGE confluence
+  if(lv.expHigh!=null && lv.expLow!=null){
+    const inside = entry <= lv.expHigh && entry >= lv.expLow;
+    reasons.push({tag:'RANGE', color:'var(--olt-blue)', text:'Today\'s expected range '+fmt(lv.expLow,inst.decimals)+'\u2013'+fmt(lv.expHigh,inst.decimals)+' (from ATM IV). Entry at '+fmt(entry,inst.decimals)+' sits '+(inside?'inside this range \u2014 a stall/reversal here fits the range model.':'outside this range \u2014 reaching entry would already be a bigger move than the model expects today, which weakens this idea.')});
+  }
+
+  // SKEW confluence
+  if(lv.skew!=null){
+    const skewPct = (lv.skew*100).toFixed(2);
+    const skewDir = lv.skew>0 ? 'call' : 'put';
+    reasons.push({tag:'SKEW', color:'#e0c847', text:(lv.skew>0?'+':'')+skewPct+'pt '+skewDir+' skew (5% OTM call IV minus 5% OTM put IV). '+(lv.skew>0 ? 'Calls pricier than puts \u2014 if price stalls at the wall, that extra call premium bleeds out as those calls lose value, which is consistent with the SELL case.' : 'Puts pricier than calls \u2014 consistent with hedging/downside demand; watch that it doesn\'t contradict a BUY case.')});
+  }
+
+  // COT confluence (CFTC Commitment of Traders, weekly futures positioning)
+  const cot = state.cotData[inst.id];
+  if(cot){
+    const netSide = cot.net>0 ? 'net long' : 'net short';
+    const wowText = cot.wowChange!=null ? ', '+(cot.wowChange>0?'+':'\u2212')+Math.abs(Math.round(cot.wowChange)).toLocaleString()+' contracts week on week' : '';
+    let verdict;
+    if(cot.extreme==='high') verdict = 'At the '+cot.pctRank+'th percentile of 3 years \u2014 crowded long, a contrarian headwind. '+(direction==='SELL'?'Supports the SELL case.':'Runs against the BUY case.');
+    else if(cot.extreme==='low') verdict = 'At the '+cot.pctRank+'th percentile of 3 years \u2014 crowded short, a contrarian tailwind. '+(direction==='BUY'?'Supports the BUY case.':'Runs against the SELL case.');
+    else verdict = cot.pctRank+'th percentile of 3 years \u2014 not at an extreme, so no COT edge either way.';
+    reasons.push({tag:'COT', color:'#7dd3fc', text:esc(cot.label)+' are '+netSide+' ('+(cot.netPctOI!=null?cot.netPctOI.toFixed(1)+'% of open interest':'')+') as of '+esc(cot.reportDate)+wowText+'. '+verdict});
+  } else {
+    reasons.push({tag:'COT', color:'#7dd3fc', text:esc(state.cotMsg[inst.id]||'CFTC positioning data not loaded yet.')});
+  }
+
+  // RISK / macro confluence
+  const macro = computeMacroAggregate(inst.id);
+  if(macro.total>0){
+    const macroBullish = macro.bull > macro.bear;
+    const conflicts = (direction==='SELL' && macroBullish) || (direction==='BUY' && !macroBullish && macro.bear>macro.bull);
+    reasons.push({tag:'RISK', color:'#ff6b6b', text:'Macro backdrop: '+macro.bull+' of '+macro.total+' tracked indicators pulling bullish, '+macro.bear+' bearish, for this instrument (from the Macro tab). '+(conflicts ? 'This macro backdrop currently works against this '+direction+' idea \u2014 treat the stop as firm.' : 'This is broadly consistent with the '+direction+' idea, but macro can override options positioning without warning.')});
+  } else {
+    reasons.push({tag:'RISK', color:'#ff6b6b', text:'No macro history available from the pipeline yet.'});
+  }
+
+  return {direction, entry, stopLoss, riskDist, tp1, tp2, tp1R, tp2R, reasons, bufferSource};
+}
+
+function renderMatrix(){
+  const el = document.getElementById('olt-matrix');
+  el.innerHTML = '';
+  INSTRUMENTS.forEach(inst=>{
+    const lv = state.levels[inst.id];
+    const spot = state.spot[inst.id];
+    const lean = computeLean(inst.id);
+    const card = document.createElement('div');
+    card.className = 'olt-card';
+    card.style.cursor = 'pointer';
+    card.style.borderColor = state.active===inst.id ? 'var(--olt-blue)' : 'var(--olt-border)';
+    let badge = '<span class="olt-badge neu">No levels set</span>';
+    if(lean) badge = '<span class="olt-badge '+(lean.bull?'bull':'bear')+'">'+(lean.bull?'Bullish':'Bearish')+' lean ('+lean.count+'/'+lean.total+')</span>';
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'+
+        '<div style="font-weight:600;">'+inst.label+'</div>'+
+        '<div style="color:var(--olt-faint);font-size:10.5px;">'+(state.lastUpdate[inst.id]||'no data')+'</div>'+
+      '</div>'+
+      '<div style="font-size:20px;font-weight:600;margin-bottom:4px;">'+(spot!=null?fmt(spot,inst.decimals):'\u2014')+'</div>'+
+      badge+
+      '<div class="olt-lvl-row"><span>CALL WALL</span><b style="color:var(--olt-green)">'+(lv.callWall!=null?fmt(lv.callWall,inst.decimals):'\u2014')+'</b></div>'+
+      '<div class="olt-lvl-row"><span>PUT WALL</span><b style="color:var(--olt-orange)">'+(lv.putWall!=null?fmt(lv.putWall,inst.decimals):'\u2014')+'</b></div>'+
+      '<div class="olt-lvl-row"><span>MAX PAIN</span><b>'+(lv.maxPain!=null?fmt(lv.maxPain,inst.decimals):'\u2014')+'</b></div>'+
+      '<div class="olt-lvl-row"><span>NET GEX</span><b>'+(lv.netGex!=null?fmtCompact(lv.netGex):'\u2014')+'</b></div>';
+    card.addEventListener('click', ()=>{ state.active = inst.id; renderAll(); });
+    el.appendChild(card);
+  });
+}
+
+function renderTabs(){
+  const el = document.getElementById('olt-tabs');
+  el.innerHTML = '';
+  INSTRUMENTS.forEach(inst=>{
+    const t = document.createElement('div');
+    t.className = 'olt-tab'+(state.active===inst.id?' active':'');
+    t.textContent = inst.full;
+    t.addEventListener('click', ()=>{ state.active = inst.id; renderAll(); });
+    el.appendChild(t);
+  });
+  const macroTab = document.createElement('div');
+  macroTab.className = 'olt-tab'+(state.active==='MACRO'?' active':'');
+  macroTab.textContent = 'Macro';
+  macroTab.addEventListener('click', ()=>{ state.active = 'MACRO'; renderAll(); });
+  el.appendChild(macroTab);
+
+  const newsTab = document.createElement('div');
+  newsTab.className = 'olt-tab'+(state.active==='NEWS'?' active':'');
+  newsTab.textContent = 'Brief';
+  newsTab.addEventListener('click', ()=>{ state.active = 'NEWS'; renderAll(); });
+  el.appendChild(newsTab);
+}
+
+function renderDetail(){
+  if(state.active==='MACRO'){
+    document.getElementById('olt-ticker').textContent = '\u2014';
+    document.getElementById('olt-detail').innerHTML = '<div style="font-size:12px;color:var(--olt-dim);margin-bottom:10px;">Macro context from FRED (St. Louis Fed), fetched by the pipeline \u2014 not specific to any one instrument above.</div>';
+    return;
+  }
+  if(state.active==='NEWS'){
+    document.getElementById('olt-ticker').textContent = '\u2014';
+    document.getElementById('olt-detail').innerHTML = '<div style="font-size:12px;color:var(--olt-dim);margin-bottom:10px;">Model signal per instrument (same as the Dashboard and Telegram brief) plus matching headlines from the pipeline RSS feeds.</div>';
+    return;
+  }
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  const spot = state.spot[inst.id];
+  const candles = state.candles[inst.id];
+  const el = document.getElementById('olt-detail');
+  document.getElementById('olt-ticker').textContent = spot!=null ? fmt(spot, inst.decimals) : '\u2014';
+  let ohlc = '';
+  if(candles && candles.length){
+    const last = candles[candles.length-1];
+    const cell = (label, value, color) => '<div><div style="font-size:9.5px;color:var(--olt-faint);letter-spacing:.03em;margin-bottom:2px;">'+label+'</div><div style="font-size:13px;'+(color?('color:'+color+';'):'')+'">'+value+'</div></div>';
+    ohlc = '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">'+
+      cell('CANDLE TIME (LAST 15M, UTC)', last.time+' UTC', 'var(--olt-blue)')+
+      cell('OPEN', fmt(last.open,inst.decimals))+
+      cell('HIGH', fmt(last.high,inst.decimals))+
+      cell('LOW', fmt(last.low,inst.decimals))+
+      cell('CLOSE', fmt(last.close,inst.decimals))+
+      '</div>';
+  } else {
+    ohlc = '<span style="color:var(--olt-faint)">No candles loaded yet</span>';
+  }
+  el.innerHTML = '<div style="font-size:12px;color:var(--olt-dim);margin-bottom:12px;">'+ohlc+'</div>';
+}
+
+function renderControls(){
+  const el = document.getElementById('olt-controls');
+  el.innerHTML = '';
+
+  if(state.active==='MACRO'){
+    const statusSpan = document.createElement('span');
+    statusSpan.style.cssText = 'color:var(--olt-faint);font-size:11px;';
+    statusSpan.textContent = state.macroMsg;
+    el.appendChild(statusSpan);
+    return;
+  }
+
+  if(state.active==='NEWS'){
+    return;
+  }
+
+  const keyWrap = document.createElement('div');
+  keyWrap.style.cssText='display:flex;gap:6px;align-items:center;';
+  keyWrap.innerHTML =
+    '<span style="color:var(--olt-dim);font-size:11.5px;">Twelve Data API key</span>'+
+    '<input type="password" id="olt-apikey" style="width:220px;" value="'+(state.apiKey?state.apiKey.replace(/"/g,''):'')+'" placeholder="paste key" />';
+  el.appendChild(keyWrap);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className='olt-primary'; saveBtn.textContent='Save & load';
+  saveBtn.addEventListener('click', async ()=>{
+    state.apiKey = document.getElementById('olt-apikey').value.trim();
+    await saveSettings();
+    fetchActive(true);
+  });
+  el.appendChild(saveBtn);
+
+  const refreshBtn = document.createElement('button');
+  refreshBtn.textContent = 'Refresh';
+  refreshBtn.addEventListener('click', ()=> fetchActive(true));
+  el.appendChild(refreshBtn);
+
+  const editBtn = document.createElement('button');
+  editBtn.textContent = state.editing ? 'Close levels editor' : 'Edit levels';
+  editBtn.addEventListener('click', ()=>{ state.editing = !state.editing; renderAll(); });
+  el.appendChild(editBtn);
+
+  const autoWrap = document.createElement('label');
+  autoWrap.className = 'olt-chk';
+  autoWrap.innerHTML = '<input type="checkbox" id="olt-auto" '+(state.autoRefresh?'checked':'')+' /> Auto-refresh every 15 min';
+  el.appendChild(autoWrap);
+  autoWrap.querySelector('input').addEventListener('change', async (e)=>{ state.autoRefresh = e.target.checked; await saveSettings(); setupAutoRefresh(); });
+
+  const statusSpan = document.createElement('span');
+  statusSpan.id = 'olt-loadmsg';
+  statusSpan.style.cssText = 'color:var(--olt-faint);font-size:11px;';
+  el.appendChild(statusSpan);
+}
+
+function renderTradeIdea(){
+  const el = document.getElementById('olt-tradeidea');
+  if(!el) return;
+  if(state.active==='MACRO'){ el.innerHTML=''; return; }
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  const idea = computeTradeIdea(inst);
+
+  if(!idea){
+    el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Trade idea: none \u2014 needs live spot plus usable options levels with at least one target beyond the entry.</div>';
+    return;
+  }
+
+  const dirColor = idea.direction==='SELL' ? 'var(--olt-orange)' : 'var(--olt-green)';
+  const cell = (label, value, color) => '<div><div style="font-size:9.5px;color:var(--olt-faint);letter-spacing:.03em;margin-bottom:2px;">'+label+'</div><div style="font-size:16px;font-weight:600;'+(color?('color:'+color+';'):'')+'">'+value+'</div></div>';
+
+  const reasonRow = r => '<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--olt-border);">'+
+    '<span style="flex:0 0 auto;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700;height:fit-content;background:'+r.color+'22;color:'+r.color+';">'+r.tag+'</span>'+
+    '<span style="font-size:11.5px;color:var(--olt-dim);line-height:1.5;">'+r.text+'</span>'+
+  '</div>';
+
+  el.innerHTML = '<div class="olt-card">'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;">'+
+      cell('DIRECTION', idea.direction+'<div style="font-size:10px;color:var(--olt-faint);font-weight:400;margin-top:2px;">'+inst.full+'</div>', dirColor)+
+      cell('ENTRY', fmt(idea.entry,inst.decimals)+'<div style="font-size:10px;color:var(--olt-faint);font-weight:400;margin-top:2px;">at '+(idea.direction==='SELL'?'call wall':'put wall')+'</div>')+
+      cell('STOP LOSS', fmt(idea.stopLoss,inst.decimals)+'<div style="font-size:10px;color:var(--olt-faint);font-weight:400;margin-top:2px;">'+fmt(idea.riskDist,inst.decimals)+' away</div>', 'var(--olt-orange)')+
+      cell('RISK', fmt(idea.riskDist,inst.decimals)+'<div style="font-size:10px;color:var(--olt-faint);font-weight:400;margin-top:2px;">'+(idea.bufferSource||'size your own position')+'</div>')+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">'+
+      '<div style="background:rgba(51,214,160,.08);border:1px solid rgba(51,214,160,.3);border-radius:8px;padding:10px 12px;">'+
+        '<div style="font-size:10px;color:var(--olt-green);font-weight:700;margin-bottom:4px;">TP1</div>'+
+        '<div style="font-size:19px;font-weight:600;">'+fmt(idea.tp1,inst.decimals)+'</div>'+
+        '<div style="font-size:10px;color:var(--olt-faint);margin-top:2px;">'+(idea.tp1R!=null?idea.tp1R.toFixed(1)+'R':'\u2014')+'</div>'+
+      '</div>'+
+      '<div style="background:rgba(51,214,160,.08);border:1px solid rgba(51,214,160,.3);border-radius:8px;padding:10px 12px;">'+
+        '<div style="font-size:10px;color:var(--olt-green);font-weight:700;margin-bottom:4px;">TP2 \u2014 '+(idea.direction==='SELL'?'PUT WALL':'CALL WALL')+'</div>'+
+        '<div style="font-size:19px;font-weight:600;">'+(idea.tp2!=null?fmt(idea.tp2,inst.decimals):'\u2014')+'</div>'+
+        '<div style="font-size:10px;color:var(--olt-faint);margin-top:2px;">'+(idea.tp2R!=null?idea.tp2R.toFixed(1)+'R':'\u2014')+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="font-size:10.5px;color:var(--olt-faint);letter-spacing:.05em;margin-top:14px;margin-bottom:2px;">CONFLUENCE REASONS</div>'+
+    idea.reasons.map(reasonRow).join('')+
+    '<div style="color:#f04141;font-size:10.5px;margin-top:12px;padding-top:10px;border-top:1px solid var(--olt-border);line-height:1.5;">'+
+      'Mechanical wall-fade idea from ETF-proxy options levels (Yahoo open interest, Black-Scholes-estimated gamma) \u2014 not backtested, not real dealer positioning, not financial advice.'+
+    '</div>'+
+  '</div>';
+}
+
+function renderOiTable(){
+  const el = document.getElementById('olt-oi-table');
+  if(!el) return;
+  if(state.active==='MACRO'){ el.innerHTML=''; return; }
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  const lv = state.levels[inst.id];
+
+  if(!lv.oiTable || !lv.oiTable.length){
+    el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Open interest by strike: not computed yet \u2014 use Edit levels \u2192 Recalculate now.</div>';
+    return;
+  }
+
+  const spot = state.spot[inst.id];
+  const maxOI = Math.max.apply(null, lv.oiTable.map(r=>Math.max(r.callOI,r.putOI)));
+  const bar = (v,color) => v>0 ? '<div style="height:6px;border-radius:3px;background:'+color+';width:'+Math.max(2,(v/maxOI)*100)+'%;"></div>' : '';
+
+  let rows = lv.oiTable.map(r=>{
+    const near = spot!=null && Math.abs(r.strike-spot) < (spot*0.0015);
+    return '<tr style="'+(near?'background:rgba(79,157,255,.08);':'')+'">'+
+      '<td style="padding:4px 8px;text-align:right;color:'+(near?'var(--olt-blue)':'var(--olt-dim)')+';">'+(r.callOI||'\u2014')+'</td>'+
+      '<td style="padding:4px 6px;width:90px;">'+bar(r.callOI,'var(--olt-green)')+'</td>'+
+      '<td style="padding:4px 8px;text-align:center;font-weight:600;color:'+(near?'var(--olt-blue)':'#ffffff')+';">'+fmt(r.strike,inst.decimals)+'</td>'+
+      '<td style="padding:4px 6px;width:90px;">'+bar(r.putOI,'var(--olt-orange)')+'</td>'+
+      '<td style="padding:4px 8px;color:'+(near?'var(--olt-blue)':'var(--olt-dim)')+';">'+(r.putOI||'\u2014')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  el.innerHTML = '<div class="olt-card">'+
+    '<div style="font-size:12px;color:var(--olt-dim);margin-bottom:8px;">Open interest by strike \u2014 all '+lv.oiTable.length+' strikes, '+inst.optsSymbol+' options exp '+lv.autoExpiration+'. Row highlighted = nearest strike to current spot.</div>'+
+    '<div style="max-height:320px;overflow-y:auto;border:1px solid var(--olt-border);border-radius:6px;">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">'+
+      '<thead style="position:sticky;top:0;background:var(--olt-card2);"><tr>'+
+        '<th style="padding:6px 8px;text-align:right;color:var(--olt-faint);font-weight:500;">Call OI</th>'+
+        '<th></th>'+
+        '<th style="padding:6px 8px;color:#ffffff;font-weight:600;">Strike</th>'+
+        '<th></th>'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--olt-faint);font-weight:500;">Put OI</th>'+
+      '</tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table></div>'+
+  '</div>';
+}
+
+function renderVolForecastTable(){
+  const el = document.getElementById('olt-volforecast-table');
+  if(!el) return;
+  if(state.active==='MACRO'){ el.innerHTML=''; return; }
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  if(!state.showVolForecast){ el.innerHTML=''; return; }
+
+  const vf = state.volForecast[inst.id];
+  const msg = state.volForecastMsg[inst.id] || '';
+
+  if(!vf){
+    el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Vol/Range Forecast: '+(msg||'not computed yet \u2014 needs a Twelve Data API key and daily history.')+'</div>';
+    return;
+  }
+
+  const row = (label, value, color) => '<tr><td style="padding:5px 10px;color:var(--olt-dim);">'+label+'</td><td style="padding:5px 10px;text-align:right;font-weight:600;'+(color?('color:'+color+';'):'')+'">'+fmt(value, inst.decimals)+'</td></tr>';
+
+  el.innerHTML = '<div class="olt-card">'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:8px;">'+
+      '<div style="font-size:12px;color:var(--olt-dim);">Vol/Range Forecast \u2014 '+inst.volProfile+' profile, '+vf.lookbackUsed+' trading days lookback, anchored to today\'s open '+fmt(vf.todayOpen,inst.decimals)+'</div>'+
+      '<div style="font-size:10.5px;color:var(--olt-faint);">'+vf.asOf+'</div>'+
+    '</div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      row('Close Med +', vf.closeMedPlus, 'var(--olt-blue)')+
+      row('Close Med \u2212', vf.closeMedMinus, 'var(--olt-blue)')+
+      row('Close 75p +', vf.close75pPlus, 'var(--olt-orange)')+
+      row('Close 75p \u2212', vf.close75pMinus, 'var(--olt-orange)')+
+      row('H-L Med +', vf.hlMedPlus, 'var(--olt-green)')+
+      row('H-L Med \u2212', vf.hlMedMinus, 'var(--olt-orange)')+
+    '</table>'+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:10.5px;color:var(--olt-faint);border-top:1px solid var(--olt-border);padding-top:8px;">'+
+      '<span>Ann. Vol: '+vf.annVol.toFixed(2)+'%</span>'+
+      '<span>H-L Median: '+vf.hlMedian.toFixed(2)+'%</span>'+
+      '<span>H-L 75th: '+vf.hl75.toFixed(2)+'%</span>'+
+      '<span>O-C Median: '+vf.ocMedian.toFixed(2)+'%</span>'+
+      '<span>O-C 75th: '+vf.oc75.toFixed(2)+'%</span>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderToggles(){
+  const el = document.getElementById('olt-toggles');
+  el.innerHTML = '';
+  const w = document.createElement('label'); w.className='olt-chk';
+  w.innerHTML = '<input type="checkbox" id="olt-showwalls" '+(state.showWalls?'checked':'')+' /> Show walls on chart';
+  el.appendChild(w);
+  w.querySelector('input').addEventListener('change', async(e)=>{ state.showWalls=e.target.checked; await saveSettings(); drawChart(); });
+
+  const r = document.createElement('label'); r.className='olt-chk';
+  r.innerHTML = '<input type="checkbox" id="olt-showrange" '+(state.showRange?'checked':'')+' /> Show expected range on chart';
+  el.appendChild(r);
+  r.querySelector('input').addEventListener('change', async(e)=>{ state.showRange=e.target.checked; await saveSettings(); drawChart(); });
+
+  const vf = document.createElement('label'); vf.className='olt-chk';
+  vf.innerHTML = '<input type="checkbox" id="olt-showvolforecast" '+(state.showVolForecast?'checked':'')+' /> Show Vol/Range Forecast (6 levels)';
+  el.appendChild(vf);
+  vf.querySelector('input').addEventListener('change', async(e)=>{ state.showVolForecast=e.target.checked; await saveSettings(); drawChart(); renderVolForecastTable(); });
+
+  const oi = document.createElement('label'); oi.className='olt-chk';
+  oi.innerHTML = '<input type="checkbox" id="olt-showoi" '+(state.showOiLevels?'checked':'')+' /> Show all OI levels on chart';
+  el.appendChild(oi);
+  oi.querySelector('input').addEventListener('change', async(e)=>{ state.showOiLevels=e.target.checked; await saveSettings(); drawChart(); });
+}
+
+function renderEditPanel(){
+  const panel = document.getElementById('olt-editpanel');
+  if(!state.editing || state.active==='MACRO'){ panel.style.display='none'; return; }
+  panel.style.display='block';
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  const lv = state.levels[inst.id];
+  const fields = [
+    ['callWall','Call wall'], ['putWall','Put wall'], ['maxPain','Max pain'], ['flip','Gamma flip'],
+    ['expHigh','Expected high'], ['expLow','Expected low'], ['pcRatio','Put/call ratio'], ['netGex','Net GEX ($)']
+  ];
+  let html = '<div class="olt-card" style="margin-bottom:10px;"><div style="font-size:12px;color:var(--olt-dim);margin-bottom:10px;">Data source for '+inst.full+' \u2014 the Twelve Data symbol to fetch, and a multiplier to rescale it (useful when the real symbol needs a paid plan and you\'re using a cheaper proxy like an ETF).</div>'+
+    '<div style="display:flex;gap:14px;align-items:flex-end;">'+
+    '<div><div style="color:var(--olt-faint);font-size:10.5px;margin-bottom:3px;">TWELVE DATA SYMBOL</div><input type="text" id="olt-symbol" style="width:140px;" value="'+inst.symbol+'" /></div>'+
+    '<div><div style="color:var(--olt-faint);font-size:10.5px;margin-bottom:3px;">MULTIPLIER</div><input type="number" step="any" id="olt-mult" style="width:90px;" value="'+inst.multiplier+'" /></div>'+
+    '<button id="olt-savesym">Save & refetch</button>'+
+    '</div></div>';
+
+  const tmsg = state.tradierMsg[inst.id] || '';
+  html += '<div class="olt-card" style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">'+
+    '<div style="font-size:12px;color:var(--olt-dim);">Levels from the <b style="color:var(--olt-text)">'+inst.optsSymbol+'</b> options chain, computed by the dashboard pipeline (front-month expiry, open interest from Yahoo during US hours, gamma estimated with Black-Scholes). A retail approximation, not true dealer positioning.</div></div>'+
+    '<div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">'+
+    '<button class="olt-primary" id="olt-autolvl">Reload pipeline data</button>'+
+    '</div>'+
+    '<div style="margin-top:8px;font-size:11px;color:var(--olt-faint);">'+tmsg+'</div>'+
+    (lv.auto ? '<div style="margin-top:6px;"><span class="olt-badge bull">Auto-computed</span> <span style="color:var(--olt-faint);font-size:11px;">from '+lv.autoUnderlying+' options exp '+lv.autoExpiration+', set '+lv.asOf+'</span></div>' : '')+
+    '</div>';
+
+  html += '<div class="olt-card"><div style="font-size:12px;color:var(--olt-dim);margin-bottom:10px;">Levels for '+inst.full+' \u2014 auto-filled above, or edit any field manually to override.</div>';
+  html += '<div class="olt-edit-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">';
+  fields.forEach(([key,label])=>{
+    html += '<div><div style="color:var(--olt-faint);font-size:10.5px;margin-bottom:3px;">'+label.toUpperCase()+'</div>'+
+      '<input type="number" step="any" id="olt-f-'+key+'" style="width:100%;" value="'+(lv[key]!=null?lv[key]:'')+'" /></div>';
+  });
+  html += '</div><div style="margin-top:10px;display:flex;gap:8px;align-items:center;">';
+  html += '<button class="olt-primary" id="olt-savelvl">Save levels</button>';
+  html += '<span style="color:var(--olt-faint);font-size:11px;">Last set: '+(lv.asOf||'never')+'</span></div></div>';
+  panel.innerHTML = html;
+  document.getElementById('olt-savesym').addEventListener('click', async ()=>{
+    inst.symbol = document.getElementById('olt-symbol').value.trim() || inst.symbol;
+    const m = parseFloat(document.getElementById('olt-mult').value);
+    inst.multiplier = isNaN(m) ? 1 : m;
+    inst.userSymbol = true;
+    try{ await storage.set('olt_symcfg_'+inst.id, JSON.stringify({symbol:inst.symbol, multiplier:inst.multiplier})); }catch(e){}
+    await fetchInstrument(inst, true);
+    renderAll();
+  });
+  document.getElementById('olt-autolvl').addEventListener('click', async ()=>{
+    await loadPipelineData();
+  });
+  document.getElementById('olt-savelvl').addEventListener('click', async ()=>{
+    fields.forEach(([key])=>{
+      const raw = document.getElementById('olt-f-'+key).value;
+      lv[key] = raw===''? null : parseFloat(raw);
+    });
+    lv.asOf = new Date().toISOString().slice(0,16).replace('T',' ')+' UTC';
+    lv.auto = false; lv.manualAt = Date.now();
+    await saveLevels(inst.id);
+    renderAll();
+  });
+}
+
+async function fetchActive(showMsg){
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  await fetchInstrument(inst, showMsg);
+  await fetchVolForecast(inst);
+  await loadPipelineData();
+}
+
+async function fetchInstrument(inst, showMsg){
+  const msgEl = document.getElementById('olt-loadmsg');
+  if(!state.apiKey){
+    if(msgEl) msgEl.textContent = 'Enter a Twelve Data API key to load live candles.';
+    return;
+  }
+  if(msgEl) msgEl.textContent = 'Loading '+inst.label+'...';
+  try{
+    const url = 'https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(inst.symbol)+'&interval=15min&outputsize=200&timezone=UTC&apikey='+encodeURIComponent(state.apiKey);
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.status==='error' || data.code){
+      if(msgEl) msgEl.textContent = 'Error loading '+inst.label+': '+(data.message||'unknown error');
+      return;
+    }
+    if(!data.values || !data.values.length){
+      if(msgEl) msgEl.textContent = 'No candle data returned for '+inst.symbol+'.';
+      return;
+    }
+    const mult = inst.multiplier || 1;
+    const candles = data.values.slice().reverse().map(v=>({
+      time: v.datetime,
+      open: parseFloat(v.open)*mult, high: parseFloat(v.high)*mult, low: parseFloat(v.low)*mult, close: parseFloat(v.close)*mult
+    }));
+    state.candles[inst.id] = candles;
+    state.spot[inst.id] = candles[candles.length-1].close;
+    state.lastUpdate[inst.id] = new Date().toLocaleTimeString();
+    if(msgEl) msgEl.textContent = 'Loaded '+candles.length+' 15m candles for '+inst.label+' \u2014 last close '+fmt(state.spot[inst.id],inst.decimals);
+  }catch(e){
+    if(msgEl) msgEl.textContent = 'Fetch failed for '+inst.label+': '+e.message;
+  }
+}
+
+function stdevPop(arr){
+  const n = arr.length;
+  if(n===0) return null;
+  const mean = arr.reduce((a,b)=>a+b,0)/n;
+  const variance = arr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/n;
+  return Math.sqrt(variance);
+}
+
+function percentileLinear(arr, p){
+  if(!arr.length) return null;
+  const sorted = arr.slice().sort((a,b)=>a-b);
+  const idx = (p/100)*(sorted.length-1);
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  if(lo===hi) return sorted[lo];
+  const frac = idx-lo;
+  return sorted[lo] + (sorted[hi]-sorted[lo])*frac;
+}
+
+function computeATR(bars, period){
+  period = period || 14;
+  if(!bars || bars.length < period+1) return null;
+  const trueRanges = [];
+  for(let i=1;i<bars.length;i++){
+    const cur = bars[i], prev = bars[i-1];
+    const tr = Math.max(cur.high-cur.low, Math.abs(cur.high-prev.close), Math.abs(cur.low-prev.close));
+    trueRanges.push(tr);
+  }
+  const recent = trueRanges.slice(-period);
+  return recent.reduce((a,b)=>a+b,0)/recent.length;
+}
+
+async function fetchVolForecast(inst){
+  state.volForecastMsg[inst.id] = 'Fetching daily history...';
+  renderEditPanel();
+  try{
+    if(!state.apiKey) throw new Error('Twelve Data API key required for daily history.');
+    const url = 'https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(inst.symbol)+'&interval=1day&outputsize=120&timezone=UTC&apikey='+encodeURIComponent(state.apiKey);
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.status==='error' || data.code) throw new Error(data.message||'Twelve Data error');
+    if(!data.values || !data.values.length) throw new Error('No daily data returned');
+
+    const mult = inst.multiplier || 1;
+    let bars = data.values.slice().reverse().map(v=>({
+      date: v.datetime.slice(0,10),
+      open: parseFloat(v.open)*mult, high: parseFloat(v.high)*mult, low: parseFloat(v.low)*mult, close: parseFloat(v.close)*mult
+    }));
+
+    const todayStr = new Date().toISOString().slice(0,10);
+    let todayBar = null;
+    if(bars.length && bars[bars.length-1].date===todayStr){
+      todayBar = bars.pop();
+    }
+    state.dailyBars[inst.id] = todayBar ? bars.concat([todayBar]) : bars.slice();
+
+    const lookback = Math.min(VOL_FORECAST_LOOKBACK, bars.length-1);
+    if(lookback < 10) throw new Error('Not enough daily history for a reliable forecast');
+
+    const forReturns = bars.slice(-(lookback+1));
+    const logRets = [];
+    for(let i=1;i<forReturns.length;i++){ logRets.push(Math.log(forReturns[i].close/forReturns[i-1].close)); }
+
+    const forHLOC = bars.slice(-lookback);
+    const hlPct = forHLOC.map(b=>(b.high-b.low)/b.open*100);
+    const ocPct = forHLOC.map(b=>Math.abs(b.close-b.open)/b.open*100);
+
+    const rawVol = stdevPop(logRets)*Math.sqrt(252)*100;
+    const rawHLMed = percentileLinear(hlPct, 50);
+    const rawHL75 = percentileLinear(hlPct, 75);
+    const rawOCMed = percentileLinear(ocPct, 50);
+    const rawOC75 = percentileLinear(ocPct, 75);
+
+    const corr = VOL_PROFILE_CORRECTIONS[inst.volProfile] || {vol:1,hlMed:1,hl75:1,ocMed:1,oc75:1};
+    const annVol = rawVol*corr.vol;
+    const hlMedian = rawHLMed*corr.hlMed;
+    const hl75 = rawHL75*corr.hl75;
+    const ocMedian = rawOCMed*corr.ocMed;
+    const oc75 = rawOC75*corr.oc75;
+
+    let todayOpen, dHigh, dLow;
+    if(todayBar){
+      todayOpen = todayBar.open; dHigh = todayBar.high; dLow = todayBar.low;
+    } else {
+      const intraday = (state.candles[inst.id]||[]).filter(c=>c.time.slice(0,10)===todayStr);
+      if(intraday.length){
+        todayOpen = intraday[0].open;
+        dHigh = Math.max.apply(null, intraday.map(c=>c.high));
+        dLow = Math.min.apply(null, intraday.map(c=>c.low));
+      } else if(state.spot[inst.id]!=null){
+        todayOpen = dHigh = dLow = state.spot[inst.id];
+      } else {
+        throw new Error('No live open/high/low available yet for today');
+      }
+    }
+
+    state.volForecast[inst.id] = {
+      closeMedPlus: todayOpen*(1+ocMedian/100),
+      closeMedMinus: todayOpen*(1-ocMedian/100),
+      close75pPlus: todayOpen*(1+oc75/100),
+      close75pMinus: todayOpen*(1-oc75/100),
+      hlMedPlus: dLow*(1+hlMedian/100),
+      hlMedMinus: dHigh*(1-hlMedian/100),
+      annVol, hlMedian, hl75, ocMedian, oc75,
+      todayOpen, dHigh, dLow,
+      lookbackUsed: lookback,
+      asOf: new Date().toISOString().slice(0,16).replace('T',' ')+' UTC',
+    };
+    state.volForecastMsg[inst.id] = 'Computed from '+lookback+' trading days, profile '+inst.volProfile+'.';
+  }catch(e){
+    state.volForecastMsg[inst.id] = 'Failed: '+e.message;
+  }
+  renderAll();
+}
+
+async function getPipelineJson(name){
+  const res = await fetch(DATA_BASE+name, {cache:'no-store'});
+  if(!res.ok) throw new Error(name+': HTTP '+res.status);
+  return res.json();
+}
+
+function applyOptions(inst, ome){
+  const lv = state.levels[inst.id];
+  if(lv.auto===false && lv.manualAt){ state.tradierMsg[inst.id] = 'Using your manual levels (saved '+lv.asOf+').'; return; }
+  const asOf = ome && ome.as_of ? new Date(ome.as_of+'Z') : null;
+  const ageH = asOf ? (Date.now()-asOf.getTime())/3.6e6 : null;
+  const keys = ['callWall','putWall','maxPain','flip','expHigh','expLow','pcRatio','netGex','skew'];
+  if(!ome || ome.error || ageH==null || ageH>OPTIONS_MAX_AGE_HOURS){
+    keys.forEach(k=>lv[k]=null); lv.oiTable=null; lv.oiTopCalls=null; lv.oiTopPuts=null; lv.auto=true;
+    state.tradierMsg[inst.id] = 'No usable options snapshot: '+esc(ome && ome.error ? ome.error : 'last one from '+((ome && ome.as_of) || 'never'))+'. Yahoo only publishes open interest during US hours.';
+    return;
+  }
+  Object.assign(lv, {callWall:ome.call_wall, putWall:ome.put_wall, maxPain:ome.max_pain, flip:ome.gamma_flip,
+    expHigh:ome.exp_high, expLow:ome.exp_low, pcRatio:ome.put_call_ratio, netGex:ome.net_gex, skew:ome.otm_skew,
+    auto:true, autoExpiration:ome.expiry, autoUnderlying:ome.proxy_for, asOf:ome.as_of+' UTC'});
+  lv.oiTable = (ome.strikes||[]).map((k,i)=>({strike:k, callOI:(ome.call_oi||[])[i]||0, putOI:(ome.put_oi||[])[i]||0}));
+  lv.oiTopCalls = lv.oiTable.filter(r=>r.callOI>0).sort((a,b)=>b.callOI-a.callOI).slice(0,8);
+  lv.oiTopPuts = lv.oiTable.filter(r=>r.putOI>0).sort((a,b)=>b.putOI-a.putOI).slice(0,8);
+  // Keep the QQQ candle feed on the same NDX scale the levels were computed on.
+  if(inst.id==='NAS100' && ome.scale_ratio && !inst.userSymbol) inst.multiplier = ome.scale_ratio;
+  state.tradierMsg[inst.id] = 'From '+esc(ome.proxy_for)+' options exp '+esc(ome.expiry)+' ('+ome.dte+'d), snapshot '+esc(ome.as_of)+' UTC'+(ome.carried_over?' (carried over: no fresh US-hours data on the latest run)':'')+'.';
+}
+
+function applyCot(inst, c){
+  if(!c || c.error){ state.cotData[inst.id]=null; state.cotMsg[inst.id]='COT unavailable'+(c&&c.error?': '+c.error:''); return; }
+  state.cotData[inst.id] = {reportDate:c.date, long:c.spec_long, short:c.spec_short, net:c.spec_net, netPctOI:c.spec_net_pct,
+    wowChange:c.wow_change, pctRank:c.pct_rank_3y, weeksOfHistory:c.weeks, label:c.group,
+    extreme: c.signal==='CROWDED_LONG' ? 'high' : c.signal==='CROWDED_SHORT' ? 'low' : null};
+  state.cotMsg[inst.id] = 'Report dated '+c.date;
+}
+
+async function loadPipelineData(){
+  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json'};
+  await Promise.all(Object.entries(files).map(async ([k,f])=>{
+    try{ state.pipeline[k] = await getPipelineJson(f); }catch(e){ state.pipeline[k] = null; }
+  }));
+  const P = state.pipeline;
+  INSTRUMENTS.forEach(inst=>{
+    const key = PIPELINE_KEY[inst.id];
+    applyOptions(inst, P.ome && P.ome.instruments ? P.ome.instruments[key] : null);
+    applyCot(inst, P.cot && P.cot.instruments ? P.cot.instruments[key] : null);
+  });
+  MACRO_SERIES = (P.macro && P.macro.series) || [];
+  state.macroData = {};
+  MACRO_SERIES.forEach(s=>{ state.macroData[s.id] = {obs: s.obs && s.obs.length ? s.obs : null, error: s.error || (s.obs && s.obs.length ? null : 'no data')}; });
+  state.macroMsg = P.macro ? 'Macro data fetched '+String(P.macro.fetched||'').slice(0,16).replace('T',' ') : 'No macro history available from the pipeline yet.';
+  renderAll();
+}
+
+let autoTimer = null;
+function setupAutoRefresh(){
+  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; }
+  if(state.autoRefresh){
+    autoTimer = setInterval(()=>{ fetchActive(true); }, 15*60*1000);
+  }
+}
+
+function niceMax(vals){ return Math.max.apply(null, vals); }
+function niceMin(vals){ return Math.min.apply(null, vals); }
+
+function ensureZoomView(instId, totalLen){
+  let z = state.chartZoom[instId];
+  const MIN_VISIBLE = 10;
+  if(!z){
+    z = {start:0, end:totalLen};
+    state.chartZoom[instId] = z;
+  } else {
+    z.end = Math.min(z.end, totalLen);
+    z.start = Math.max(0, Math.min(z.start, Math.max(0, z.end-MIN_VISIBLE)));
+    if(z.end - z.start < MIN_VISIBLE || z.end > totalLen || z.start<0){ z.start=0; z.end=totalLen; }
+  }
+  return z;
+}
+
+function attachChartInteractions(canvas){
+  if(canvas._zoomBound) return;
+  canvas._zoomBound = true;
+
+  function currentInstAndCandles(){
+    const inst = INSTRUMENTS.find(i=>i.id===state.active);
+    if(!inst) return null;
+    const candles = state.candles[inst.id];
+    if(!candles || !candles.length) return null;
+    return {inst, candles};
+  }
+
+  canvas.addEventListener('wheel', (e)=>{
+    const ctx0 = currentInstAndCandles();
+    if(!ctx0) return;
+    e.preventDefault();
+    const {inst, candles} = ctx0;
+    const view = ensureZoomView(inst.id, candles.length);
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const padLeftApprox = 8, padRightApprox = 100;
+    const plotWApprox = Math.max(1, rect.width - padLeftApprox - padRightApprox);
+    const frac = Math.min(1, Math.max(0, (mouseX-padLeftApprox)/plotWApprox));
+    const curLen = view.end-view.start;
+    const centerIdx = view.start + frac*curLen;
+    const zoomFactor = e.deltaY < 0 ? 0.85 : (1/0.85);
+    let newLen = Math.round(curLen*zoomFactor);
+    newLen = Math.max(10, Math.min(candles.length, newLen));
+    let newStart = Math.round(centerIdx - frac*newLen);
+    let newEnd = newStart+newLen;
+    if(newStart<0){ newStart=0; newEnd=newLen; }
+    if(newEnd>candles.length){ newEnd=candles.length; newStart=Math.max(0,newEnd-newLen); }
+    state.chartZoom[inst.id] = {start:newStart, end:newEnd};
+    drawChart();
+  }, {passive:false});
+
+  let dragging=false, dragStartX=0, dragStartView=null, dragInstId=null;
+  canvas.addEventListener('mousedown',(e)=>{
+    const ctx0 = currentInstAndCandles();
+    if(!ctx0) return;
+    dragging=true; dragStartX=e.clientX;
+    dragInstId = ctx0.inst.id;
+    dragStartView = Object.assign({}, ensureZoomView(ctx0.inst.id, ctx0.candles.length));
+    canvas.style.cursor='grabbing';
+  });
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging || !dragStartView || !dragInstId) return;
+    const candles = state.candles[dragInstId];
+    if(!candles) return;
+    const rect = canvas.getBoundingClientRect();
+    const plotWApprox = Math.max(1, rect.width - 8 - 100);
+    const len = dragStartView.end-dragStartView.start;
+    const dxPixels = e.clientX-dragStartX;
+    const dxCandles = Math.round(-dxPixels/plotWApprox*len);
+    let newStart = dragStartView.start+dxCandles;
+    let newEnd = dragStartView.end+dxCandles;
+    if(newStart<0){ newStart=0; newEnd=len; }
+    if(newEnd>candles.length){ newEnd=candles.length; newStart=Math.max(0,newEnd-len); }
+    state.chartZoom[dragInstId] = {start:newStart, end:newEnd};
+    drawChart();
+  });
+  window.addEventListener('mouseup',()=>{
+    if(dragging){ dragging=false; dragStartView=null; dragInstId=null; canvas.style.cursor='grab'; }
+  });
+}
+
+function drawChart(){
+  if(state.active==='MACRO') return;
+  const inst = INSTRUMENTS.find(i=>i.id===state.active);
+  const canvas = document.getElementById('olt-canvas');
+  if(!canvas || !inst) return;
+  attachChartInteractions(canvas);
+  const wrap = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+
+  const candles = state.candles[inst.id];
+  const lv = state.levels[inst.id];
+  const style = getComputedStyle(root);
+  const dim = style.getPropertyValue('--olt-dim').trim() || '#8592ab';
+  const faint = style.getPropertyValue('--olt-faint').trim() || '#4c5872';
+  const green = style.getPropertyValue('--olt-green').trim() || '#33d6a0';
+  const orange = style.getPropertyValue('--olt-orange').trim() || '#fb9152';
+  const purple = style.getPropertyValue('--olt-purple').trim() || '#9c9fe0';
+  const blue = style.getPropertyValue('--olt-blue').trim() || '#4f9dff';
+  const border = style.getPropertyValue('--olt-border').trim() || '#1c2740';
+
+  if(!candles || !candles.length){
+    ctx.fillStyle = faint; ctx.font = '12px '+getComputedStyle(root).fontFamily;
+    ctx.fillText('No candle data. Enter an API key and click Save & load.', 14, h/2);
+    return;
+  }
+
+  const view = ensureZoomView(inst.id, candles.length);
+  const visibleCandles = candles.slice(view.start, view.end);
+  const zoomInfoEl = document.getElementById('olt-zoominfo');
+  if(zoomInfoEl){
+    zoomInfoEl.textContent = visibleCandles.length>=candles.length ? 'Showing all '+candles.length+' candles' : 'Showing '+visibleCandles.length+' of '+candles.length+' candles';
+  }
+
+  const vf = state.volForecast[inst.id];
+
+  const fontFam = getComputedStyle(root).fontFamily;
+  ctx.font = '600 10.5px '+fontFam;
+  const candidateLabels = [];
+  if(state.showWalls){
+    if(lv.callWall!=null) candidateLabels.push('Call wall '+fmt(lv.callWall,inst.decimals));
+    if(lv.putWall!=null) candidateLabels.push('Put wall '+fmt(lv.putWall,inst.decimals));
+  }
+  if(state.showRange){
+    if(lv.expHigh!=null) candidateLabels.push('Exp high (today) '+fmt(lv.expHigh,inst.decimals));
+    if(lv.expLow!=null) candidateLabels.push('Exp low (today) '+fmt(lv.expLow,inst.decimals));
+  }
+  if(state.showVolForecast && vf){
+    candidateLabels.push('Close Med + '+fmt(vf.closeMedPlus,inst.decimals));
+    candidateLabels.push('Close Med \u2212 '+fmt(vf.closeMedMinus,inst.decimals));
+    candidateLabels.push('Close 75p + '+fmt(vf.close75pPlus,inst.decimals));
+    candidateLabels.push('Close 75p \u2212 '+fmt(vf.close75pMinus,inst.decimals));
+    candidateLabels.push('H-L Med + '+fmt(vf.hlMedPlus,inst.decimals));
+    candidateLabels.push('H-L Med \u2212 '+fmt(vf.hlMedMinus,inst.decimals));
+  }
+  let maxLabelW = 0;
+  candidateLabels.forEach(txt=>{ maxLabelW = Math.max(maxLabelW, ctx.measureText(txt).width); });
+  const padLeft = 8, padRight = Math.max(78, maxLabelW + 24), padTop = 16, padBottom = 26;
+  const plotW = w - padLeft - padRight, plotH = h - padTop - padBottom;
+
+  let vals = [];
+  visibleCandles.forEach(c=>{ vals.push(c.high, c.low); });
+  if(!vals.length){ candles.forEach(c=>{ vals.push(c.high, c.low); }); }
+  let maxV = niceMax(vals), minV = niceMin(vals);
+  const range = maxV - minV || 1;
+  maxV += range*0.06; minV -= range*0.06;
+
+  function yOf(v){ return padTop + (1 - (v-minV)/(maxV-minV)) * plotH; }
+  function xOf(i){ return padLeft + (i+0.5) * (plotW/visibleCandles.length); }
+
+  ctx.strokeStyle = border; ctx.lineWidth = 1;
+  const steps = 6;
+  ctx.font = '10.5px '+getComputedStyle(root).fontFamily;
+  for(let s=0;s<=steps;s++){
+    const v = minV + (maxV-minV)*s/steps;
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(padLeft,y); ctx.lineTo(padLeft+plotW,y); ctx.stroke();
+    ctx.fillStyle = dim;
+    ctx.fillText(fmt(v, inst.decimals), padLeft+plotW+8, y+3);
+  }
+
+  const bw = Math.max(1.5, (plotW/visibleCandles.length)*0.6);
+  visibleCandles.forEach((c,i)=>{
+    const x = xOf(i);
+    const up = c.close >= c.open;
+    ctx.strokeStyle = up?green:orange;
+    ctx.fillStyle = up?green:orange;
+    ctx.beginPath(); ctx.moveTo(x, yOf(c.high)); ctx.lineTo(x, yOf(c.low)); ctx.stroke();
+    const oy = yOf(c.open), cy = yOf(c.close);
+    const top = Math.min(oy,cy), bh = Math.max(1, Math.abs(cy-oy));
+    ctx.fillRect(x-bw/2, top, bw, bh);
+  });
+
+  function drawLevelLine(v, color, label, dashed){
+    if(v==null || v<minV || v>maxV) return;
+    const y = yOf(v);
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+    if(dashed) ctx.setLineDash([4,4]); else ctx.setLineDash([1,3]);
+    ctx.beginPath(); ctx.moveTo(padLeft,y); ctx.lineTo(padLeft+plotW,y); ctx.stroke();
+    ctx.setLineDash([]);
+    const txt = label+' '+fmt(v,inst.decimals);
+    ctx.font = '10.5px '+getComputedStyle(root).fontFamily;
+    const tw = ctx.measureText(txt).width + 12;
+    ctx.fillStyle = color; ctx.fillRect(padLeft+plotW+2, y-9, Math.min(tw, padRight-4), 18);
+    ctx.fillStyle = '#04101f'; ctx.font = '600 10.5px '+getComputedStyle(root).fontFamily;
+    ctx.fillText(txt, padLeft+plotW+6, y+3);
+    ctx.restore();
+  }
+
+  if(state.showWalls){
+    drawLevelLine(lv.callWall, green, 'Call wall', true);
+    drawLevelLine(lv.putWall, orange, 'Put wall', true);
+  }
+  if(state.showRange){
+    drawLevelLine(lv.expHigh, purple, 'Exp high (today)', false);
+    drawLevelLine(lv.expLow, purple, 'Exp low (today)', false);
+  }
+  if(state.showVolForecast && vf){
+    drawLevelLine(vf.closeMedPlus, blue, 'Close Med +', true);
+    drawLevelLine(vf.closeMedMinus, blue, 'Close Med \u2212', true);
+    drawLevelLine(vf.close75pPlus, orange, 'Close 75p +', true);
+    drawLevelLine(vf.close75pMinus, orange, 'Close 75p \u2212', true);
+    drawLevelLine(vf.hlMedPlus, green, 'H-L Med +', true);
+    drawLevelLine(vf.hlMedMinus, orange, 'H-L Med \u2212', true);
+  }
+
+  function drawOiLine(v, oi, color){
+    if(v==null || v<minV || v>maxV) return;
+    const y = yOf(v);
+    ctx.save();
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.35; ctx.lineWidth = 1;
+    ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(padLeft,y); ctx.lineTo(padLeft+plotW,y); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 0.8;
+    ctx.font = '9.5px '+getComputedStyle(root).fontFamily;
+    ctx.fillStyle = color;
+    ctx.fillText('OI '+oi, padLeft+plotW+6, y+3);
+    ctx.restore();
+  }
+
+  if(state.showOiLevels){
+    (lv.oiTopCalls||[]).slice(1).forEach(r=>drawOiLine(r.strike, r.callOI, green));
+    (lv.oiTopPuts||[]).slice(1).forEach(r=>drawOiLine(r.strike, r.putOI, orange));
+  }
+
+  ctx.fillStyle = dim; ctx.font = '10px '+getComputedStyle(root).fontFamily;
+  const labelEvery = Math.max(1, Math.floor(visibleCandles.length/6));
+  visibleCandles.forEach((c,i)=>{
+    if(i % labelEvery === 0){
+      const t = c.time.slice(5,16).replace('T',' ').slice(0,11);
+      ctx.fillText(t, xOf(i)-16, h-6);
+    }
+  });
+}
+
+function renderAll(){
+  renderMatrix();
+  renderTabs();
+  renderDetail();
+  renderControls();
+  const chartWrap = document.getElementById('olt-chartwrap');
+  const macroPanel = document.getElementById('olt-macropanel');
+  const newsPanel = document.getElementById('olt-newspanel');
+  if(state.active==='MACRO'){
+    chartWrap.style.display = 'none';
+    macroPanel.style.display = 'block';
+    newsPanel.style.display = 'none';
+    renderMacroPanel();
+  } else if(state.active==='NEWS'){
+    chartWrap.style.display = 'none';
+    macroPanel.style.display = 'none';
+    newsPanel.style.display = 'block';
+    renderNewsPanel();
+  } else {
+    chartWrap.style.display = 'block';
+    macroPanel.style.display = 'none';
+    newsPanel.style.display = 'none';
+    renderToggles();
+    renderEditPanel();
+    renderVolForecastTable();
+    renderTradeIdea();
+    renderOiTable();
+    drawChart();
+  }
+}
+
+function sparklinePoints(obs){
+  return obs.filter(o=>o.value!=='.' && o.value!=null).map(o=>parseFloat(o.value));
+}
+
+function calcTrend(values){
+  if(!values || values.length<2) return 0;
+  const recent = values[values.length-1];
+  const lookback = values[Math.max(0, values.length-10)];
+  const diff = recent - lookback;
+  const base = Math.abs(lookback) > 1e-9 ? Math.abs(lookback) : 1;
+  const pctChange = Math.abs(diff)/base;
+  if(pctChange < 0.002) return 0;
+  return diff > 0 ? 1 : -1;
+}
+
+function effectBadgeHtml(label, effect){
+  if(effect>0) return '<span style="color:var(--olt-green);">'+label+' \u25b2</span>';
+  if(effect<0) return '<span style="color:var(--olt-orange);">'+label+' \u25bc</span>';
+  return '<span style="color:var(--olt-faint);">'+label+' \u2013</span>';
+}
+
+function drawSparkline(canvas, values, color){
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 160, h = canvas.clientHeight || 40;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  if(!values || values.length<2) return;
+  const max = Math.max.apply(null, values), min = Math.min.apply(null, values);
+  const range = (max-min) || 1;
+  ctx.beginPath();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  values.forEach((v,i)=>{
+    const x = (i/(values.length-1)) * (w-4) + 2;
+    const y = h - 4 - ((v-min)/range) * (h-8);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+function renderNewsPanel(){
+  const el = document.getElementById('olt-newspanel');
+  if(!el) return;
+  const P = state.pipeline;
+  if(!P.scores || !P.scores.instruments){ el.innerHTML = '<div class="olt-card" style="font-size:11.5px;color:var(--olt-faint);">Model scores not available yet.</div>'; return; }
+  const m = P.scores.model || {};
+  const headlines = (P.geo && P.geo.headlines) || [];
+  let html = '<div style="font-size:11px;color:var(--olt-faint);margin-bottom:10px;">Model run '+esc(String(P.scores.generated||'').slice(0,16).replace('T',' '))+' UTC \u00b7 signal needs |score| \u2265 '+(m.signal_threshold||2)+' of \u00b1'+(m.max_score||11)+'</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
+  INSTRUMENTS.forEach(inst=>{
+    const key = PIPELINE_KEY[inst.id], d = P.scores.instruments[key];
+    if(!d) return;
+    const cls = d.signal==='LONG' ? 'bull' : d.signal==='SHORT' ? 'bear' : 'neu';
+    const details = Object.assign({}, d.positioning_details, d.macro_details, d.cot_details);
+    const hl = headlines.filter(h=>(h.instruments||[]).includes(key)).slice(0,5);
+    html += '<div class="olt-card">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><div style="font-weight:600;font-size:13px;">'+inst.label+'</div>'+
+      '<span class="olt-badge '+cls+'">'+esc(d.signal)+' ('+(d.total_score>0?'+':'')+d.total_score+')</span></div>'+
+      '<div style="font-size:11px;color:var(--olt-dim);margin-bottom:8px;">Positioning '+d.positioning_score+' \u00b7 Macro '+d.macro_score+' \u00b7 COT '+d.cot_score+'</div>'+
+      Object.entries(details).map(([k,v])=>'<div style="font-size:10.5px;color:var(--olt-faint);line-height:1.5;"><span style="color:var(--olt-dim)">'+esc(k)+'</span> '+esc(v)+'</div>').join('')+
+      (hl.length ? '<div style="font-size:10.5px;color:var(--olt-dim);margin-top:10px;margin-bottom:4px;">Headlines</div>'+hl.map(h=>'<div style="font-size:11px;line-height:1.45;margin-bottom:4px;"><a href="'+esc(h.url)+'" target="_blank" rel="noopener noreferrer" style="color:var(--olt-text);">'+esc(h.title)+'</a> <span style="color:var(--olt-faint);">'+esc(h.source)+'</span></div>').join('') : '')+
+    '</div>';
+  });
+  el.innerHTML = html+'</div>';
+}
+
+function renderMacroPanel(){
+  const panel = document.getElementById('olt-macropanel');
+  const style = getComputedStyle(root);
+  const blue = style.getPropertyValue('--olt-blue').trim() || '#4f9dff';
+  let html = '<div class="olt-macro-grid">';
+  MACRO_SERIES.forEach(s=>{
+    const rec = state.macroData[s.id];
+    html += '<div class="olt-macro-card"><div style="display:flex;justify-content:space-between;align-items:baseline;">'+
+      '<div style="font-weight:600;font-size:12.5px;">'+s.label+'</div></div>';
+    if(rec && rec.obs && rec.obs.length){
+      const vals = sparklinePoints(rec.obs);
+      const last = rec.obs[rec.obs.length-1];
+      const lastVal = parseFloat(last.value);
+      const trend = calcTrend(vals);
+      const effXAU = trend * (s.bias ? s.bias.XAUUSD : 0);
+      const effEUR = trend * (s.bias ? s.bias.EURUSD : 0);
+      const effNAS = trend * (s.bias ? s.bias.NAS100 : 0);
+      html += '<div style="font-size:19px;font-weight:600;margin:4px 0 2px;">'+(isNaN(lastVal)?'\u2014':fmt(lastVal,s.decimals))+'</div>'+
+        '<div style="color:var(--olt-faint);font-size:10.5px;margin-bottom:6px;">as of '+last.date+'</div>'+
+        '<canvas id="olt-spark-'+s.id+'" style="width:100%;height:36px;display:block;"></canvas>'+
+        '<div style="display:flex;gap:10px;font-size:11px;margin-top:8px;">'+
+          effectBadgeHtml('XAU', effXAU)+effectBadgeHtml('EUR', effEUR)+effectBadgeHtml('NAS', effNAS)+
+        '</div>'+
+        '<div style="color:var(--olt-dim);font-size:10.5px;margin-top:6px;">'+s.note+'</div>';
+    } else if(rec && rec.error){
+      html += '<div style="color:var(--olt-orange);font-size:11px;margin-top:6px;">'+esc(rec.error)+'</div>';
+    } else {
+      html += '<div style="color:var(--olt-faint);font-size:11px;margin-top:6px;">Not loaded yet.</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div><div style="color:var(--olt-faint);font-size:10.5px;margin-top:10px;">Badges show the likely near-term pull on each instrument based on whether this indicator is currently rising or falling (\u25b2 = tailwind, \u25bc = headwind, \u2013 = no reliable historical relationship). These are textbook macro relationships applied mechanically to the recent trend \u2014 not a forecast, and real markets often diverge from them, especially over short windows.</div><div style="color:var(--olt-faint);font-size:10.5px;margin-top:6px;">Series are fetched server-side by the dashboard pipeline, so no API key is needed or stored in this browser.</div>';
+  panel.innerHTML = html;
+  MACRO_SERIES.forEach(s=>{
+    const rec = state.macroData[s.id];
+    if(rec && rec.obs && rec.obs.length){
+      const canvas = document.getElementById('olt-spark-'+s.id);
+      if(canvas) drawSparkline(canvas, sparklinePoints(rec.obs), blue);
+    }
+  });
+}
+
+window.addEventListener('resize', ()=>{ drawChart(); });
+
+(async function init(){
+  await loadStorage();
+  renderAll();
+  setupAutoRefresh();
+
+  const zoomInBtn = document.getElementById('olt-zoomin');
+  const zoomOutBtn = document.getElementById('olt-zoomout');
+  const zoomResetBtn = document.getElementById('olt-zoomreset');
+  function currentInstCandles(){
+    const inst = INSTRUMENTS.find(i=>i.id===state.active);
+    if(!inst) return null;
+    const candles = state.candles[inst.id];
+    if(!candles || !candles.length) return null;
+    return {inst, candles};
+  }
+  if(zoomInBtn) zoomInBtn.addEventListener('click', ()=>{
+    const c0 = currentInstCandles(); if(!c0) return;
+    const view = ensureZoomView(c0.inst.id, c0.candles.length);
+    const len = view.end-view.start, center = (view.start+view.end)/2;
+    let newLen = Math.max(10, Math.round(len*0.7));
+    let newStart = Math.round(center-newLen/2), newEnd = newStart+newLen;
+    if(newStart<0){ newStart=0; newEnd=newLen; }
+    if(newEnd>c0.candles.length){ newEnd=c0.candles.length; newStart=Math.max(0,newEnd-newLen); }
+    state.chartZoom[c0.inst.id] = {start:newStart, end:newEnd};
+    drawChart();
+  });
+  if(zoomOutBtn) zoomOutBtn.addEventListener('click', ()=>{
+    const c0 = currentInstCandles(); if(!c0) return;
+    const view = ensureZoomView(c0.inst.id, c0.candles.length);
+    const len = view.end-view.start, center = (view.start+view.end)/2;
+    let newLen = Math.min(c0.candles.length, Math.round(len/0.7));
+    let newStart = Math.round(center-newLen/2), newEnd = newStart+newLen;
+    if(newStart<0){ newStart=0; newEnd=newLen; }
+    if(newEnd>c0.candles.length){ newEnd=c0.candles.length; newStart=Math.max(0,newEnd-newLen); }
+    state.chartZoom[c0.inst.id] = {start:newStart, end:newEnd};
+    drawChart();
+  });
+  if(zoomResetBtn) zoomResetBtn.addEventListener('click', ()=>{
+    const c0 = currentInstCandles(); if(!c0) return;
+    state.chartZoom[c0.inst.id] = {start:0, end:c0.candles.length};
+    drawChart();
+  });
+
+  await loadPipelineData();
+  if(state.apiKey){
+    for(const inst of INSTRUMENTS){ await fetchInstrument(inst, false); }
+    renderAll();
+    for(const inst of INSTRUMENTS){ await fetchVolForecast(inst); }
+  }
+  renderAll();
+})();
+})();
+</script>
+</body>
+</html>

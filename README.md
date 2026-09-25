@@ -1,136 +1,68 @@
-# Market Dashboard — OME + Macro
+# Market Dashboard
 
-Automated daily market dashboard that blends **options positioning data** (from OME screenshots via Groq/Llama vision) with **macro-economic data** (from FRED API) into a single bullish/bearish score per instrument.
+Daily market dashboard, options levels tracker, and Telegram brief for **Gold, NAS100 and EUR/USD**.
+One pipeline, one scoring model, and every output reads the same data files.
 
-**Instruments:** Gold, NAS100, EUR/USD  
-**Output:** Static HTML site, auto-deployed to GitHub Pages
+- Dashboard: https://kenjtradez.github.io/Market-Dashboard/
+- Options tracker: https://kenjtradez.github.io/Market-Dashboard/tracker/
 
-## How It Works
+## Schedule (weekdays)
 
-```
-You upload 4 screenshots ─┐
-                           ▼
-  ┌──────────────────────────────┐
-  │  GitHub Actions (daily cron  │
-  │  or triggered by uploads)    │
-  │                              │
-  │  1. Fetch FRED macro data    │
-  │     (VIX, yields, dollar,    │
-  │      breakeven, fed funds)   │
-  │                              │
-  │  2. Llama Vision reads OME   │
-  │     numbers from screenshots │
-  │                              │
-  │  3. Score engine blends      │
-  │     positioning + macro      │
-  │                              │
-  │  4. Build static HTML        │
-  └──────────┬───────────────────┘
-             ▼
-  ┌──────────────────────────────┐
-  │  GitHub Pages                │
-  │  → yourname.github.io/...    │
-  └──────────────────────────────┘
-             ▼
-    You open the URL → daily signal
-```
+| UK time | What runs |
+|---|---|
+| 06:41 | Full build + Telegram brief |
+| 12:41 | Full build + Telegram brief |
+| 19:23 BST / 18:23 GMT | Full build, no Telegram. Captures option open interest, which Yahoo only publishes during US hours |
 
-## Setup (one-time, ~15 minutes)
+Pushes to `main` rebuild and deploy without sending Telegram. Use **Actions → Build Market Dashboard → Run workflow** to run it by hand, and tick *Send the Telegram brief* if you want the message too.
 
-### 1. Create a GitHub repository
+GitHub cron is UTC-only. Each brief has a BST cron and a GMT cron, and the first workflow step skips whichever one doesn't match the current UK offset.
 
-Create a new **private** or **public** repo on GitHub, then push this folder to it.
+## Pipeline (`scripts/run_all.py`)
 
-### 2. Get a free FRED API key
+| Step | Script | Source |
+|---|---|---|
+| Macro | `fetch_fred.py` | FRED (yields, breakevens, VIX/VXN/GVZ, Fed funds, broad USD) and Yahoo (DXY, SKEW). Also writes the 90-day history the tracker's Macro tab uses |
+| Options levels | `fetch_options_yf.py` | Yahoo option chains for GLD / QQQ / FXE: highest-OI expiry within 3–45 days, scaled to XAU/USD, NDX and EUR/USD. Thin or pre-market chains are rejected and the last good snapshot is kept |
+| COT | `fetch_cot.py` | CFTC public API, queried by contract code, with 3 years of weekly history |
+| Vol & range | `calc_vol_range.py` | 105-day realised ranges from GC=F / NQ=F / 6E=F, calibrated to the Vol & Range Pine script |
+| Calendar | `fetch_events.py` | ForexFactory weekly feed, shown in UK time |
+| Headlines | `fetch_geopolitical.py`, `fetch_sentiment.py` | BBC, CNBC and FXStreet RSS. Display only, not scored |
+| Score | `compute_scores.py` | See below |
+| Build | `build_dashboard.py` | Writes `index.html`. `tracker/index.html` is static and reads `data/*.json` |
+| Telegram | `send_telegram.py` | One consolidated brief. `--dry-run` prints it instead of sending |
 
-1. Go to https://fred.stlouisfed.org/docs/api/api_key.html
-2. Click "Request an API Key" (instant, no approval)
-3. Copy the key
+`data/` and `index.html` are generated (git-ignored) and carried between runs by the Actions cache.
 
-### 3. Get a free Hugging Face API key (for screenshot vision)
+## Scoring model
 
-1. Go to https://huggingface.co/settings/tokens → **Create new token**
-2. Role: **Read**, name: `market-dashboard`, click **Create**
-3. Copy the key
+| Component | Range | Rule |
+|---|---|---|
+| Positioning | ±4 | PCR < 0.7 → +2, > 1.3 → −2 · ATM IV skew ±5% → ±1 · magnet above/below spot → ±1. Scores 0 without a usable snapshot (≤ 96 h old) |
+| Macro | ±5 | Instrument vol index (GVZ / VXN; EUR has none since EVZ was discontinued) · DXY < 100 / > 107 · 2s10s ±0.5% · SKEW > 145 / < 120 · 5Y breakeven > 3% / < 1.5%. Stale series are skipped |
+| COT | ±2 | Extremes only, contrarian: speculator net % of OI ranked against 3 years. ≥ 90th pct → −1, ≥ 97th → −2, mirrored at the low end |
 
-### 4. Add GitHub secrets
+**Signal:** LONG or SHORT only when |total| ≥ 2 (out of ±11), otherwise NEUTRAL. "High-probability" needs components that agree *and* |total| ≥ 4.
 
-In your repo → Settings → Secrets and variables → Actions → add:
+This is a heuristic model. It is not backtested and not financial advice.
 
-| Secret | Value |
-|--------|-------|
-| `FRED_API_KEY` | Your FRED API key |
-| `HF_API_KEY` | Your Hugging Face API key (free, from https://huggingface.co/settings/tokens) |
+## Secrets
 
-### 5. Enable GitHub Pages
+| Secret | Used by |
+|---|---|
+| `FRED_API_KEY` | Macro step |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Telegram brief |
 
-In your repo → Settings → Pages → Source: **GitHub Actions**
+The tracker's live candles use a Twelve Data key that you enter in the page. It's stored in your browser and sent only to Twelve Data.
 
-### 6. Trigger your first build
-
-- Go to your repo → Actions → **Build Market Dashboard** → **Run workflow**
-- Or: wait for the 07:30 UTC cron, or push screenshots
-
-## Daily Workflow (30 seconds)
-
-1. Take 3 OME screenshots (Gold, NAS100, EURUSD)
-2. Upload them to the `screenshots/` folder via GitHub web UI
-3. The Action runs automatically and updates the dashboard
-4. Bookmark the GitHub Pages URL — check it each morning
-
-No terminal needed. No server to maintain. Zero cost.
-
-## Screenshot naming
-
-Name your files so the script can find them:
-
-```
-screenshots/Gold.png
-screenshots/NAS100.png
-screenshots/NAS100.png
-screenshots/EURUSD.png
-```
-
-PNG or JPG, any size.
-
-## Local testing (optional)
+## Local run
 
 ```bash
-cd market-dashboard
 pip install -r requirements.txt
-export FRED_API_KEY=your_key
-export HF_API_KEY=your_key
+export FRED_API_KEY=your_key            # optional; FRED-only series are skipped without it
 python scripts/run_all.py
+python scripts/send_telegram.py --dry-run
+python -m http.server 8000              # then open http://localhost:8000/
 ```
 
-## Scoring Logic
-
-| Component | Weight | Source |
-|-----------|--------|--------|
-| Put/Call Ratio | 2pts | OME screenshot |
-| Skew | 1pt | OME screenshot |
-| Magnet / Spot | 1pt | OME screenshot |
-| Call/Put Walls | 1pt | OME screenshot |
-| VIX | 1pt | FRED |
-| Dollar Index | 1pt | FRED |
-| Yield Curve | 1pt | FRED |
-| **Max** | **±7** | |
-
-Signal: **LONG** (total > 0), **SHORT** (total < 0), **NEUTRAL** (= 0)
-
-## Files
-
-```
-market-dashboard/
-├── .github/workflows/build.yml   # Auto-build on schedule or upload
-├── scripts/
-│   ├── fetch_fred.py              # FRED API fetcher
-│   ├── extract_ome.py             # Hugging Face Vision screenshot reader
-│   ├── compute_scores.py          # Bullish/bearish scoring engine
-│   ├── build_dashboard.py         # Static HTML generator
-│   └── run_all.py                 # Orchestrator (run everything)
-├── screenshots/                   # Drop your daily OME screenshots here
-├── data/                          # Cached JSON (not committed usually)
-├── dashboard.html                 # Generated dashboard
-└── requirements.txt
-```
+`scripts/backtest_reversal.py` (manual workflow **Reversal Backtest**) is a separate research script and isn't part of the scheduled build.

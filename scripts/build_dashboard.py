@@ -2,13 +2,15 @@
 Generate a full-analysis dashboard with conviction, narrative, news, correlations.
 """
 import os, json
-from datetime import datetime, timedelta
+from datetime import datetime
+from html import escape
+from zoneinfo import ZoneInfo
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..")
 INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
 DASH = "\u2014"
+UK = ZoneInfo("Europe/London")
 
 CORRELATIONS = {
     "Gold":    {"moves_with": {"Silver": 0.87, "Platinum": 0.76, "EUR/USD": 0.61},
@@ -22,8 +24,6 @@ CORRELATIONS = {
                 "driven_by":  "ECB/Fed differential, risk sentiment, USD"},
 }
 
-# Populated from events.json at build time
-ECON_EVENTS = []
 
 def load_json(path):
     if os.path.exists(path):
@@ -84,6 +84,15 @@ def generate_narrative(instr, d, ome_raw, macro_score, cot=None):
     sp = ome_raw.get("underlying_price")
 
     paragraphs = []
+    if cw is None or pw is None:
+        paragraphs.append(f"{instr} at {fmt(sp)}: no usable options snapshot (Yahoo open interest is only published during US hours), so positioning is not scored this run.")
+        cot_score = d.get("cot_score", 0)
+        tail = f"Macro contributes {macro_score:+d}. "
+        if cot and "error" not in cot:
+            tail += (f"COT ({cot.get('date')}): {cot.get('group')} {cot.get('spec_net_pct')}% of OI net, "
+                     f"{cot.get('pct_rank_3y')}th percentile of 3 years (score {cot_score:+d}). ")
+        paragraphs.append(tail + f"Net score: {ts} ({sig}).")
+        return paragraphs
 
     # First paragraph: where price is pinned
     p1 = f"{instr} at {fmt(sp)} is pinned between two key options reference points"
@@ -124,16 +133,25 @@ def generate_narrative(instr, d, ome_raw, macro_score, cot=None):
     p3 = ""
     if mg is not None:
         p3 += f"The magnet at {fmt(mg)} holds the highest total OI concentration, acting as a price attractor. "
-    p3 += f"Macro contributes {macro_score}/5 to the score. "
+    p3 += f"Macro contributes {macro_score:+d} to the score. "
     cot_score = d.get("cot_score", 0)
-    if cot is not None and "error" not in cot:
-        p3 += f"COT: specs {cot.get('noncomm_net_pct')}% net, commercials {cot.get('comm_net_pct')}% net (score {cot_score:+d}). "
+    if cot and "error" not in cot:
+        p3 += (f"COT ({cot.get('date')}): {cot.get('group')} {cot.get('spec_net_pct')}% of OI net, "
+               f"{cot.get('pct_rank_3y')}th percentile of 3 years (score {cot_score:+d}). ")
     p3 += f"Net score: {ts} ({sig})."
     paragraphs.append(p3)
 
     return paragraphs
 
-def generate_bottom_line(instr, d, ome_raw=None):
+def has_confluence(d, min_total=4):
+    """Positioning/Macro/COT agree in sign (at least two non-zero) and the
+    total is large enough to matter."""
+    ts = d.get("total_score")
+    nonzero = [c for c in (d.get("positioning_score", 0), d.get("macro_score", 0), d.get("cot_score", 0)) if c]
+    same_sign = len(nonzero) >= 2 and (all(c > 0 for c in nonzero) or all(c < 0 for c in nonzero))
+    return same_sign and ts is not None and abs(ts) >= min_total
+
+def generate_bottom_line(instr, d, ome_raw=None, min_total=4):
     """One-sentence, plain-English takeaway. This is what gets shown up front
     (dashboard) or as the whole message (Telegram) — the multi-paragraph
     narrative is detail for people who want to dig, not the headline read.
@@ -152,7 +170,7 @@ def generate_bottom_line(instr, d, ome_raw=None):
     }
     nonzero = {k: v for k, v in components.items() if v}
 
-    if len(nonzero) >= 2 and (all(v > 0 for v in nonzero.values()) or all(v < 0 for v in nonzero.values())):
+    if has_confluence(d, min_total):
         agree_str = ", ".join(nonzero.keys())
         return f"{sig} (net {ts:+d}) — {agree_str} all agree. Higher-conviction setup."
 
@@ -161,6 +179,8 @@ def generate_bottom_line(instr, d, ome_raw=None):
         neg_side = [k for k, v in nonzero.items() if v < 0]
         pos_str = "/".join(pos_side) if pos_side else "nothing"
         neg_str = "/".join(neg_side) if neg_side else "nothing"
+        if sig == "NEUTRAL":
+            return f"NEUTRAL (net {ts:+d}) — below the signal threshold. No trade bias."
         return f"{sig} lean (net {ts:+d}), but mixed — {pos_str} bullish vs {neg_str} bearish. Lower conviction, size accordingly."
 
     return f"{sig} (net {ts:+d}) — components are flat or missing data. Low conviction."
@@ -260,91 +280,49 @@ def generate_trade_idea(instr, d, ome_raw):
     pw = ome_raw.get("put_wall")
     sp = ome_raw.get("underlying_price")
 
-    # True range midpoint, used as a fallback target whenever max_pain would
-    # collide with the entry level (e.g. max_pain == put_wall == call_wall),
-    # which previously produced trade ideas with an entry equal to its own target.
-    midpoint = (cw + pw) / 2 if (cw and pw) else None
+    if not (cw and pw):
+        return "No usable options snapshot this run — no wall-based idea. Use the Vol/Range idea below."
+    midpoint = (cw + pw) / 2
+
+    def target_beyond(entry, direction):
+        """Max pain if it sits on the profitable side of entry by a real margin,
+        else the wall midpoint. Previously max pain was used unchecked, which
+        produced targets equal to (or behind) the entry."""
+        for label, t in (("max pain", mp), ("range midpoint", midpoint)):
+            if t is not None and (t - entry) * direction > abs(entry) * 0.001:
+                return t, label
+        return None, None
 
     if sig == "LONG":
         if cw and pw and cw > pw:
-            target = mp if (mp and midpoint and abs(mp - pw) > abs(midpoint - pw) * 0.05) else midpoint
-            return f"Lean long at {fmt(pw)} put-wall support, target {fmt(target)} {'max pain' if target == mp else 'range midpoint'}, stop below {fmt(pw - (pw * 0.01 if pw > 100 else 0.001))}; fade any rip to {fmt(cw)} call wall."
-        return f"Bullish bias: look for dips toward support, target a drift higher. Stop below recent range lows."
+            target, label = target_beyond(pw, +1)
+            if target:
+                return f"Lean long at {fmt(pw)} put-wall support, target {fmt(target)} {label}, stop below {fmt(pw - (pw * 0.01 if pw > 100 else 0.001))}; fade any rip to {fmt(cw)} call wall."
+        return "Bullish bias: look for dips toward support, target a drift higher. Stop below recent range lows."
     elif sig == "SHORT":
         if cw and pw and cw > pw:
-            target = mp if (mp and midpoint and abs(mp - cw) > abs(midpoint - cw) * 0.05) else midpoint
-            return f"Lean short at {fmt(cw)} call-wall resistance, target {fmt(target)} {'max pain' if target == mp else 'range midpoint'}, stop above {fmt(cw + (cw * 0.01 if cw > 100 else 0.001))}; fade any dip to {fmt(pw)} put wall."
-        return f"Bearish bias: look for rallies toward resistance, target a drift lower. Stop above recent range highs."
+            target, label = target_beyond(cw, -1)
+            if target:
+                return f"Lean short at {fmt(cw)} call-wall resistance, target {fmt(target)} {label}, stop above {fmt(cw + (cw * 0.01 if cw > 100 else 0.001))}; fade any dip to {fmt(pw)} put wall."
+        return "Bearish bias: look for rallies toward resistance, target a drift lower. Stop above recent range highs."
     else:
         if cw and pw:
             return f"Neutral: fade pushes toward {fmt(cw)} (sell) and treat {fmt(pw)} as a floor (buy). Low conviction \u2014 small size only."
         return f"Neutral bias \u2014 no strong directional edge. Wait for a clear break of the range."
 
-def staleness_badge(generated_str, max_age_days=1.5):
-    """gold-forecast.html is a static file with no regeneration step in the
-    pipeline (nothing in scripts/ or the GH Actions workflow writes to it),
-    so it can silently go stale while the rest of the dashboard refreshes
-    2x/day. Surface its true age instead of presenting it as live."""
-    if not generated_str:
-        return "\u26a0 unknown age", "var(--red)"
-    try:
-        gen_dt = datetime.fromisoformat(generated_str)
-        age_days = (datetime.now() - gen_dt).total_seconds() / 86400
-        if age_days <= max_age_days:
-            return f"\u2713 live ({age_days:.1f}d old)", "var(--long)"
-        return f"\u26a0 STALE ({age_days:.0f}d old) \u2014 not auto-refreshed", "var(--short)"
-    except (ValueError, TypeError):
-        return "\u26a0 unknown age", "var(--red)"
-
 def load_gold_forecast():
-    """Prefer gold-forecast.html's richer HAR-IV output, but that file is a
-    static artifact nothing in the pipeline regenerates (confirmed: no script
-    or workflow step writes to it), so it can silently freeze indefinitely.
-    Fall back to vol_range.json — which calc_vol_range.py DOES regenerate
-    every run — whenever the HAR-IV file is missing, unparseable, or stale."""
-    path = os.path.join(OUTPUT_DIR, "gold-forecast.html")
-    result = {}
-    if os.path.exists(path):
-        import re
-        with open(path, encoding="utf-8") as f:
-            content = f.read()
-        m = re.search(r'const DATA\s*=\s*({.*?});', content, re.DOTALL)
-        if m:
-            try:
-                data = json.loads(m.group(1))
-                base = data.get("base", data)
-                result = {
-                    "daily_vol": base.get("forecast_daily_pct"),
-                    "annual_vol": base.get("forecast_annual_pct"),
-                    "hl_median": base.get("hl", {}).get("median"),
-                    "oc_median": base.get("oc", {}).get("median"),
-                    "generated": data.get("generated", ""),
-                    "source": "har-iv",
-                }
-            except json.JSONDecodeError:
-                pass
-
-    is_stale = True
-    if result.get("generated"):
-        try:
-            age_days = (datetime.now() - datetime.fromisoformat(result["generated"])).total_seconds() / 86400
-            is_stale = age_days > 1.5
-        except (ValueError, TypeError):
-            pass
-
-    if not result or is_stale:
-        vr = load_json(os.path.join(DATA_DIR, "vol_range.json"))
-        gold_vr = vr.get("instruments", {}).get("Gold")
-        if gold_vr and gold_vr.get("volatility_annualized") is not None:
-            result = {
-                "daily_vol": gold_vr.get("volatility_annualized", 0) / (252 ** 0.5) if gold_vr.get("volatility_annualized") is not None else None,
-                "annual_vol": gold_vr.get("volatility_annualized"),
-                "hl_median": gold_vr.get("high_low_range_median"),
-                "oc_median": gold_vr.get("open_close_median"),
-                "generated": vr.get("date", "") + "T00:00:00" if vr.get("date") else "",
-                "source": "vol_range",
-            }
-    return result
+    """Gold next-day vol summary from vol_range.json (regenerated every run)."""
+    vr = load_json(os.path.join(DATA_DIR, "vol_range.json"))
+    g = vr.get("instruments", {}).get("Gold") or {}
+    if g.get("volatility_annualized") is None:
+        return {}
+    return {
+        "daily_vol": g["volatility_annualized"] / (252 ** 0.5),
+        "annual_vol": g["volatility_annualized"],
+        "hl_median": g.get("high_low_range_median"),
+        "oc_median": g.get("open_close_median"),
+        "generated": vr.get("date", ""),
+    }
 
 def run():
     scores = load_json(os.path.join(DATA_DIR, "scores.json"))
@@ -352,12 +330,14 @@ def run():
     ome = load_json(os.path.join(DATA_DIR, "ome_data.json")).get("instruments", {})
     cot_data = load_json(os.path.join(DATA_DIR, "cot_data.json")).get("instruments", {})
     sentiment = load_json(os.path.join(DATA_DIR, "sentiment.json")).get("instruments", {})
-    oanda = load_json(os.path.join(DATA_DIR, "oanda_prices.json")).get("instruments", {})
     geopolitical = load_json(os.path.join(DATA_DIR, "geopolitical.json"))
 
     overall = scores.get("overall", {})
     macro = scores.get("macro", {})
     instruments = scores.get("instruments", {})
+    model = scores.get("model", {})
+    max_score = model.get("max_score", 11)
+    sig_threshold = model.get("signal_threshold", 2)
 
     gen_time = scores.get("generated", datetime.now().isoformat())
     gen_dt = datetime.fromisoformat(gen_time)
@@ -376,7 +356,7 @@ def run():
     for instr in INSTRUMENTS:
         ome_i = ome.get(instr, {})
         strikes_i = ome_i.get("strikes", [])
-        if strikes_i:
+        if strikes_i and instruments.get(instr, {}).get("options_ok"):
             tag = instr.lower().replace(" ", "")
             all_oi_data[instr] = {"strikes": strikes_i, "call_oi": ome_i.get("call_oi", []), "put_oi": ome_i.get("put_oi", []),
                                   "total_oi_used": ome_i.get("total_oi_used"), "put_call_ratio": ome_i.get("put_call_ratio"),
@@ -389,7 +369,7 @@ def run():
             <div class="analysis-title-row">
               <h2 class="analysis-name">{instr} Options OI</h2>
               <div class="analysis-badge" style="background:var(--accent)15;color:var(--accent);border:1px solid var(--accent)40">{ome_i.get("proxy_for",instr)}</div>
-              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
+              <button class="analysis-close" onclick="event.stopPropagation();this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
             </div>
             <div class="analysis-sub">
               <span class="analysis-ai">Expiry {ome_i.get("expiry","")} &middot; {len(strikes_i)} strikes</span>
@@ -424,8 +404,8 @@ def run():
         geo_color = "var(--red)" if gs >= 5 else ("var(--amber)" if gs >= 3 else "var(--green)")
         geo_rows = ""
         for a in arts:
-            tags = "".join(f'<span class="geo-art-tag">{t}</span>' for t in a.get("tags", []))
-            geo_rows += f'<div class="geo-art"><a class="geo-art-title" href="{a["url"]}" target="_blank" rel="noopener">{a["title"]}</a> <span class="geo-art-domain">{a.get("domain","")}</span>{tags}</div>'
+            tags = "".join(f'<span class="geo-art-tag">{escape(t)}</span>' for t in a.get("tags", []))
+            geo_rows += f'<div class="geo-art"><a class="geo-art-title" href="{escape(a["url"], quote=True)}" target="_blank" rel="noopener noreferrer">{escape(a["title"])}</a> <span class="geo-art-domain">{escape(a.get("source",""))}</span>{tags}</div>'
         instr_rows = ""
         for instr in INSTRUMENTS:
             v = ir.get(instr, {})
@@ -446,14 +426,11 @@ def run():
     gf = load_gold_forecast()
     gold_forecast_section = ""
     if gf.get("daily_vol") is not None:
-        stale_txt, stale_color = staleness_badge(gf.get("generated"))
-        model_label = "HAR-IV model" if gf.get("source") == "har-iv" else "20-day realized vol (fallback — HAR-IV file is stale)"
         gold_forecast_section = f"""
         <div class="gold-forecast-card">
           <div class="gold-fc-header">
             <span class="gold-fc-label">Gold Next-Day Vol Forecast</span>
-            <span class="gold-fc-source">{model_label}</span>
-            <span class="gold-fc-source" style="color:{stale_color}">{stale_txt}</span>
+            <span class="gold-fc-source">105-day realised vol, calibrated to the Vol &amp; Range Pine script</span>
           </div>
           <div class="gold-fc-body">
             <div class="gold-fc-metric">
@@ -481,8 +458,6 @@ def run():
 
     # Vol & Range Forecast (check data/ then screenshots/)
     vol_range = load_json(os.path.join(DATA_DIR, "vol_range.json"))
-    if not vol_range:
-        vol_range = load_json(os.path.join(SCREENSHOT_DIR, "vol_range.json"))
     vol_date = vol_range.get("date", "")
     vol_session = vol_range.get("session", "")
     vol_rows = ""
@@ -516,70 +491,51 @@ def run():
     # Economic Events
     events_data = load_json(os.path.join(DATA_DIR, "events.json")).get("events", [])
 
-    # Currencies actually relevant to each instrument — previously ECON_EVENTS was
-    # one global top-4 list (no currency filter) reused verbatim under every
-    # instrument's "News for This Pair" section, so Gold/NAS100/EURUSD all showed
-    # identical events (e.g. RBNZ, CHF CPI) regardless of relevance.
+    # Currencies relevant to each instrument's "News for This Pair" list.
     INSTRUMENT_CURRENCIES = {
         "Gold":   {"USD"},
         "NAS100": {"USD"},
         "EURUSD": {"USD", "EUR"},
     }
 
-    def build_econ_list(events_data, currencies=None, limit=4):
-        econ_list = []
-        now = datetime.now()
+    def upcoming_events(events_data, currencies=None):
+        """High/Medium events still ahead, with times converted to UK time.
+        ForexFactory timestamps carry a New York offset; comparing them with a
+        naive now() raised, and the bare except fell back to printing the raw
+        New York time with no day."""
+        now = datetime.now(UK)
+        out = []
         for ev in events_data:
-            imp = ev.get("impact", "")
-            if imp not in ("High", "Medium"):
+            if ev.get("impact") not in ("High", "Medium"):
                 continue
             if currencies is not None and ev.get("country") not in currencies:
                 continue
             try:
-                ev_dt = datetime.fromisoformat(ev["date"])
-                if ev_dt < now:
-                    continue
-                ev_time = ev_dt.strftime("%H:%M")
-                ev_day = "Today" if ev_dt.strftime("%Y-%m-%d") == now.strftime("%Y-%m-%d") else ev_dt.strftime("%a")
-            except:
-                ev_time = ev["date"][11:16] if len(ev["date"]) > 16 else ev["date"]
-                ev_day = ""
-            econ_list.append((ev["title"], ev_time, ev.get("forecast", ""), ev_day))
-        return econ_list[:limit]
-
-    ECON_EVENTS = build_econ_list(events_data)  # unfiltered top-4, kept for any general use
-    events_section = ""
-    if events_data:
-        event_rows = ""
-        row_count = 0
-        now_dt = datetime.now()
-        today = now_dt.strftime("%Y-%m-%d")
-        for ev in events_data:
-            if row_count >= 30:
-                break
-            try:
-                ev_dt = datetime.fromisoformat(ev["date"])
-                if ev_dt < now_dt:
-                    continue
-                ev_time = ev_dt.strftime("%H:%M")
-                ev_day = "Today" if ev_dt.strftime("%Y-%m-%d") == today else ev_dt.strftime("%a")
-            except:
-                ev_time = ev["date"][11:16] if len(ev["date"]) > 16 else ev["date"]
-                ev_day = ""
-            imp = ev.get("impact", "Low")
-            if imp not in ("High", "Medium"):
+                ev_dt = datetime.fromisoformat(ev["date"]).astimezone(UK)
+            except (KeyError, ValueError):
                 continue
+            if ev_dt < now:
+                continue
+            day = "Today" if ev_dt.date() == now.date() else ev_dt.strftime("%a")
+            out.append((ev, ev_dt.strftime("%H:%M"), day))
+        return out
+
+    events_section = ""
+    upcoming = upcoming_events(events_data)
+    if upcoming:
+        event_rows = ""
+        for ev, ev_time, ev_day in upcoming[:30]:
+            imp = ev["impact"]
             imp_cls = "imp-high" if imp == "High" else "imp-med"
-            row_count += 1
             event_rows += f"""
           <tr class="{imp_cls}-row">
             <td class="ev-time">{ev_time}</td>
             <td class="ev-day">{ev_day}</td>
-            <td class="ev-flag">{ev.get("country","")}</td>
-            <td class="ev-title">{ev.get("title","")}</td>
+            <td class="ev-flag">{escape(ev.get("country",""))}</td>
+            <td class="ev-title">{escape(ev.get("title",""))}</td>
             <td class="ev-impact"><span class="imp-badge {imp_cls}">{imp}</span></td>
-            <td class="ev-fc">{ev.get("forecast","")}</td>
-            <td class="ev-prev">{ev.get("previous","")}</td>
+            <td class="ev-fc">{escape(ev.get("forecast",""))}</td>
+            <td class="ev-prev">{escape(ev.get("previous",""))}</td>
           </tr>"""
         events_section = f"""
         <div class="events-card">
@@ -590,7 +546,7 @@ def run():
           <table class="events-table">
             <thead>
               <tr>
-                <th>Time</th>
+                <th>Time (UK)</th>
                 <th>Day</th>
                 <th>Curr</th>
                 <th>Event</th>
@@ -603,7 +559,7 @@ def run():
               {event_rows}
             </tbody>
           </table>
-          <div class="events-note">Upcoming events &bull; High impact highlighted</div>
+          <div class="events-note">Upcoming events, UK time &bull; High impact highlighted</div>
         </div>"""
 
     # Snapshot scoreboard (pre-pass to collect instrument data)
@@ -616,11 +572,8 @@ def run():
         sig_color = "var(--long)" if sig == "LONG" else ("var(--short)" if sig == "SHORT" else "var(--muted)")
         sent = sentiment.get(instr, {})
         sent_sig = sent.get("signal")
-        sent_label = f"News: {sent_sig}" if sent_sig else ""
+        sent_label = "Headlines (info only)"
         sent_color = "var(--long)" if sent_sig == "BULLISH" else ("var(--short)" if sent_sig == "BEARISH" else "")
-        oanda_instr = oanda.get(instr, {})
-        oanda_price = oanda_instr.get("mid")
-        oanda_note = f"Proxy quote ({oanda_instr.get('ticker', 'ETF')}): {oanda_price}" if oanda_price else ""
         arr = arrow_for(ts)
         # Use THIS instrument's own macro contribution (the one actually summed
         # into total_score), not the cross-instrument average — using the average
@@ -628,7 +581,10 @@ def run():
         # displayed Total Score.
         instr_macro_score = d.get("macro_score", 0)
         ps = d.get("positioning_score", 0)
-        ome_raw = d.get("ome_data", {})
+        ome_full = d.get("ome_data", {})
+        # Options-derived sections only render from a usable snapshot; a failed
+        # or stale one contributes just its spot price.
+        ome_raw = ome_full if d.get("options_ok") else {"underlying_price": ome_full.get("underlying_price")}
         pcr = ome_raw.get("put_call_ratio")
         mp = ome_raw.get("max_pain")
         cw = ome_raw.get("call_wall")
@@ -637,7 +593,7 @@ def run():
         sp = ome_raw.get("underlying_price")
         tot = ome_raw.get("total_oi")
 
-        conv_label, conv_stars = conviction_label(ts, 12)  # true max: pos(5)+macro(5)+cot(2)=12
+        conv_label, conv_stars = conviction_label(ts, max_score)
         rng = range_pct(sp, cw, pw)
         rng_str = f"{rng:.0f}%" if rng is not None else DASH
 
@@ -646,9 +602,7 @@ def run():
         # alone, since a high total can come from one extreme component while the
         # others disagree or sit neutral. Require at least 2 of the 3 components
         # to be non-zero and none of the non-zero ones to conflict in sign.
-        _components = [ps, instr_macro_score, d.get("cot_score", 0)]
-        _nonzero = [c for c in _components if c]
-        is_confluence = len(_nonzero) >= 2 and (all(c > 0 for c in _nonzero) or all(c < 0 for c in _nonzero))
+        is_confluence = has_confluence(d, model.get("confluence_min", 4))
         hp_lightning = "\u26a1"
         hp_snap_tag = f'<div class="snap-hp-tag">{hp_lightning} HIGH PROB</div>' if is_confluence else ''
         hp_badge = f'<div class="analysis-badge" style="background:var(--gold)15;color:var(--gold);border:1px solid var(--gold)40">{hp_lightning} High-Probability Setup</div>' if is_confluence else ''
@@ -672,7 +626,7 @@ def run():
                 pass
 
         paragraphs = generate_narrative(instr, d, ome_raw, instr_macro_score, cot_data.get(instr, {}))
-        bottom_line = generate_bottom_line(instr, d, ome_raw)
+        bottom_line = generate_bottom_line(instr, d, ome_raw, model.get("confluence_min", 4))
         trade_idea = generate_trade_idea(instr, d, ome_raw)
         forecast_trade_idea = generate_forecast_trade_idea(instr, d, ome_raw, vol_range.get("instruments", {}).get(instr, {}))
         forecast_table = generate_forecast_trade_table(ome_raw, vol_range.get("instruments", {}).get(instr, {}))
@@ -694,7 +648,7 @@ def run():
         stars_html = "\u2605" * conv_stars + "\u2606" * (10 - conv_stars)
 
         # Snapshot card
-        score_bar_pct = min(abs(ts) / 12 * 100, 100) if ts is not None else 0  # true max score is 12, not 8
+        score_bar_pct = min(abs(ts) / max_score * 100, 100) if ts is not None else 0
         bar_color = "var(--long)" if (ts or 0) > 0 else "var(--short)"
         snap_highlight_style = f"border:1.5px solid {sig_color};box-shadow:0 0 0 1px {sig_color}30" if is_confluence else ""
         snapshot_rows += f"""
@@ -710,9 +664,9 @@ def run():
         corr = CORRELATIONS.get(instr, {})
 
         news_rows = ""
-        for ev in build_econ_list(events_data, INSTRUMENT_CURRENCIES.get(instr)):
+        for ev, ev_time, ev_day in upcoming_events(events_data, INSTRUMENT_CURRENCIES.get(instr))[:4]:
             news_rows += f"""
-            <div class="news-row"><span class="news-time">{ev[1]}</span><span class="news-name">{ev[0]}</span><span class="news-forecast">{ev[2]}</span><span class="news-day">{ev[3]}</span></div>"""
+            <div class="news-row"><span class="news-time">{ev_time}</span><span class="news-name">{escape(ev.get("title",""))}</span><span class="news-forecast">{escape(ev.get("forecast",""))}</span><span class="news-day">{ev_day}</span></div>"""
 
         instr_sections += f"""
         <div class="analysis-section{' hp-confluence' if is_confluence else ''}" id="{instr.lower()}">
@@ -723,7 +677,7 @@ def run():
               {hp_badge}
               <div class="analysis-range">{rng_str} RANGE</div>
               <div class="analysis-fair">{fair_str}</div>
-              <button class="analysis-close" onclick="this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
+              <button class="analysis-close" onclick="event.stopPropagation();this.closest('.analysis-section').classList.toggle('collapsed')" title="Toggle">\u2715</button>
             </div>
             <div class="analysis-sub">
               <span class="analysis-ai">AI \u2014 NOT BACKTESTED</span>
@@ -748,7 +702,7 @@ def run():
                 <div class="sd-item"><span class="sd-label">Total Score</span><span class="sd-val">{ts if ts is not None else DASH}</span></div>
                 <div class="sd-item"><span class="sd-label">Positioning</span><span class="sd-val">{ps}</span></div>
                 <div class="sd-item"><span class="sd-label">COT</span><span class="sd-val">{d.get("cot_score", "N/A")}</span></div>
-                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">{instr_macro_score}/5</span></div>
+                <div class="sd-item"><span class="sd-label">Macro</span><span class="sd-val">{instr_macro_score:+d}/{model.get("max_macro", 5)}</span></div>
                 <div class="sd-item"><span class="sd-label">AI Conviction</span><span class="sd-val">{conv_stars}/10 <span class="stars">{stars_html}</span></span></div>
                 {"".join(f'<div class="sd-item"><span class="sd-label">{sent_label}</span><span class="sd-val" style="color:{sent_color}">{sent_sig}</span></div>' for _ in [1] if sent_sig)}
               </div>
@@ -771,7 +725,7 @@ def run():
                     {"".join(f"<p>{p}</p>" for p in paragraphs)}
                   </details>
                 </div>
-                <p class="an-footer">Generated {gen_display}. AI opinion, not a backtested signal.{' | ' + oanda_note if oanda_note else ''}</p>
+                <p class="an-footer">Generated {gen_display}. AI opinion, not a backtested signal.{' | Options snapshot ' + escape(str(ome_raw.get('as_of',''))) + ' (' + escape(str(ome_raw.get('proxy_for',''))) + ' exp ' + escape(str(ome_raw.get('expiry',''))) + ')' if ome_raw.get('as_of') else ''}</p>
               </div>
             </div>
 
@@ -800,7 +754,7 @@ def run():
                       <div class="corr-driven">{corr.get("driven_by", "")}</div>
                     </div>
                   </div>
-                  <div class="corr-footer">10-day rolling window &bull; context only, not a signal</div>
+                  <div class="corr-footer">Typical long-run values (static reference, not live) &bull; context only, not a signal</div>
                 </div>
               </div>
             </div>
@@ -815,9 +769,11 @@ def run():
     macro_line_parts = []
     if vix: macro_line_parts.append(f"VIX: {vix}")
     if dxy: macro_line_parts.append(f"DXY: {dxy}")
+    broad = fred.get("Broad USD", {}).get("value")
+    if broad: macro_line_parts.append(f"Broad USD: {broad}")
     if y10 and y2: macro_line_parts.append(f"2-10: {float(y10)-float(y2):.2f}%")
     # CBOE volatility indices
-    for label, key in [("VXN", "VXN"), ("GVZ", "GVZ"), ("EVZ", "EVZ"), ("SKEW", "SKEW")]:
+    for label, key in [("VXN", "VXN"), ("GVZ", "GVZ"), ("SKEW", "SKEW")]:
         v = fred.get(key, {}).get("value")
         if v: macro_line_parts.append(f"{label}: {v}")
     # Breakeven inflation
@@ -826,11 +782,13 @@ def run():
     macro_line = " &bull; ".join(macro_line_parts)
 
     macro_items = ""
-    for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "10Y Breakeven", "VIX", "VXN", "GVZ", "EVZ", "SKEW", "Dollar Index", "Fed Funds"]:
+    for label in ["10Y Yield", "2Y Yield", "5Y Breakeven", "10Y Breakeven", "VIX", "VXN", "GVZ", "SKEW", "Dollar Index", "Broad USD", "Fed Funds"]:
         d_fred = fred.get(label, {})
         val = d_fred.get("value", DASH)
         dt = d_fred.get("date", "")
         is_stale = d_fred.get("stale", False)
+        if val is None:
+            val, dt = DASH, ""
         val_str = f"{val} \u26a0" if (is_stale and val != DASH) else str(val)
         val_color = "color:var(--short)" if is_stale else ""
         macro_items += f'<div class="macro-item" title="{"STALE / source may be discontinued" if is_stale else ""}"><span class="macro-label">{label}</span><span class="macro-val" style="{val_color}">{val_str}</span><span class="macro-date">{dt}</span></div>'
@@ -1012,6 +970,9 @@ def run():
   .macro-card .mc-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }}
   .macro-card .macro-item {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; display: flex; gap: 0.3rem; align-items: baseline; }}
 
+  .topnav {{ display: flex; gap: 1rem; margin-bottom: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }}
+  .topnav a {{ color: var(--muted); text-decoration: none; padding-bottom: 0.2rem; border-bottom: 2px solid transparent; }}
+  .topnav a.active, .topnav a:hover {{ color: var(--text); border-bottom-color: var(--accent); }}
   footer {{ margin-top: 1rem; font-size: 0.6rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; padding-top: 0.75rem; border-top: 1px solid var(--border); }}
 
 
@@ -1031,6 +992,7 @@ def run():
 <body>
 <div class="container">
 
+  <nav class="topnav"><a class="active" href="./">Dashboard</a><a href="tracker/">Options Tracker</a></nav>
   <div class="masthead">
     <h1>Market Analysis</h1>
     <span class="date">{gen_display}</span>
@@ -1056,7 +1018,7 @@ def run():
     <div class="mc-grid">{macro_items}</div>
   </div>
 
-  <footer>Yahoo Finance &rarr; Scoring &rarr; GitHub Pages &bull; Data updates 2x daily</footer>
+  <footer>FRED &bull; Yahoo Finance &bull; CFTC &bull; ForexFactory &rarr; one scoring model &rarr; GitHub Pages &bull; Signal needs |score| &ge; {sig_threshold} of &plusmn;{max_score} &bull; Updated weekdays before 07:00 &amp; 13:00 UK</footer>
 
 </div>
 
@@ -1111,7 +1073,7 @@ def run():
           y:{{...commonChart.scales.y,title:{{display:true,text:'Total payout',color:'#525866',font:{{size:10}}}}}}}}
     }}}});
     // PCR by strike
-    const pcr = s.map((_,i)=> {{ const c=co[i]||0, p=po[i]||0; return c+p>0 ? p/c : 0; }});
+    const pcr = s.map((_,i)=> {{ const c=co[i]||0, p=po[i]||0; return c>0 ? p/c : null; }});
     new Chart(pcrC, {{type:'bar', data:{{labels:s,datasets:[{{label:'Put/Call OI',data:pcr,
       backgroundColor:pcr.map(d=>d>1?'rgba(218,54,51,0.7)':'rgba(88,166,255,0.7)'),
       borderColor:pcr.map(d=>d>1?'#da3633':'#58a6ff'),borderWidth:1

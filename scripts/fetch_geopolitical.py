@@ -1,8 +1,13 @@
 """
-Fetch geopolitical risk news from RSS feeds.
-No API key required. Falls back gracefully if a feed is unavailable.
+Fetch headlines from RSS feeds (no API key) and derive:
+  - a geopolitical risk list (headlines with war/sanction/tariff-type terms)
+  - per-instrument headline sets, matched across ALL headlines, which
+    fetch_sentiment.py scores.
+
+Instrument matching runs over every headline, not just the risk list —
+matching only the top risk headlines meant almost nothing ever matched.
 """
-import os, json, time, re
+import os, json, re
 from datetime import datetime
 
 import requests
@@ -11,24 +16,30 @@ from xml.etree import ElementTree
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 FEEDS = [
-    ("BBC", "https://feeds.bbci.co.uk/news/world/rss.xml"),
+    ("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),
+    ("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml"),
     ("CNBC", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362"),
-    ("GoogleNews-World", "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FuUjFHZ0pTVlZnQVAB"),
-    ("GoogleNews-Business", "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FuUjFHZ0pTVlZnQVAB"),
-    ("Reddit-WorldNews", "https://www.reddit.com/r/worldnews/.rss"),
+    ("CNBC Economy", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"),
+    ("CNBC Investing", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069"),
+    ("FXStreet", "https://www.fxstreet.com/rss/news"),
 ]
 
-KEYWORDS = [
-    "war", "conflict", "crisis", "sanction", "invasion", "attack", "nuclear",
-    "tariff", "trade war", "default", "coup", "collapse", "emergency",
-    "protest", "riot", "embargo", "shutdown", "disruption", "restriction",
-]
-
-INSTRUMENTS = {
-    "Gold":   ["gold", "commodity", "precious metal", "gld", "xau"],
-    "NAS100": ["nasdaq", "tech", "semiconductor", "qqq", "big tech", "ai", "software"],
-    "EURUSD": ["euro", "ecb", "european", "fxe", "eur", "germany", "france", "dax"],
+SEVERITY = {
+    "war": 3, "conflict": 2, "crisis": 3, "sanction": 2, "sanctions": 2, "invasion": 3,
+    "attack": 2, "nuclear": 3, "tariff": 2, "tariffs": 2, "trade war": 3, "default": 3,
+    "coup": 3, "collapse": 2, "emergency": 2, "protest": 1, "embargo": 2,
+    "disruption": 2, "riot": 2, "shutdown": 2, "restriction": 2,
 }
+
+INSTRUMENT_TERMS = {
+    "Gold":   ["gold", "xau", "xau/usd", "bullion", "precious metal", "precious metals"],
+    "NAS100": ["nasdaq", "nasdaq 100", "tech stocks", "big tech", "semiconductor", "chip stocks", "qqq"],
+    "EURUSD": ["euro", "eur/usd", "eurusd", "ecb", "eurozone", "lagarde"],
+}
+
+
+def has_term(text, term):
+    return re.search(r"\b" + re.escape(term) + r"\b", text) is not None
 
 
 def parse_feed(url, timeout=20):
@@ -37,119 +48,70 @@ def parse_feed(url, timeout=20):
         if resp.status_code != 200:
             return []
         root = ElementTree.fromstring(resp.content)
-        ns = {"atom": "http://www.w3.org/2005/Atom"}
-        items = []
-
-        # RSS items
-        for item in root.iter("item"):
-            title = item.findtext("title", "")
-            link_el = item.find("link")
-            link = link_el.text if link_el is not None and link_el.text else (link_el.get("href", "") if link_el is not None else "")
-            desc = item.findtext("description", "")
-            pubdate = item.findtext("pubDate", "")
-            items.append({"title": title, "url": link, "description": desc, "date": pubdate})
-
-        # Atom entries (Google News)
-        for entry in root.iter("{http://www.w3.org/2005/Atom}entry"):
-            title = entry.findtext("{http://www.w3.org/2005/Atom}title", "")
-            link_el = entry.find("{http://www.w3.org/2005/Atom}link")
-            link = link_el.get("href", "") if link_el is not None else ""
-            desc_el = entry.find("{http://www.w3.org/2005/Atom}content")
-            desc = desc_el.text if desc_el is not None else entry.findtext("{http://www.w3.org/2005/Atom}summary", "")
-            pubdate = entry.findtext("{http://www.w3.org/2005/Atom}published", "")
-            items.append({"title": title, "url": link, "description": desc[:500], "date": pubdate})
-
-        return items
     except Exception as e:
         print(f"  Feed error for {url}: {e}")
         return []
+    items = []
+    for item in root.iter("item"):
+        link = (item.findtext("link") or "").strip()
+        items.append({"title": (item.findtext("title") or "").strip(), "url": link,
+                      "description": re.sub(r"<[^>]+>", " ", item.findtext("description") or "")[:400],
+                      "date": item.findtext("pubDate") or ""})
+    return items
 
 
-def score_article(title, desc):
-    import re
-    text = (title + " " + desc).lower()
-    score = 0
-    tags = []
-    severity = {
-        "war": 3, "conflict": 2, "crisis": 3, "sanction": 2, "invasion": 3,
-        "attack": 2, "nuclear": 3, "tariff": 2, "trade war": 3, "default": 3,
-        "coup": 3, "collapse": 2, "emergency": 2, "protest": 1,
-        "embargo": 2, "disruption": 2, "riot": 2, "shutdown": 2, "restriction": 2,
-    }
-    for word, pts in severity.items():
-        if re.search(r"\b" + re.escape(word) + r"\b", text):
+def risk_score(text):
+    score, tags = 0, []
+    for word, pts in SEVERITY.items():
+        if has_term(text, word):
             score += pts
             tags.append(word)
     return min(score, 10), tags
 
 
 def run():
-    print("Fetching geopolitical risk news from RSS feeds...")
-
-    all_articles = []
-    seen = set()
-
-    for source_name, url in FEEDS:
-        items = parse_feed(url)
-        print(f"  {source_name}: {len(items)} items")
-        for art in items:
-            link = art.get("url", "")
-            if not link or link in seen:
+    print("Fetching headlines from RSS feeds...")
+    items, seen = [], set()
+    for source, url in FEEDS:
+        feed = parse_feed(url)
+        print(f"  {source}: {len(feed)} items")
+        for it in feed:
+            # Only http(s) links are kept; they end up as hrefs on a public page.
+            if not it["url"].startswith(("https://", "http://")) or it["url"] in seen:
                 continue
-            seen.add(link)
-            title = art.get("title", "")
-            desc = art.get("description", "")
-            relevance, tags = score_article(title, desc)
-            if relevance >= 2:
-                all_articles.append({
-                    "title": title,
-                    "url": link,
-                    "domain": source_name.lower(),
-                    "seentext": desc[:300],
-                    "relevance": relevance,
-                    "tags": tags,
-                    "date": art.get("date", ""),
-                })
+            seen.add(it["url"])
+            text = (it["title"] + " " + it["description"]).lower()
+            rel, tags = risk_score(text)
+            items.append({"title": it["title"], "url": it["url"], "source": source, "date": it["date"],
+                          "summary": it["description"][:300], "relevance": rel, "tags": tags,
+                          "instruments": [i for i, terms in INSTRUMENT_TERMS.items() if any(has_term(text, t) for t in terms)]})
 
-    all_articles.sort(key=lambda x: x["relevance"], reverse=True)
-    top = all_articles[:20]
-
+    risk = sorted((i for i in items if i["relevance"] >= 2), key=lambda x: x["relevance"], reverse=True)[:20]
     instr_risk = {}
-    for instr, terms in INSTRUMENTS.items():
-        count = 0
-        total_rel = 0
-        for art in top:
-            txt = (art["title"] + " " + art["seentext"]).lower()
-            # Word-boundary match, not substring — NAS100's "ai" term previously
-            # matched inside ordinary words ("said", "again", "remain", "explain"),
-            # so NAS100 risk was being scored off articles with no actual
-            # tech/Nasdaq relevance (visible live as "NAS100: MODERATE" risk on
-            # a day where every listed article was about Iran/Ukraine/tariffs).
-            if any(re.search(r"\b" + re.escape(t) + r"\b", txt) for t in terms):
-                count += 1
-                total_rel += art["relevance"]
+    for instr in INSTRUMENT_TERMS:
+        hits = [a for a in risk if instr in a["instruments"]]
+        avg = sum(a["relevance"] for a in hits) / len(hits) if hits else 0
         instr_risk[instr] = {
-            "article_count": count,
-            "avg_relevance": round(total_rel / count, 1) if count else 0,
-            "risk_level": "HIGH" if count >= 3 and total_rel / max(count, 1) >= 5 else "MODERATE" if count >= 1 else "LOW",
+            "article_count": len(hits),
+            "avg_relevance": round(avg, 1),
+            "risk_level": "HIGH" if len(hits) >= 3 and avg >= 5 else "MODERATE" if hits else "LOW",
         }
 
     out = {
         "fetched": datetime.now().isoformat(),
-        "total_articles": len(all_articles),
-        "articles": top,
+        "total_headlines": len(items),
+        "articles": risk,
+        "headlines": items,
         "instrument_risk": instr_risk,
-        "global_risk_score": round(sum(a["relevance"] for a in top) / max(len(top), 1), 1),
+        "global_risk_score": round(sum(a["relevance"] for a in risk) / max(len(risk), 1), 1),
     }
-
-    out_path = os.path.join(DATA_DIR, "geopolitical.json")
     os.makedirs(DATA_DIR, exist_ok=True)
-    with open(out_path, "w") as f:
+    with open(os.path.join(DATA_DIR, "geopolitical.json"), "w") as f:
         json.dump(out, f, indent=2)
-    print(f"  Saved {len(top)} articles to {out_path}")
-    print(f"  Global risk score: {out['global_risk_score']}")
+    print(f"  {len(items)} headlines, {len(risk)} risk-tagged, global risk {out['global_risk_score']}")
     for instr, v in instr_risk.items():
-        print(f"  {instr}: {v['risk_level']} ({v['article_count']} articles)")
+        n = sum(1 for i in items if instr in i["instruments"])
+        print(f"  {instr}: {n} relevant headlines, risk {v['risk_level']}")
     return True
 
 

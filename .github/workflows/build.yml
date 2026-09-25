@@ -2,15 +2,28 @@ name: Build Market Dashboard
 
 on:
   schedule:
-    # Weekdays 06:30 & 13:00 UK (winter: 06:30/13:00 UTC, summer BST: 07:30/14:00)
-    - cron: '30 6 * * 1-5'
-    - cron: '0 13 * * 1-5'
+    # Briefs at 06:41 and 12:41 UK time. GitHub cron is UTC-only, so each brief
+    # has a BST and a GMT cron and the "slot" step drops whichever one doesn't
+    # match the current UK offset. Off-the-hour minutes because on-the-hour
+    # schedules are the ones GitHub delays most.
+    - cron: '41 5 * * 1-5'   # 06:41 BST
+    - cron: '41 6 * * 1-5'   # 06:41 GMT
+    - cron: '41 11 * * 1-5'  # 12:41 BST
+    - cron: '41 12 * * 1-5'  # 12:41 GMT
+    # Silent data refresh during US hours: Yahoo only publishes option open
+    # interest while the US market is open, so this snapshot feeds the briefs.
+    - cron: '23 18 * * 1-5'
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      send_telegram:
+        description: 'Send the Telegram brief'
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -26,76 +39,75 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Decide run type
+        id: slot
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          EVENT: ${{ github.event_name }}
+          MANUAL_SEND: ${{ inputs.send_telegram }}
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          sched, event = os.environ["SCHEDULE"], os.environ["EVENT"]
+          bst = datetime.now(ZoneInfo("Europe/London")).utcoffset().total_seconds() == 3600
+          run, send = True, False
+          if event == "schedule":
+              hour = int(sched.split()[1])
+              if hour in (5, 11):
+                  run = send = bst
+              elif hour in (6, 12):
+                  run = send = not bst
+          elif event == "workflow_dispatch":
+              send = os.environ.get("MANUAL_SEND") == "true"
+          print(f"run={'true' if run else 'false'}")
+          print(f"send={'true' if send else 'false'}")
+          EOF
+          cat "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.slot.outputs.run == 'true'
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        if: steps.slot.outputs.run == 'true'
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
+        if: steps.slot.outputs.run == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Restore cached data
-        id: cache
-        uses: actions/cache@v4
+        if: steps.slot.outputs.run == 'true'
+        uses: actions/cache@v6
         with:
           path: data/
-          key: fred-data-${{ github.run_id }}
-          restore-keys: fred-data-
+          key: pipeline-data-${{ github.run_id }}
+          restore-keys: pipeline-data-
 
-      - name: Fetch FRED macro data
+      - name: Run pipeline
+        if: steps.slot.outputs.run == 'true'
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: python scripts/fetch_fred.py
-        continue-on-error: true
-
-      - name: Fetch options data from Yahoo Finance
-        run: python scripts/fetch_options_yf.py
-        continue-on-error: true
-
-      - name: Compute scores
-        run: python scripts/compute_scores.py
-
-      - name: Calculate Vol & Range Forecast
-        run: python scripts/calc_vol_range.py
-        continue-on-error: true
-
-      - name: Fetch economic calendar events
-        run: python scripts/fetch_events.py
-        continue-on-error: true
-
-      - name: Fetch CFTC COT positioning
-        run: python scripts/fetch_cot.py
-        continue-on-error: true
-
-      - name: Fetch live prices via Yahoo Finance
-        run: python scripts/fetch_oanda.py
-        continue-on-error: true
-
-      - name: Fetch geopolitical risk news
-        run: python scripts/fetch_geopolitical.py
-        continue-on-error: true
-
-      - name: Compute news sentiment from GDELT articles
-        run: python scripts/fetch_sentiment.py
-        continue-on-error: true
-
-      - name: Build dashboard
-        run: python scripts/build_dashboard.py
+        run: python scripts/run_all.py
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        if: steps.slot.outputs.run == 'true'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./
 
       - name: Deploy to GitHub Pages
+        if: steps.slot.outputs.run == 'true'
         id: deployment
         uses: actions/deploy-pages@v5
 
-      - name: Send Telegram morning brief
+      - name: Send Telegram brief
+        if: steps.slot.outputs.send == 'true'
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
