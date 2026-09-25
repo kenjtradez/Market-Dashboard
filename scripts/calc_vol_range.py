@@ -12,9 +12,21 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 
 TICKERS = {
-    "Gold":   {"ticker": "GC=F",   "name": "Gold Futures"},
-    "NAS100": {"ticker": "NQ=F",   "name": "NASDAQ 100 Futures"},
-    "EURUSD": {"ticker": "6E=F",   "name": "Euro FX Futures"},
+    "Gold":   {"ticker": "GC=F",     "name": "Gold Futures"},
+    "NAS100": {"ticker": "NQ=F",     "name": "Nasdaq 100 Futures"},
+    "EURUSD": {"ticker": "6E=F",     "name": "Euro FX Futures"},
+}
+# Futures rather than spot/cash tickers: their sessions are closest to the
+# ~23h CFD sessions, and Yahoo's EURUSD=X daily bars report Close ~= Open.
+
+# Same lookback and calibration as the KenJTradez Vol & Range Forecast Pine
+# script (factors back-solved against it on 2026-09-17). The tracker tab uses
+# these same numbers so the two views agree.
+LOOKBACK = 105
+CORRECTIONS = {
+    "Gold":   {"vol": 1.00, "hlMed": 1.0064, "hl75": 1.0096, "ocMed": 1.0124, "oc75": 0.9973},
+    "EURUSD": {"vol": 1.00, "hlMed": 0.9806, "hl75": 1.0077, "ocMed": 0.9904, "oc75": 1.0111},
+    "NAS100": {"vol": 1.00, "hlMed": 0.9911, "hl75": 1.0127, "ocMed": 0.9917, "oc75": 1.0336},
 }
 
 ASSET_ALIASES = {
@@ -56,10 +68,10 @@ def parse_csv(csv_path):
     return results
 
 def calc_from_yfinance():
-    """Fallback: compute from yfinance 20-day rolling window."""
+    """Fallback: compute from yfinance over the trailing LOOKBACK sessions."""
     print("  Falling back to yfinance calculation...")
     today = datetime.now()
-    start_date = (today - timedelta(days=60)).strftime("%Y-%m-%d")
+    start_date = (today - timedelta(days=int(LOOKBACK * 1.6) + 10)).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
 
     instruments = {}
@@ -74,8 +86,8 @@ def calc_from_yfinance():
         if df.empty:
             continue
 
-        df = df.tail(20)
-        if len(df) < 5:
+        df = df.tail(LOOKBACK)
+        if len(df) < 20:
             continue
 
         hl_ranges, oc_moves, daily_returns = [], [], []
@@ -116,11 +128,12 @@ def calc_from_yfinance():
             true_ranges.append(tr)
             prev_close = c
 
-        hl_median = float(np.median(hl_ranges)) if hl_ranges else None
-        hl_p75 = float(np.percentile(hl_ranges, 75)) if hl_ranges else None
-        oc_median = float(np.median(oc_moves)) if oc_moves else None
-        oc_p75 = float(np.percentile(oc_moves, 75)) if oc_moves else None
-        vol = float(np.std(daily_returns, ddof=1) * np.sqrt(252) * 100) if len(daily_returns) > 1 else None
+        corr = CORRECTIONS[instr]
+        hl_median = float(np.median(hl_ranges)) * corr["hlMed"] if hl_ranges else None
+        hl_p75 = float(np.percentile(hl_ranges, 75)) * corr["hl75"] if hl_ranges else None
+        oc_median = float(np.median(oc_moves)) * corr["ocMed"] if oc_moves else None
+        oc_p75 = float(np.percentile(oc_moves, 75)) * corr["oc75"] if oc_moves else None
+        vol = float(np.std(daily_returns, ddof=1) * np.sqrt(252) * 100) * corr["vol"] if len(daily_returns) > 1 else None
 
         # Asymmetric up/down excursion percentiles — mirrors the Pine
         # script's upHistory/downHistory logic exactly. Upside and downside

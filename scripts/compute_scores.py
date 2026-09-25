@@ -1,148 +1,150 @@
 """
-Blend OME positioning data + FRED macro data into a bullish/bearish score
-per instrument and an overall market score.
+Blend options positioning, macro and COT into one score per instrument.
+This is the single scoring model: the dashboard, the tracker tab and the
+Telegram brief all read scores.json rather than scoring on their own.
+
+Components (max magnitude):
+  Positioning  ±4  PCR ±2, ATM IV skew ±1, magnet vs spot ±1
+  Macro        ±5  instrument vol index, DXY, 2s10s curve, SKEW, 5Y breakeven
+  COT          ±2  speculator positioning, only at 3-year extremes (contrarian)
+
+Signal: LONG / SHORT only when |total| >= SIGNAL_THRESHOLD, else NEUTRAL.
 """
 import os
 import json
 from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
 INSTRUMENTS = ["Gold", "NAS100", "EURUSD"]
+MAX_POSITIONING, MAX_MACRO, MAX_COT = 4, 5, 2
+MAX_SCORE = MAX_POSITIONING + MAX_MACRO + MAX_COT
+SIGNAL_THRESHOLD = 2
+# "High-probability" needs components to agree AND a total of at least this.
+CONFLUENCE_MIN = 4
+OPTIONS_MAX_AGE_HOURS = 96  # OI is published once a day; a weekend-old snapshot is still usable
+
+# Instrument-specific implied-vol index. EURUSD has none since CBOE retired EVZ.
+VOL_INDEX = {"Gold": "GVZ", "NAS100": "VXN", "EURUSD": None}
+
+
+def load(name):
+    path = os.path.join(DATA_DIR, name)
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
+
+
+def signal_for(total):
+    if total is None:
+        return "N/A"
+    if total >= SIGNAL_THRESHOLD:
+        return "LONG"
+    if total <= -SIGNAL_THRESHOLD:
+        return "SHORT"
+    return "NEUTRAL"
+
+
+def options_age_hours(ome):
+    try:
+        return (datetime.now() - datetime.fromisoformat(ome["as_of"])).total_seconds() / 3600
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def options_usable(ome):
+    age = options_age_hours(ome or {})
+    return bool(ome) and "error" not in ome and age is not None and age <= OPTIONS_MAX_AGE_HOURS
+
 
 def score_positioning(ome):
-    score = 0
-    details = {}
+    if not options_usable(ome):
+        why = (ome or {}).get("error") or f"no usable snapshot (last {(ome or {}).get('as_of', 'never')})"
+        return 0, {"options": why}
 
+    score, details = 0, {}
     pcr = ome.get("put_call_ratio")
     if pcr is not None:
         if pcr < 0.7:
-            score += 2
-            details["pcr"] = f"{pcr:.2f} (bearish puts light, +2)"
+            score += 2; details["pcr"] = f"{pcr:.2f} (call-heavy, +2)"
         elif pcr > 1.3:
-            score -= 2
-            details["pcr"] = f"{pcr:.2f} (bearish puts heavy, -2)"
+            score -= 2; details["pcr"] = f"{pcr:.2f} (put-heavy, -2)"
         else:
             details["pcr"] = f"{pcr:.2f} (neutral)"
 
     skew = ome.get("skew_percent")
     if skew is not None:
         if skew > 5:
-            score += 1
-            details["skew"] = f"{skew:.1f}% (calls favoured, +1)"
+            score += 1; details["skew"] = f"{skew:.1f}% (calls bid, +1)"
         elif skew < -5:
-            score -= 1
-            details["skew"] = f"{skew:.1f}% (puts favoured, -1)"
+            score -= 1; details["skew"] = f"{skew:.1f}% (puts bid, -1)"
         else:
             details["skew"] = f"{skew:.1f}% (neutral)"
 
-    magnet = ome.get("magnet_strike")
-    spot = ome.get("spot", ome.get("underlying_price"))
+    magnet, spot = ome.get("magnet_strike"), ome.get("underlying_price")
     if magnet and spot:
         dist = (magnet - spot) / spot * 100
-        if dist > 0:
-            score += 1
-            details["magnet"] = f"magnet {magnet} above spot (+1)"
+        if dist > 0.25:
+            score += 1; details["magnet"] = f"{magnet} is {dist:.1f}% above spot (+1)"
+        elif dist < -0.25:
+            score -= 1; details["magnet"] = f"{magnet} is {abs(dist):.1f}% below spot (-1)"
         else:
-            score -= 1
-            details["magnet"] = f"magnet {magnet} below spot (-1)"
-    else:
-        details["magnet"] = "N/A"
-
-    call_wall = ome.get("call_wall")
-    put_wall = ome.get("put_wall")
-    if call_wall and put_wall:
-        if call_wall > put_wall:
-            score += 1
-            details["walls"] = f"C{call_wall} > P{put_wall} (+1)"
-        elif call_wall < put_wall:
-            score -= 1
-            details["walls"] = f"C{call_wall} < P{put_wall} (-1)"
-        else:
-            details["walls"] = f"C{call_wall} = P{put_wall} (neutral)"
-    else:
-        details["walls"] = "N/A"
-
-    max_pain = ome.get("max_pain")
-    if max_pain:
-        details["max_pain"] = max_pain
-
+            details["magnet"] = f"{magnet} at spot (neutral)"
     return score, details
 
 
 def score_cot(cot):
-    """Score CFTC COT positioning. Returns (score, details)."""
-    score = 0
-    details = {}
     if not cot or "error" in cot:
-        return score, {"cot": "N/A"}
-
-    spec = cot.get("spec_signal")
-    if spec == "BULLISH":
-        score += 1; details["cot_spec"] = f"{cot.get('noncomm_net_pct')}% (spec net short bullish, +1)"
-    elif spec == "BEARISH":
-        score -= 1; details["cot_spec"] = f"{cot.get('noncomm_net_pct')}% (spec net long bearish, -1)"
+        return 0, {"cot": (cot or {}).get("error", "no COT data")}
+    s = cot.get("score", 0)
+    rank, pct = cot.get("pct_rank_3y"), cot.get("spec_net_pct")
+    if cot.get("signal") == "CROWDED_LONG":
+        text = f"specs {pct}% net long, {rank}th pct of 3y (crowded long, {s:+d})"
+    elif cot.get("signal") == "CROWDED_SHORT":
+        text = f"specs {pct}% net, {rank}th pct of 3y (crowded short, {s:+d})"
     else:
-        details["cot_spec"] = f"{cot.get('noncomm_net_pct')}% (neutral)"
+        text = f"specs {pct}% net, {rank}th pct of 3y (not extreme, 0)"
+    return s, {"cot": text}
 
-    comm = cot.get("comm_signal")
-    if comm == "BULLISH":
-        score += 1; details["cot_comm"] = f"{cot.get('comm_net_pct')}% (comm long bullish, +1)"
-    elif comm == "BEARISH":
-        score -= 1; details["cot_comm"] = f"{cot.get('comm_net_pct')}% (comm short bearish, -1)"
-    else:
-        details["cot_comm"] = f"{cot.get('comm_net_pct')}% (neutral)"
 
-    return score, details
+def live(macro, key):
+    """Latest value of a macro series, or None if missing or stale."""
+    entry = macro.get(key, {})
+    if entry.get("stale") or entry.get("value") is None:
+        return None
+    return entry["value"]
 
 
 def score_macro(macro, instr=None):
-    """Score macro environment. If instr is given, scores against its relevant volatility index."""
-    score = 0
-    details = {}
+    score, details = 0, {}
 
-    vol_idx_map = {
-        "Gold":   {"series": "GVZ", "label": "GVZ"},
-        "NAS100": {"series": "VXN", "label": "VXN"},
-        "EURUSD": {"series": "EVZ", "label": "EVZ"},
-    }
-
-    # Instrument-specific volatility index
-    if instr and instr in vol_idx_map:
-        vs = vol_idx_map[instr]
-        vol = macro.get(vs["series"], {}).get("value")
+    vol_key = VOL_INDEX.get(instr) if instr else "VIX"
+    if vol_key:
+        vol = live(macro, vol_key)
+        hi = 25 if vol_key == "VIX" else 30
         if vol is not None:
             if vol < 15:
-                score += 1; details[f"{vs['label']}"] = f"{vol} (low fear, +1)"
-            elif vol > 30:
-                score -= 1; details[f"{vs['label']}"] = f"{vol} (high fear, -1)"
+                score += 1; details[vol_key] = f"{vol} (low fear, +1)"
+            elif vol > hi:
+                score -= 1; details[vol_key] = f"{vol} (high fear, -1)"
             else:
-                details[f"{vs['label']}"] = f"{vol} (neutral)"
+                details[vol_key] = f"{vol} (neutral)"
     else:
-        # Fallback: VIX for general / unknown instruments
-        vix = macro.get("VIX", {}).get("value")
-        if vix is not None:
-            if vix < 15:
-                score += 1; details["VIX"] = f"{vix} (low fear, +1)"
-            elif vix > 25:
-                score -= 1; details["VIX"] = f"{vix} (high fear, -1)"
-            else:
-                details["VIX"] = f"{vix} (neutral)"
+        details["vol"] = "no live EUR vol index (EVZ discontinued)"
 
-    dxy = macro.get("Dollar Index", {}).get("value")
+    dxy = live(macro, "Dollar Index")
     if dxy is not None:
         if dxy < 100:
-            score += 1; details["dxy"] = f"{dxy} (weak USD bullish, +1)"
+            score += 1; details["dxy"] = f"DXY {dxy} (weak USD, +1)"
         elif dxy > 107:
-            score -= 1; details["dxy"] = f"{dxy} (strong USD bearish, -1)"
+            score -= 1; details["dxy"] = f"DXY {dxy} (strong USD, -1)"
         else:
-            details["dxy"] = f"{dxy} (neutral)"
+            details["dxy"] = f"DXY {dxy} (neutral)"
 
-    curve = macro.get("10Y Yield", {}).get("value")
-    short = macro.get("2Y Yield", {}).get("value")
-    if curve is not None and short is not None:
-        spread = curve - short
+    y10, y2 = live(macro, "10Y Yield"), live(macro, "2Y Yield")
+    if y10 is not None and y2 is not None:
+        spread = y10 - y2
         if spread > 0.5:
             score += 1; details["curve"] = f"{spread:.2f}% (steep, +1)"
         elif spread < -0.5:
@@ -150,8 +152,7 @@ def score_macro(macro, instr=None):
         else:
             details["curve"] = f"{spread:.2f}% (neutral)"
 
-    # SKEW (tail risk)
-    skew = macro.get("SKEW", {}).get("value")
+    skew = live(macro, "SKEW")
     if skew is not None:
         if skew > 145:
             score -= 1; details["skew"] = f"{skew} (tail risk high, -1)"
@@ -160,8 +161,7 @@ def score_macro(macro, instr=None):
         else:
             details["skew"] = f"{skew} (neutral)"
 
-    # Breakeven inflation
-    be5 = macro.get("5Y Breakeven", {}).get("value")
+    be5 = live(macro, "5Y Breakeven")
     if be5 is not None:
         if be5 > 3.0:
             score -= 1; details["be5"] = f"{be5}% (high inflation, -1)"
@@ -172,92 +172,51 @@ def score_macro(macro, instr=None):
 
     return score, details
 
+
 def run():
-    # Load FRED macro
-    macro_path = os.path.join(DATA_DIR, "fred_macro.json")
-    macro_data = {}
-    if os.path.exists(macro_path):
-        with open(macro_path) as f:
-            macro_data = json.load(f).get("series", {})
-        print(f"Loaded FRED macro data ({len(macro_data)} series)")
-    else:
-        print("WARNING: No FRED data found — skipping macro scores")
+    macro_data = load("fred_macro.json").get("series", {})
+    ome_all = load("ome_data.json").get("instruments", {})
+    cot_all = load("cot_data.json").get("instruments", {})
 
-    macro_score, macro_details = score_macro(macro_data)
-    print(f"\nGeneral macro score: {macro_score}")
-    for k, v in macro_details.items():
-        print(f"  {k}: {v}")
-
-    # Load OME data
-    ome_path = os.path.join(DATA_DIR, "ome_data.json")
-    ome_instruments = {}
-    if os.path.exists(ome_path):
-        with open(ome_path) as f:
-            ome_instruments = json.load(f).get("instruments", {})
-        print(f"\nLoaded OME data ({len(ome_instruments)} instruments)")
-    else:
-        print("WARNING: No OME data found")
-
-    # Load COT data
-    cot_path = os.path.join(DATA_DIR, "cot_data.json")
-    cots = {}
-    if os.path.exists(cot_path):
-        with open(cot_path) as f:
-            cots = json.load(f).get("instruments", {})
-        print(f"\nLoaded COT data ({len(cots)} instruments)")
-    else:
-        print("WARNING: No COT data found")
+    general_score, general_details = score_macro(macro_data)
+    print(f"General macro: {general_score} {general_details}")
 
     per_instrument = {}
     for instr in INSTRUMENTS:
-        ome = ome_instruments.get(instr, {})
-        if "error" in ome:
-            per_instrument[instr] = {"error": ome["error"], "total_score": None}
-            continue
-
-        pos_score, pos_details = score_positioning(ome)
-        instr_macro_score, instr_macro_details = score_macro(macro_data, instr)
-        cot_score, cot_details = score_cot(cots.get(instr, {}))
-        total = pos_score + instr_macro_score + cot_score
+        ome = ome_all.get(instr, {})
+        pos, pos_d = score_positioning(ome)
+        mac, mac_d = score_macro(macro_data, instr)
+        cot, cot_d = score_cot(cot_all.get(instr))
+        total = pos + mac + cot
         per_instrument[instr] = {
-            "ome_data": {k: v for k, v in ome.items() if k != "raw"},
-            "positioning_score": pos_score,
-            "positioning_details": pos_details,
-            "macro_score": instr_macro_score,
-            "macro_details": instr_macro_details,
-            "cot_score": cot_score,
-            "cot_details": cot_details,
+            "ome_data": ome,
+            "options_ok": options_usable(ome),
+            "positioning_score": pos, "positioning_details": pos_d,
+            "macro_score": mac, "macro_details": mac_d,
+            "cot_score": cot, "cot_details": cot_d,
             "total_score": total,
-            "signal": "LONG" if total > 0 else ("SHORT" if total < 0 else "NEUTRAL"),
+            "signal": signal_for(total),
         }
-        print(f"\n{instr}: pos={pos_score} + macro={instr_macro_score} + cot={cot_score} = {total} ({per_instrument[instr]['signal']})")
-        for k, v in instr_macro_details.items():
-            print(f"  macro.{k}: {v}")
-        for k, v in cot_details.items():
-            print(f"  cot.{k}: {v}")
+        print(f"{instr}: pos {pos:+d} + macro {mac:+d} + cot {cot:+d} = {total:+d} ({signal_for(total)})")
+        for k, v in {**pos_d, **mac_d, **cot_d}.items():
+            print(f"    {k}: {v}")
 
-    # Overall market score
-    valid = {k: v for k, v in per_instrument.items() if v.get("total_score") is not None}
-    avg = sum(v["total_score"] for v in valid.values()) / len(valid) if valid else 0
-
-    # Aggregate macro for dashboard display (general macro)
-    macro_details = per_instrument.get("Gold", {}).get("macro_details", {})
-    # Also merge in the macro_score as the average across instruments
-    macro_score_avg = sum(v["macro_score"] for v in valid.values()) / len(valid) if valid else 0
-
+    totals = [v["total_score"] for v in per_instrument.values()]
+    avg = sum(totals) / len(totals)
     output = {
         "generated": datetime.now().isoformat(),
-        "macro": {"score": round(macro_score_avg, 1), "details": macro_details, "raw": macro_data},
+        "model": {"max_score": MAX_SCORE, "max_positioning": MAX_POSITIONING, "max_macro": MAX_MACRO,
+                  "max_cot": MAX_COT, "signal_threshold": SIGNAL_THRESHOLD,
+                  "confluence_min": CONFLUENCE_MIN},
+        "macro": {"score": general_score, "details": general_details},
         "instruments": per_instrument,
-        "overall": {"avg_score": round(avg, 1), "signal": "LONG" if avg > 0 else ("SHORT" if avg < 0 else "NEUTRAL")},
+        "overall": {"avg_score": round(avg, 1), "signal": signal_for(avg)},
     }
-
-    out_path = os.path.join(OUTPUT_DIR, "scores.json")
-    with open(out_path, "w") as f:
+    with open(os.path.join(DATA_DIR, "scores.json"), "w") as f:
         json.dump(output, f, indent=2)
-    print(f"\nSaved scores to {out_path}")
     print(f"Overall: {output['overall']['signal']} ({output['overall']['avg_score']})")
-    return output
+    return True
+
 
 if __name__ == "__main__":
     run()

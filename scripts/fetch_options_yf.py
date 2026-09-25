@@ -1,309 +1,235 @@
 """
-Fetch options chains from Yahoo Finance using ETF proxies:
-  Gold   -> GLD  (SPDR Gold Trust)
-  NAS100 -> QQQ  (Invesco QQQ Trust)
-  EURUSD -> FXE  (Invesco CurrencyShares Euro Trust)
+Fetch options chains from Yahoo Finance via ETF proxies and derive levels:
+  Gold   -> GLD, scaled to spot XAU/USD
+  NAS100 -> QQQ, scaled to the NDX index
+  EURUSD -> FXE, scaled to spot EUR/USD
 
-The options CHAIN itself has to come from these ETFs — there's no free
-retail-accessible spot-gold or spot-index options chain. But the price used
-to scale strikes/walls/spot up to "real" terms previously targeted GC=F
-(COMEX gold FUTURES) and NQ=F (Nasdaq-100 FUTURES), not the actual spot
-price — futures carry a basis that's a different number from true spot.
+Expiry: the highest-open-interest expiry within 3-45 days (the front-month
+window). Picking the highest-OI expiry overall selected LEAPS months out,
+whose walls sit far from where price trades day to day.
 
-Gold price sourcing tries multiple candidates in order, since a single
-untested ticker guess already failed once (yfinance's "XAUUSD=X" returns a
-clean 404 — confirmed via a real workflow run, not just theory):
-  1. gold-api.com — a dedicated free spot-gold API, no key required. This is
-     the SAME source the abandoned gold-forecast.html tool used successfully
-     for its live price, so it's proven to work, just never wired into this
-     pipeline before now.
-  2. yfinance "XAU=X" — a plausible alternate Yahoo spot-gold ticker format,
-     unverified but worth trying since it costs nothing to attempt.
-  3. yfinance "GC=F" (COMEX futures) — the original, CONFIRMED-working
-     fallback. Not true spot (carries a small futures basis) but far better
-     than nothing if both spot sources fail.
-Each candidate is tried in order; first one that returns a price wins.
-NAS100 and EURUSD keep a simpler two-candidate chain (spot ticker, then the
-original futures/FX fallback).
-
-Selects the expiry with highest total open interest.
-Computes PCR, max pain, put/call walls, magnet.
+Outputs, per instrument: PCR, max pain, call/put walls (largest OI strike),
+magnet (largest combined OI), ATM IV skew, 5%-OTM skew, a gamma-flip level
+(only if cumulative dealer GEX actually crosses zero), net GEX, a 1-day
+expected range from ATM IV, and the full OI-by-strike profile. All price
+levels are scaled from ETF to instrument terms using a spot price fetched
+at the same time.
 """
-import os, json, sys
-from datetime import datetime
+import os, json, math
+from datetime import datetime, date
 
 import requests
 import yfinance as yf
 
-# Each instrument's price candidates, tried in order. ("yf", ticker) uses
-# yfinance; ("http_json", url, json_key) does a plain GET and reads a key
-# from the JSON response — used for gold-api.com, which isn't a yfinance
-# ticker at all.
 PRICE_CANDIDATES = {
-    "Gold": [
-        ("http_json", "https://api.gold-api.com/price/XAU", "price"),
-        ("yf", "XAU=X"),
-        ("yf", "GC=F"),
-    ],
-    "NAS100": [
-        ("yf", "^NDX"),
-        ("yf", "NQ=F"),
-    ],
-    "EURUSD": [
-        ("yf", "EURUSD=X"),
-    ],
+    "Gold":   [("http_json", "https://api.gold-api.com/price/XAU", "price"), ("yf", "GC=F")],
+    "NAS100": [("yf", "^NDX"), ("yf", "NQ=F")],
+    "EURUSD": [("yf", "EURUSD=X")],
 }
-
-INSTRUMENTS = {
-    "Gold":   {"ticker": "GLD", "note": "ETF proxy for Gold, scaled to spot XAU/USD"},
-    "NAS100": {"ticker": "QQQ", "note": "ETF proxy for NAS100, scaled to spot NDX index"},
-    "EURUSD": {"ticker": "FXE", "note": "ETF proxy for EURUSD, scaled to spot EUR/USD"},
-}
+INSTRUMENTS = {"Gold": "GLD", "NAS100": "QQQ", "EURUSD": "FXE"}
+MIN_DTE, MAX_DTE = 3, 45
+RISK_FREE = 0.05
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 
+# Yahoo zeroes most open interest outside US market hours, so a chain is
+# only trusted when enough strikes carry OI and the total is meaningful.
+# Otherwise the previous good snapshot is kept (see run()). FXE rarely
+# passes: its options are too thin to say anything about EUR/USD.
+MIN_OI_COVERAGE = 0.25
+MIN_TOTAL_OI = 5000
 
-def best_expiry(ticker):
-    """Return the expiry date string with highest total open interest."""
-    t = yf.Ticker(ticker)
-    try:
-        dates = t.options
-    except Exception:
-        return None, None, "no options data"
+
+def pick_expiry(t):
+    """Return (expiry, chain, dte) for the highest-OI trustworthy expiry in the front-month window."""
+    today = date.today()
+    dates = list(t.options or [])
     if not dates:
-        return None, None, "no option expirations"
-
-    best_date = None
-    best_chain = None
-    best_oi = 0
-    for d in dates:
+        raise RuntimeError("no option expirations")
+    window = [d for d in dates if MIN_DTE <= (date.fromisoformat(d) - today).days <= MAX_DTE]
+    best, best_seen = None, 0
+    for d in window:
         try:
             chain = t.option_chain(d)
         except Exception:
             continue
-        tc = chain.calls["openInterest"].sum() if not chain.calls.empty else 0
-        tp = chain.puts["openInterest"].sum() if not chain.puts.empty else 0
-        total = int(tc) + int(tp)
-        if total > best_oi:
-            best_oi = total
-            best_date = d
-            best_chain = chain
-
-    if best_date is None or best_oi == 0:
-        return None, None, "zero open interest across all expiries"
-    return best_date, best_chain, None
-
-
-def compute_metrics(ticker, expiry, chain):
-    calls = chain.calls
-    puts = chain.puts
-
-    spot = None
-    t = yf.Ticker(ticker)
-    info = {}
-    try:
-        info = t.info
-    except Exception:
-        pass
-    spot = info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
-
-    # Total OI
-    total_call_oi = int(calls["openInterest"].sum()) if not calls.empty and calls["openInterest"].notna().any() else 0
-    total_put_oi = int(puts["openInterest"].sum()) if not puts.empty and puts["openInterest"].notna().any() else 0
-    pcr = round(total_put_oi / total_call_oi, 4) if total_call_oi > 0 else None
-
-    # Build strike_data from non-zero OI rows
-    strike_data = {}
-    for _, row in calls.iterrows():
-        oi = row["openInterest"]
-        if not oi or oi != oi or oi <= 0:
+        oi_col = [chain.calls["openInterest"].fillna(0), chain.puts["openInterest"].fillna(0)]
+        n_rows = sum(len(c) for c in oi_col)
+        oi = int(sum(c.sum() for c in oi_col))
+        coverage = sum(int((c > 0).sum()) for c in oi_col) / n_rows if n_rows else 0
+        best_seen = max(best_seen, oi)
+        if coverage < MIN_OI_COVERAGE:
             continue
-        s = int(row["strike"])
-        strike_data.setdefault(s, {"call": 0, "put": 0})["call"] += int(oi)
-    for _, row in puts.iterrows():
-        oi = row["openInterest"]
-        if not oi or oi != oi or oi <= 0:
+        if best is None or oi > best[3]:
+            best = (d, chain, (date.fromisoformat(d) - today).days, oi)
+    if best is None or best[3] < MIN_TOTAL_OI:
+        raise RuntimeError(f"open interest too thin or unpublished (max {best_seen} in {MIN_DTE}-{MAX_DTE}d window)")
+    return best[0], best[1], max(best[2], 0.5)
+
+
+def bs_gamma(S, K, T, sigma):
+    if not (S > 0 and K > 0 and T > 0 and sigma and sigma > 0):
+        return None
+    d1 = (math.log(S / K) + (RISK_FREE + sigma * sigma / 2) * T) / (sigma * math.sqrt(T))
+    return math.exp(-d1 * d1 / 2) / math.sqrt(2 * math.pi) / (S * sigma * math.sqrt(T))
+
+
+def rows(df, kind):
+    out = []
+    for _, r in df.iterrows():
+        oi = r.get("openInterest")
+        oi = 0 if oi is None or oi != oi else int(oi)
+        iv = r.get("impliedVolatility")
+        iv = None if iv is None or iv != iv or iv <= 0.0001 else float(iv)
+        out.append({"strike": round(float(r["strike"]), 2), "type": kind, "oi": oi, "iv": iv})
+    return out
+
+
+def compute_metrics(chain, spot, dte):
+    contracts = rows(chain.calls, "call") + rows(chain.puts, "put")
+    by_strike = {}
+    for c in contracts:
+        if c["oi"] > 0:
+            by_strike.setdefault(c["strike"], {"call": 0, "put": 0})[c["type"]] += c["oi"]
+    if not by_strike:
+        raise RuntimeError("no strikes with open interest")
+    strikes = sorted(by_strike)
+    call_oi = sum(v["call"] for v in by_strike.values())
+    put_oi = sum(v["put"] for v in by_strike.values())
+
+    max_pain = min(strikes, key=lambda k: sum(
+        (s - k) * v["call"] if s > k else (k - s) * v["put"] for s, v in by_strike.items()))
+    call_wall = max(strikes, key=lambda s: by_strike[s]["call"])
+    put_wall = max(strikes, key=lambda s: by_strike[s]["put"])
+    magnet = max(strikes, key=lambda s: by_strike[s]["call"] + by_strike[s]["put"])
+
+    def nearest_iv(kind, target, n=1):
+        pool = sorted((c for c in contracts if c["type"] == kind and c["iv"]), key=lambda c: abs(c["strike"] - target))
+        pool = pool[:n]
+        return sum(c["iv"] for c in pool) / len(pool) if pool else None
+
+    atm_call, atm_put = nearest_iv("call", spot, 5), nearest_iv("put", spot, 5)
+    skew_pct = round((atm_call - atm_put) / atm_put * 100, 2) if atm_call and atm_put else None
+    otm_call, otm_put = nearest_iv("call", spot * 1.05), nearest_iv("put", spot * 0.95)
+    otm_skew = round(otm_call - otm_put, 4) if otm_call and otm_put else None
+
+    # Dealer GEX sign convention: dealers long calls / short puts.
+    T = dte / 365
+    gex = {}
+    for c in contracts:
+        g = bs_gamma(spot, c["strike"], T, c["iv"])
+        if g is None or not c["oi"]:
             continue
-        s = int(row["strike"])
-        strike_data.setdefault(s, {"call": 0, "put": 0})["put"] += int(oi)
+        v = g * c["oi"] * 100 * spot * spot * 0.01
+        gex[c["strike"]] = gex.get(c["strike"], 0) + (v if c["type"] == "call" else -v)
+    flip, cum = None, 0.0
+    for s in sorted(gex):
+        prev, cum = cum, cum + gex[s]
+        if flip is None and prev < 0 <= cum:
+            flip = s
 
-    # Max pain
-    max_pain = None
-    if strike_data:
-        strikes = sorted(strike_data.keys())
-        best_strike = None
-        best_value = float("inf")
-        for k in strikes:
-            total_value = 0
-            for s in strikes:
-                if s > k:
-                    total_value += (s - k) * strike_data[s]["call"]
-                elif s < k:
-                    total_value += (k - s) * strike_data[s]["put"]
-            if total_value < best_value:
-                best_value = total_value
-                best_strike = k
-        max_pain = best_strike
-
-    # Walls
-    call_wall = max(strike_data, key=lambda s: strike_data[s]["call"]) if strike_data else None
-    put_wall = max(strike_data, key=lambda s: strike_data[s]["put"]) if strike_data else None
-
-    # Magnet
-    magnet = max(strike_data, key=lambda s: strike_data[s]["call"] + strike_data[s]["put"]) if strike_data else None
-
-    # Skew (ATM implied vol skew)
-    skew = None
-    if spot and not calls.empty and not puts.empty:
-        near_calls = calls.iloc[(calls["strike"] - spot).abs().argsort()[:5]]
-        near_puts = puts.iloc[(puts["strike"] - spot).abs().argsort()[:5]]
-        ac = near_calls["impliedVolatility"].mean()
-        ap = near_puts["impliedVolatility"].mean()
-        if ap and ap > 0:
-            skew = round((ac - ap) / ap * 100, 2)
-        else:
-            skew = 0.0
-
-    # Build full strike arrays for charting
-    strikes_list = sorted(strike_data.keys()) if strike_data else []
-    call_oi_list = [strike_data[s]["call"] for s in strikes_list]
-    put_oi_list = [strike_data[s]["put"] for s in strikes_list]
+    atm_iv = nearest_iv("call", spot) or nearest_iv("put", spot)
+    move = spot * atm_iv * math.sqrt(1 / 365) if atm_iv else None
 
     return {
-        "expiry": expiry,
-        "total_oi_used": total_call_oi + total_put_oi,
-        "underlying_price": round(spot, 2) if spot else None,
-        "put_call_ratio": pcr,
-        "max_pain": max_pain,
-        "call_wall": call_wall,
-        "put_wall": put_wall,
-        "magnet_strike": magnet,
-        "skew_percent": skew,
-        "n_calls_used": len(strike_data),
-        "strikes": strikes_list,
-        "call_oi": call_oi_list,
-        "put_oi": put_oi_list,
+        "total_oi_used": call_oi + put_oi,
+        "put_call_ratio": round(put_oi / call_oi, 4) if call_oi else None,
+        "max_pain": max_pain, "call_wall": call_wall, "put_wall": put_wall, "magnet_strike": magnet,
+        "gamma_flip": flip, "net_gex": round(sum(gex.values())) if gex else None,
+        "skew_percent": skew_pct, "otm_skew": otm_skew,
+        "exp_high": spot + move if move else None, "exp_low": spot - move if move else None,
+        "strikes": strikes,
+        "call_oi": [by_strike[s]["call"] for s in strikes],
+        "put_oi": [by_strike[s]["put"] for s in strikes],
     }
 
 
-def _fetch_price_yf(ticker):
-    try:
-        info = yf.Ticker(ticker).info
-        return info.get("regularMarketPrice") or info.get("ask") or info.get("bid") or info.get("previousClose")
-    except Exception as e:
-        print(f"    yfinance {ticker} failed: {e}")
-        return None
-
-
-def _fetch_price_http_json(url, json_key, timeout=10):
-    try:
-        r = requests.get(url, timeout=timeout)
-        r.raise_for_status()
-        val = r.json().get(json_key)
-        return float(val) if val is not None else None
-    except Exception as e:
-        print(f"    HTTP {url} failed: {e}")
-        return None
-
-
-def _fetch_price_candidates(candidates):
-    """Try each (type, ...) candidate in order, return (price, source_label)
-    for the first one that succeeds, or (None, None) if all fail."""
+def fetch_price(candidates):
     for cand in candidates:
-        kind = cand[0]
-        if kind == "yf":
-            price = _fetch_price_yf(cand[1])
-            if price:
-                return price, cand[1]
-        elif kind == "http_json":
-            price = _fetch_price_http_json(cand[1], cand[2])
-            if price:
-                return price, cand[1]
+        try:
+            if cand[0] == "yf":
+                info = yf.Ticker(cand[1]).info
+                p = info.get("regularMarketPrice") or info.get("previousClose")
+            else:
+                r = requests.get(cand[1], timeout=10)
+                r.raise_for_status()
+                p = r.json().get(cand[2])
+            if p:
+                return float(p), cand[1]
+        except Exception as e:
+            print(f"    price source {cand[1]} failed: {e}")
     return None, None
 
 
-def scale_to_futures(data, etf_ticker, candidates):
-    """Scale ETF strikes/prices to real-instrument levels, trying each price
-    candidate in order (see PRICE_CANDIDATES) until one succeeds. Spot
-    sources are preferred but a futures-based scale is still far better than
-    leaving the data unscaled entirely."""
-    if "error" in data:
-        return data
-    etf_price = data.get("underlying_price")
-    if not etf_price:
-        return data
+def scale(value, ratio):
+    if value is None:
+        return None
+    v = value * ratio
+    return round(v, 5) if abs(v) < 100 else round(v, 1)
 
-    real_price, used_source = _fetch_price_candidates(candidates)
-    if not real_price:
-        return data
-    ratio = real_price / etf_price
 
-    scaled = dict(data)
-    scaled["underlying_price"] = round(real_price, 2)
-    scaled["proxy_for"] = etf_ticker
-    scaled["proxy_note"] = f"ETF proxy for {used_source}, scaled by {ratio:.2f}x"
-    scaled["scale_ratio"] = round(ratio, 4)
-    scaled["scale_source"] = used_source
+def fetch_instrument(instr, etf):
+    t = yf.Ticker(etf)
+    info = t.info
+    etf_px = info.get("regularMarketPrice") or info.get("previousClose")
+    if not etf_px:
+        raise RuntimeError(f"no {etf} price")
+    expiry, chain, dte = pick_expiry(t)
+    m = compute_metrics(chain, float(etf_px), dte)
+    # Sparse OI puts max pain and the walls far from price; a front-month
+    # max pain more than 20% away means the chain isn't trustworthy.
+    if abs(m["max_pain"] / etf_px - 1) > 0.20:
+        raise RuntimeError(f"max pain {m['max_pain']} is >20% from {etf} {etf_px}; chain looks unreliable")
 
-    for field in ["max_pain", "call_wall", "put_wall", "magnet_strike"]:
-        val = data.get(field)
-        if val is not None:
-            scaled_val = val * ratio
-            scaled[field] = round(scaled_val, 4) if abs(scaled_val) < 100 else round(scaled_val)
-
-    raw_strikes = data.get("strikes", [])
-    if raw_strikes:
-        scaled["strikes"] = [round(s * ratio, 4) if abs(ratio * s) < 100 else round(s * ratio) for s in raw_strikes]
-
-    # Add raw (unscaled) data for reference
-    scaled["raw_price"] = round(etf_price, 2)
-    scaled["raw_strikes"] = raw_strikes
-    return scaled
+    real_px, src = fetch_price(PRICE_CANDIDATES[instr])
+    ratio = real_px / etf_px if real_px else 1.0
+    out = {
+        "as_of": datetime.now().isoformat(timespec="minutes"),
+        "expiry": expiry, "dte": dte, "proxy_for": etf,
+        "raw_price": round(etf_px, 2),
+        "underlying_price": round(real_px, 5 if real_px and real_px < 100 else 2) if real_px else round(etf_px, 2),
+        "scale_ratio": round(ratio, 6), "scale_source": src or "unscaled",
+        "total_oi_used": m["total_oi_used"], "put_call_ratio": m["put_call_ratio"],
+        "skew_percent": m["skew_percent"], "otm_skew": m["otm_skew"], "net_gex": m["net_gex"],
+        "raw_strikes": m["strikes"], "call_oi": m["call_oi"], "put_oi": m["put_oi"],
+    }
+    for k in ("max_pain", "call_wall", "put_wall", "magnet_strike", "gamma_flip", "exp_high", "exp_low"):
+        out[k] = scale(m[k], ratio)
+    out["strikes"] = [scale(s, ratio) for s in m["strikes"]]
+    return out
 
 
 def run():
     print("Fetching options data from Yahoo Finance...")
-    results = {}
-    all_ok = True
-    for instr, cfg in INSTRUMENTS.items():
-        ticker = cfg["ticker"]
-        print(f"  {instr} ({ticker})...", end=" ", flush=True)
-        expiry, chain, err = best_expiry(ticker)
-        if err:
-            results[instr] = {"error": err}
-            print(f"ERROR: {err}")
-            all_ok = False
-            continue
-        data = compute_metrics(ticker, expiry, chain)
-        data["proxy_for"] = ticker
-        data["proxy_note"] = cfg["note"]
-        # Scale ETF strikes to real-instrument levels, trying each price
-        # candidate in order (spot sources preferred, futures as last resort)
-        if "error" not in data:
-            data = scale_to_futures(data, ticker, PRICE_CANDIDATES[instr])
-        results[instr] = data
-        sp = data.get("underlying_price", "?")
-        src = data.get("scale_source", "unscaled")
-        print(f"OK — expiry={expiry}, OI={data['total_oi_used']}, PCR={data['put_call_ratio']}, spot={sp} (via {src})")
-
     out_path = os.path.join(DATA_DIR, "ome_data.json")
-    if not all_ok and os.path.exists(out_path):
-        existing = json.load(open(out_path))
-        # merge: keep existing data for failed instruments
-        for instr in INSTRUMENTS:
-            if instr in results and "error" in results[instr]:
-                if instr in existing.get("instruments", {}) and "error" not in existing["instruments"][instr]:
-                    results[instr] = existing["instruments"][instr]
-                    print(f"  Kept existing data for {instr}")
-                else:
-                    del results[instr]
-        if not results:
-            print("  All instruments failed, preserving existing file")
-            return True
+    previous = {}
+    if os.path.exists(out_path):
+        with open(out_path) as f:
+            previous = json.load(f).get("instruments", {})
+
+    results, ok = {}, True
+    for instr, etf in INSTRUMENTS.items():
+        try:
+            results[instr] = fetch_instrument(instr, etf)
+            d = results[instr]
+            print(f"  {instr} ({etf}): exp {d['expiry']} ({d['dte']}d), OI {d['total_oi_used']}, PCR {d['put_call_ratio']}, "
+                  f"walls C{d['call_wall']}/P{d['put_wall']}, spot {d['underlying_price']} via {d['scale_source']}")
+        except Exception as e:
+            ok = False
+            print(f"  {instr} ({etf}): ERROR {e}")
+            prev = previous.get(instr, {})
+            if "error" not in prev and prev.get("as_of"):
+                results[instr] = dict(prev, carried_over=True)
+                print(f"    kept previous snapshot from {prev['as_of']}")
+            else:
+                # Keep a spot price even without options so price-based
+                # sections (vol/range ideas) still work.
+                px, src = fetch_price(PRICE_CANDIDATES[instr])
+                results[instr] = {"error": str(e), "underlying_price": px, "scale_source": src}
+
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump({"fetched": datetime.now().isoformat(), "instruments": results}, f, indent=2)
-    print(f"\nSaved to {out_path}")
-    return True
+    return ok
 
 
 if __name__ == "__main__":
