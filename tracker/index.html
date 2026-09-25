@@ -497,6 +497,45 @@ function renderControls(){
   el.appendChild(statusSpan);
 }
 
+// Band-based ideas for instruments with no options market (EUR/USD, USD/JPY):
+// the same table as the KenJTradez TradingView indicator — targets at today's
+// median / 75th bands, stop 1.5x ATR(14) from the current price. Both sides
+// are shown; there is no directional call.
+function bandIdeaHtml(inst){
+  const all = state.pipeline.band && state.pipeline.band.instruments;
+  const br = all ? all[PIPELINE_KEY[inst.id]] : null;
+  if(!br || br.error) return null;
+  const d = inst.decimals;
+  const px = state.spot[inst.id]!=null ? state.spot[inst.id] : br.price;
+  let atr = computeATR(state.dailyBars[inst.id], 14), atrSrc = 'ATR14 from Twelve Data daily bars';
+  const vr = state.pipeline.vol && state.pipeline.vol.instruments ? state.pipeline.vol.instruments[PIPELINE_KEY[inst.id]] : null;
+  if(atr==null && vr && vr.atr14_pct){ atr = px*vr.atr14_pct/100; atrSrc = 'ATR14 from the pipeline'; }
+  if(atr==null) return null;
+  const stop = 1.5*atr;
+  const rows = [
+    ['Long → upper median', br.bands.up_med, 1, 'var(--olt-green)'],
+    ['Long → upper 75th', br.bands.up_p75, 1, 'var(--olt-green)'],
+    ['Short → lower median', br.bands.dn_med, -1, 'var(--olt-orange)'],
+    ['Short → lower 75th', br.bands.dn_p75, -1, 'var(--olt-orange)'],
+  ].map(([label, tp, dir, color])=>{
+    const sl = px - dir*stop;
+    const ahead = (tp-px)*dir > 0;
+    const r = ahead ? Math.abs(tp-px)/stop : null;
+    return '<tr><td style="padding:5px 10px;color:'+color+';">'+label+'</td>'+
+      '<td style="padding:5px 10px;text-align:right;">'+(ahead?fmt(tp,d):'<span style="color:var(--olt-faint)">already passed</span>')+'</td>'+
+      '<td style="padding:5px 10px;text-align:right;">'+(ahead?fmt(sl,d):'—')+'</td>'+
+      '<td style="padding:5px 10px;text-align:right;color:var(--olt-faint);">'+(r!=null?r.toFixed(2)+'R':'—')+'</td></tr>';
+  }).join('');
+  return '<div class="olt-card">'+
+    '<div style="font-size:12px;color:var(--olt-dim);margin-bottom:8px;">Trade ideas from today\'s bands — '+esc(inst.full)+' has no usable options market, so these use the vol bands instead (same table as your KenJTradez indicator).</div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+      '<tr style="color:var(--olt-faint);font-size:10.5px;"><td style="padding:4px 10px;">From '+fmt(px,d)+'</td><td style="padding:4px 10px;text-align:right;">TARGET</td><td style="padding:4px 10px;text-align:right;">STOP</td><td style="padding:4px 10px;text-align:right;">REWARD</td></tr>'+
+      rows+
+    '</table>'+
+    '<div style="font-size:10px;color:var(--olt-faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--olt-border);">Stop = 1.5× '+atrSrc+' ('+fmt(stop,d)+'). Both sides shown — not a directional call; pick a side from your own read. Not backtested, not financial advice.</div>'+
+  '</div>';
+}
+
 function renderTradeIdea(){
   const el = document.getElementById('olt-tradeidea');
   if(!el) return;
@@ -505,6 +544,9 @@ function renderTradeIdea(){
   const idea = computeTradeIdea(inst);
 
   if(!idea){
+    const lv = state.levels[inst.id];
+    const band = bandIdeaHtml(inst);
+    if(band && lv.callWall==null && lv.putWall==null){ el.innerHTML = band; return; }
     el.innerHTML = '<div class="olt-card" style="font-size:11px;color:var(--olt-faint);">Trade idea: none \u2014 needs live spot plus usable options levels with at least one target beyond the entry.</div>';
     return;
   }
@@ -903,7 +945,7 @@ function applyCot(inst, c){
 }
 
 async function loadPipelineData(){
-  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json', band:'band_read.json'};
+  const files = {ome:'ome_data.json', cot:'cot_data.json', macro:'fred_history.json', scores:'scores.json', geo:'geopolitical.json', band:'band_read.json', vol:'vol_range.json'};
   await Promise.all(Object.entries(files).map(async ([k,f])=>{
     try{ state.pipeline[k] = await getPipelineJson(f); }catch(e){ state.pipeline[k] = null; }
   }));
