@@ -344,6 +344,10 @@ def band_read_html(instr, br):
     marks = f'<div class="band-range" style="left:{pos(br["low"]):.1f}%;width:{max(0.5, pos(br["high"]) - pos(br["low"])):.1f}%"></div>'
     if cp.get("available"):
         marks += f'<div class="band-mark band-chk" style="left:{pos(cp["price"]):.1f}%" title="10:00 London {cp["price"]:,.{dec}f}"></div>'
+    pj = br.get("projection")
+    if pj:
+        c25, c75 = pj["close"]["25"], pj["close"]["75"]
+        marks += f'<div class="band-proj" style="left:{pos(c25):.1f}%;width:{max(0.5, pos(c75) - pos(c25)):.1f}%" title="middle half of closes on similar days"></div>'
     marks += f'<div class="band-mark band-now" style="left:{pos(br["price"]):.1f}%" title="now {br["price"]:,.{dec}f}"></div>'
 
     status_cls = "band-ext" if v["status"].startswith("STRETCHED") else ("band-faded" if "PULLED BACK" in v["status"] else "")
@@ -367,10 +371,30 @@ def band_read_html(instr, br):
               <div class="band-headline">{escape(v["headline"])}</div>
               <p class="band-text">{escape(v["text"])}</p>
               <div class="band-ladder">{marks}{ticks}</div>
-              <div class="band-legend"><span><i class="lg-range"></i>today's range</span><span><i class="lg-chk"></i>10:00 London</span><span><i class="lg-now"></i>now</span></div>
+              <div class="band-legend"><span><i class="lg-range"></i>today's range</span><span><i class="lg-chk"></i>10:00 London</span><span><i class="lg-now"></i>now</span>{'<span><i class="lg-proj"></i>projected close (middle half)</span>' if br.get("projection") else ''}</div>
+              {projection_html(br, dec)}
               {f'<div class="band-chk-line">{escape(chk_txt)}</div>' if chk_txt else ''}
               <div class="band-foot">Odds from {hist.get("sessions", "?")} sessions ({escape(str(hist.get("first", "")))} to {escape(str(hist.get("last", "")))}) of minute data, 95% range in brackets. Bands = session open ± median / 75th-percentile move of the last 75 sessions. Not a signal and not part of the score.</div>
             </div>"""
+
+
+def projection_html(br, dec):
+    pj = br.get("projection")
+    if not pj:
+        return ""
+    c, h, l = pj["close"], pj["high"], pj["low"]
+    f = lambda v: f"{v:,.{dec}f}"
+    return f"""<div class="band-proj-box">
+                <div class="band-proj-title">Projected to the session close (22:00 UK) &middot; from {pj["n"]:,} similar days</div>
+                <div class="band-proj-grid">
+                  <div><span>Close, middle</span><b>{f(c["50"])}</b></div>
+                  <div><span>Close, half of days</span><b>{f(c["25"])} &ndash; {f(c["75"])}</b></div>
+                  <div><span>Close, 8 in 10 days</span><b>{f(c["10"])} &ndash; {f(c["90"])}</b></div>
+                  <div><span>Session high, 1 in 4 days above</span><b>{f(h["75"])}</b></div>
+                  <div><span>Session low, 1 in 4 days below</span><b>{f(l["75"])}</b></div>
+                </div>
+                <div class="band-proj-note">A range, not a call: the middle is where similar days finished on average, and it rarely leans far from the price now.</div>
+              </div>"""
 
 
 def load_gold_forecast():
@@ -949,6 +973,15 @@ def run():
   .lg-chk {{ background: var(--gold); border-radius: 50% !important; width: 8px !important; height: 8px !important; }}
   .lg-now {{ background: var(--text); border-radius: 50% !important; width: 8px !important; height: 8px !important; }}
   .band-chk-line {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--muted); margin-top: 0.4rem; }}
+  .band-proj {{ position: absolute; top: -4px; height: 8px; background: var(--gold); opacity: 0.35; border-radius: 3px; }}
+  .lg-proj {{ background: var(--gold); opacity: 0.35; }}
+  .band-proj-box {{ margin-top: 0.6rem; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 4px; }}
+  .band-proj-title {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }}
+  .band-proj-grid {{ display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }}
+  .band-proj-grid span {{ display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.52rem; color: var(--muted); }}
+  .band-proj-grid b {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 600; color: var(--text); }}
+  .band-proj-note {{ font-size: 0.6rem; color: var(--muted); margin-top: 0.4rem; }}
+  @media (max-width: 700px) {{ .band-proj-grid {{ grid-template-columns: 1fr 1fr; }} }}
   .band-foot {{ font-size: 0.58rem; color: var(--muted); margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--border); line-height: 1.45; }}
   @media (max-width: 700px) {{ .band-tick b {{ display: none; }} .band-asof {{ margin-left: 0; }} }}
   .bottom-line-banner {{ background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 0.7rem 0.9rem; margin: 0.75rem 1rem 0; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }}

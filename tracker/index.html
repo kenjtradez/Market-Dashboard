@@ -1207,6 +1207,13 @@ function renderBandRead(){
       '<div>Up side, next band: <b style="color:var(--olt-text)">'+odds('up')+'</b></div>'+
       '<div>Down side, next band: <b style="color:var(--olt-text)">'+odds('dn')+'</b></div>'+
     '</div>'+
+    (br.projection ? '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--olt-border);">'+
+      cell('PROJ. CLOSE (MIDDLE)', fmt(br.projection.close['50'],d), 'var(--olt-blue)')+
+      cell('HALF OF DAYS', fmt(br.projection.close['25'],d)+' \u2013 '+fmt(br.projection.close['75'],d))+
+      cell('8 IN 10 DAYS', fmt(br.projection.close['10'],d)+' \u2013 '+fmt(br.projection.close['90'],d))+
+      cell('HIGH, 1 IN 4 ABOVE', fmt(br.projection.high['75'],d), 'var(--olt-green)')+
+      cell('LOW, 1 IN 4 BELOW', fmt(br.projection.low['75'],d), 'var(--olt-orange)')+
+    '</div><div style="font-size:10px;color:var(--olt-faint);margin-top:4px;">Projected to the session close (22:00 UK) from '+br.projection.n.toLocaleString()+' similar days. A range, not a call.</div>' : '')+
     (cp && cp.available ? '<div style="font-size:10.5px;color:var(--olt-faint);margin-top:8px;">10:00 London: '+fmt(cp.price,d)+' \u2014 '+(Math.max(cp.p_up,cp.p_dn)>=1 ? 'already through the '+(cp.p_up>=cp.p_dn?'upper':'lower')+' median band' : Math.round(Math.max(cp.p_up,cp.p_dn,0)*100)+'% of the way to the '+(cp.p_up>=cp.p_dn?'upper':'lower')+' median band')+(cp.extended?' (extended '+(cp.extended==='up'?'\u2191':'\u2193')+')':' (not extended)')+'</div>' : '')+
     '<div style="font-size:10px;color:var(--olt-faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--olt-border);">Odds from '+(br.history?br.history.sessions:'?')+' sessions of minute data ('+esc(br.history?br.history.first:'')+' to '+esc(br.history?br.history.last:'')+'), 95% range in brackets. Levels in '+esc(br.feed)+' terms'+(inst.id==='XAUUSD'?' rescaled to spot':'')+'. Context, not a signal.</div>'+
   '</div>';
