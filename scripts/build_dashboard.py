@@ -940,7 +940,14 @@ def run():
 
   .masthead {{ border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: baseline; }}
   .masthead h1 {{ font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600; color: white; letter-spacing: -0.02em; }}
+  .masthead-right {{ display: flex; align-items: center; gap: 0.6rem; }}
   .masthead .date {{ font-size: 0.72rem; color: var(--muted); }}
+  #refresh-btn {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 20px; padding: 0.25rem 0.7rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; }}
+  #refresh-btn:hover {{ border-color: var(--accent); color: var(--accent); }}
+  #refresh-btn:disabled {{ opacity: 0.55; cursor: default; }}
+  #refresh-btn svg {{ width: 11px; height: 11px; }}
+  #refresh-btn.spin svg {{ animation: rf-spin 0.7s linear infinite; }}
+  @keyframes rf-spin {{ to {{ transform: rotate(360deg); }} }}
 
   .overall-card {{ display: flex; align-items: center; gap: 1.25rem; background: var(--surface); border: 1px solid {overall_color}; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.25rem; }}
   .overall-card .oc-arrow {{ font-size: 1.8rem; color: {overall_color}; }}
@@ -1172,7 +1179,13 @@ def run():
   <nav class="topnav"><a class="active" href="./">Dashboard</a><a href="tracker/">Options Tracker</a><a href="https://claude.ai/artifact/Kynaj9s2jNsyJC8TGH1eq3" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Live Six Ledger ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Macro Snapshot ↗</a></nav>
   <div class="masthead">
     <h1>Market Analysis</h1>
-    <span class="date">{gen_display}</span>
+    <div class="masthead-right">
+      <span class="date" id="gen-date">{gen_display}</span>
+      <button id="refresh-btn" title="Check for a newer build">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
   </div>
 
   {daily_bias_html(daily_bias)}
@@ -1203,6 +1216,43 @@ def run():
 
 <script>
 (() => {{
+  // This whole page is a static build (scripts/build_dashboard.py, run a
+  // few times a day by .github/workflows/build.yml) -- there's no live data
+  // feed to poll continuously. "Refresh" instead re-checks the small
+  // data/scores.json this same build already deploys (confirmed reachable
+  // at data/scores.json) for a newer "generated" timestamp than the one
+  // baked into this page; if there's a newer build, it reloads to it.
+  const PAGE_GENERATED = {json.dumps(gen_time)};
+  const btn = document.getElementById('refresh-btn');
+  const dateEl = document.getElementById('gen-date');
+  if (btn) {{
+    btn.addEventListener('click', async () => {{
+      btn.disabled = true;
+      btn.classList.add('spin');
+      const label = btn.childNodes[btn.childNodes.length - 1];
+      const started = Date.now();
+      let msg = 'check failed';
+      try {{
+        const res = await fetch('data/scores.json?_=' + started, {{cache: 'no-store'}});
+        const j = await res.json();
+        if (j.generated && j.generated > PAGE_GENERATED) {{
+          msg = 'newer build found — reloading…';
+          label.textContent = ' ' + msg;
+          setTimeout(() => location.reload(), 900);
+          return;
+        }}
+        msg = 'checked ✓ (already latest)';
+      }} catch (e) {{ /* keep msg = "check failed" */ }}
+      const elapsed = Date.now() - started;
+      if (elapsed < 500) await new Promise(r => setTimeout(r, 500 - elapsed));
+      btn.classList.remove('spin');
+      btn.disabled = false;
+      const prevText = label.textContent;
+      label.textContent = ' ' + msg;
+      setTimeout(() => {{ label.textContent = prevText; }}, 2200);
+    }});
+  }}
+
   const ALLOI = {json.dumps(all_oi_data or {})};
   const fmt = x => x.toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}});
   const pct = x => (x>=0?'+':'')+x.toFixed(2)+'%';

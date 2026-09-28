@@ -6,13 +6,19 @@
 <title>Options Levels Tracker</title>
 <style>
 html, body { background:#080b14; margin:0; padding:0; }
-.topnav{display:flex;flex-wrap:wrap;gap:6px 1rem;max-width:1600px;margin:0 auto;padding:14px 18px 0;font-family:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;font-size:12px;}
+.topnav{display:flex;flex-wrap:wrap;align-items:center;gap:6px 1rem;max-width:1600px;margin:0 auto;padding:14px 18px 0;font-family:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;font-size:12px;}
 .topnav a{color:#8592ab;text-decoration:none;padding-bottom:3px;border-bottom:2px solid transparent;}
 .topnav a.active,.topnav a:hover{color:#e7ecf7;border-bottom-color:#4f9dff;}
+#global-refresh{margin-left:auto;font-family:inherit;font-size:11.5px;color:#8592ab;background:transparent;border:1px solid #1c2740;border-radius:20px;padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+#global-refresh:hover{border-color:#4f9dff;color:#4f9dff;}
+#global-refresh:disabled{opacity:.55;cursor:default;}
+#global-refresh svg{width:11px;height:11px;}
+#global-refresh.spin svg{animation:gr-spin .7s linear infinite;}
+@keyframes gr-spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
-<nav class="topnav"><a href="../">Dashboard</a><a class="active" href="./">Options Tracker</a><a href="https://claude.ai/artifact/Kynaj9s2jNsyJC8TGH1eq3" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Live Six Ledger ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Macro Snapshot ↗</a></nav>
+<nav class="topnav"><a href="../">Dashboard</a><a class="active" href="./">Options Tracker</a><a href="https://claude.ai/artifact/Kynaj9s2jNsyJC8TGH1eq3" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Live Six Ledger ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Macro Snapshot ↗</a><button id="global-refresh" title="Reload pipeline data (COT/macro/scores/band/vol/bias) and the active instrument's live quote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Refresh</button></nav>
 <div id="olt-root">
 <style>
 #olt-root{--olt-bg:#080b14;--olt-card:#0e1524;--olt-card2:#111a2d;--olt-border:#1c2740;--olt-border2:#26314c;--olt-text:#e7ecf7;--olt-dim:#8592ab;--olt-faint:#4c5872;--olt-blue:#4f9dff;--olt-green:#33d6a0;--olt-orange:#fb9152;--olt-purple:#9c9fe0;--olt-mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;background:var(--olt-bg);color:var(--olt-text);font-family:var(--olt-mono);padding:18px;border-radius:14px;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;max-width:1600px;margin:0 auto;}
@@ -1462,6 +1468,37 @@ window.addEventListener('resize', ()=>{ drawChart(); });
     for(const inst of INSTRUMENTS){ await fetchVolForecast(inst); }
   }
   renderAll();
+
+  // Global Refresh (topnav): the per-instrument "Refresh" button elsewhere on
+  // this page only re-fetches that one instrument's live quote (fetchActive)
+  // and isn't shown on every tab (e.g. not on NEWS) -- this one is always
+  // visible and reloads everything: the CI-built pipeline JSON (COT, macro,
+  // scores, band read, vol forecast, daily bias -- only as fresh as the last
+  // scheduled build) plus the active instrument's live quote.
+  const globalRefresh = document.getElementById('global-refresh');
+  if(globalRefresh){
+    globalRefresh.addEventListener('click', async ()=>{
+      globalRefresh.disabled = true;
+      globalRefresh.classList.add('spin');
+      const label = globalRefresh.childNodes[globalRefresh.childNodes.length-1];
+      const prevText = label.textContent;
+      const started = Date.now();
+      let msg = 'checked ✓';
+      try{ await loadPipelineData(); }catch(e){ msg = 'check failed'; }
+      // fetchActive() assumes state.active is one of INSTRUMENTS (it isn't
+      // on the NEWS/MACRO tabs) -- guard it separately so a failure there
+      // never masks a pipeline refresh that already succeeded above.
+      if(INSTRUMENTS.some(i=>i.id===state.active)){
+        try{ await fetchActive(true); }catch(e){ if(msg!=='check failed') msg='checked ✓'; }
+      }
+      const elapsed = Date.now()-started;
+      if(elapsed<500) await new Promise(r=>setTimeout(r,500-elapsed));
+      globalRefresh.classList.remove('spin');
+      globalRefresh.disabled = false;
+      label.textContent = msg;
+      setTimeout(()=>{ label.textContent = prevText; }, 2200);
+    });
+  }
 })();
 })();
 </script>
