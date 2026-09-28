@@ -1147,7 +1147,7 @@ def run():
   .macro-card .mc-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }}
   .macro-card .macro-item {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; display: flex; gap: 0.3rem; align-items: baseline; }}
 
-  .topnav {{ display: flex; gap: 1rem; margin-bottom: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }}
+  .topnav {{ display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-bottom: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; }}
   .topnav a {{ color: var(--muted); text-decoration: none; padding-bottom: 0.2rem; border-bottom: 2px solid transparent; }}
   .topnav a.active, .topnav a:hover {{ color: var(--text); border-bottom-color: var(--accent); }}
   footer {{ margin-top: 1rem; font-size: 0.6rem; color: var(--muted); text-align: center; font-family: 'IBM Plex Mono', monospace; padding-top: 0.75rem; border-top: 1px solid var(--border); }}
@@ -1169,7 +1169,7 @@ def run():
 <body>
 <div class="container">
 
-  <nav class="topnav"><a class="active" href="./">Dashboard</a><a href="tracker/">Options Tracker</a></nav>
+  <nav class="topnav"><a class="active" href="./">Dashboard</a><a href="tracker/">Options Tracker</a><a href="https://claude.ai/artifact/Kynaj9s2jNsyJC8TGH1eq3" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Live Six Ledger ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Macro Snapshot ↗</a></nav>
   <div class="masthead">
     <h1>Market Analysis</h1>
     <span class="date">{gen_display}</span>
