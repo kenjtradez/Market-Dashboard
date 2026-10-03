@@ -1169,7 +1169,7 @@ def run():
 <body>
 <div class="container">
 
-  <nav class="topnav"><a class="active" href="./">Dashboard</a><a href="tracker/">Options Tracker</a><a href="https://claude.ai/artifact/Kynaj9s2jNsyJC8TGH1eq3" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Live Six Ledger ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Macro Snapshot ↗</a></nav>
+  <nav class="topnav"><a class="active" href="./">Dashboard</a><a href="tracker/">Options Tracker</a><a href="https://claude.ai/artifact/Kynaj9s2jNsyJC8TGH1eq3" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Live Six Ledger ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Macro Snapshot ↗</a><a href="https://claude.ai/artifact/R3EsEBz3ECEWYqaRbH9RYw#strategies" target="_blank" rel="noopener noreferrer" title="Opens on claude.ai (private to your account)">Strategies ↗</a></nav>
   <div class="masthead">
     <h1>Market Analysis</h1>
     <span class="date">{gen_display}</span>
